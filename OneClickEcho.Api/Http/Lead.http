@@ -1,0 +1,59 @@
+@OneClickEcho_HostAddress = http://localhost:5000
+
+### Upload Leads
+POST {{OneClickEcho_HostAddress}}/api/lead/uploadleads
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="Data"; filename="leads.csv"
+Content-Type: text/csv
+
+PhoneNumber,FirstName,LastName,Gender,Email,DateOfBirth,City,State,Country
+123-456-7890,John,Doe,,john.doe@example.com,,,,
+098-765-4321,Jane,Smith,,jane.smith@example.com,,,,
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Get Leads
+GET {{OneClickEcho_HostAddress}}/api/Lead?Page=1&PageSize=20&OrderBy=FirstName&Filter=FirstName co 'J'
+Accept: application/json
+
+### Create Lead
+POST {{OneClickEcho_HostAddress}}/api/Lead
+Content-Type: application/json
+
+{
+  "PhoneNumber": "123-456-7890",
+  "FirstName": "John",
+  "LastName": "Doe",
+  "Gender": 1,
+  "Email": "john.doe@example.com",
+  "DateOfBirth": "1980-05-15",
+  "City": "Springfield",
+  "State": "IL",
+  "Country": "USA"
+}
+
+> {%
+    client.global.set("LeadId", response.body.id);
+%}
+
+### Update Lead
+PUT {{OneClickEcho_HostAddress}}/api/Lead
+Content-Type: application/json
+
+{
+  "LeadId": "{{LeadId}}",
+  "PhoneNumber": "123-456-7890",
+  "FirstName": "John",
+  "LastName": "Doe",
+  "Gender": 2,
+  "Email": "john.doe@edit.com",
+  "DateOfBirth": "1985-05-15",
+  "City": "Springfield",
+  "State": "IL",
+  "Country": "USA"
+}
+
+### Get Lead by ID
+GET {{OneClickEcho_HostAddress}}/api/Lead/{{LeadId}}
+Content-Type: application/json

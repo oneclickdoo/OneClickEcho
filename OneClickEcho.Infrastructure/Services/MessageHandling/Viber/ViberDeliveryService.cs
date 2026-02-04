@@ -1,0 +1,486 @@
+using Microsoft.Extensions.Options;
+using OneClickEcho.Application.Common.Services;
+using OneClickEcho.Application.Common.Services.ViberService.Request;
+using OneClickEcho.Application.Common.Services.ViberService.Request.Common;
+using OneClickEcho.Application.Common.Services.ViberService.Response;
+using OneClickEcho.Application.Common.Services.ViberService.Response.Common;
+using OneClickEcho.Application.Common.Services.ViberService.Response.Enum;
+using OneClickEcho.Domain.ApiMessageAggregate;
+using OneClickEcho.Domain.CampaignAggregate;
+using OneClickEcho.Domain.CampaignAggregate.Repositories;
+using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
+using OneClickEcho.Domain.CampaignLeadAggregate;
+using OneClickEcho.Domain.CampaignLeadAggregate.Entities;
+using OneClickEcho.Domain.CampaignLeadAggregate.Enums;
+using OneClickEcho.Domain.CampaignLeadAggregate.Repositories;
+using OneClickEcho.Domain.Common.Repositories;
+using OneClickEcho.Domain.CompanyAggregate.Repositories;
+using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
+using OneClickEcho.Domain.LeadAggregate.Repositories;
+using OneClickEcho.Domain.LeadAggregate.ValueObjects;
+using OneClickEcho.Domain.TestMessageAggregate;
+using OneClickEcho.Domain.TestMessageAggregate.Repositories;
+using OneClickEcho.Infrastructure.Services.MessageHandling.Sms;
+using OneClickEcho.Infrastructure.Settings;
+
+namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
+{
+    public class ViberDeliveryService
+    {
+        private static readonly int MAX_RECORDS_PER_REQUEST = 200;
+        
+        public static async Task GetViberDeliveryForLast49Hours(
+            ICompanyRepository companyRepository,
+            ICampaignRepository campaignRepository,
+            ICampaignLeadRepository campaignLeadRepository,
+            IHttpClientFactory httpClientFactory,
+            IOptions<ViberSettings> viberSettings,
+            ILeadRepository leadRepository,
+            IStringTemplatingService stringTemplatingService,
+            IUnitOfWork unitOfWork)
+        {
+            List<Campaign> last49HoursViberCampaigns = await campaignRepository.GetLast49HoursViberCampaigns();
+            
+            // create HTTP client
+            HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
+
+            ViberService viberService = new(httpClient);
+
+            ViberUserCredentials credentials = new()
+            {
+                UserName = viberSettings.Value.Username,
+                Password = viberSettings.Value.Password
+            };
+
+            // get all non-terminal status campaign leads to check
+            List<CampaignLead> campaignLeads = await campaignLeadRepository
+                .GetNonTerminalCampaignLeadsForCampaignIdsAsync(
+                    last49HoursViberCampaigns.Select(x => x.Id).ToList()
+                );
+
+            // divide campaign leads into chunks
+            List<List<CampaignLead>> dividedCampaignLeads = [];
+
+            for (int i = 0; i < campaignLeads.Count; i += MAX_RECORDS_PER_REQUEST)
+            {
+                dividedCampaignLeads.Add(campaignLeads.GetRange(i, Math.Min(MAX_RECORDS_PER_REQUEST, campaignLeads.Count - i)));
+            }
+
+            int j = 0;
+
+            Dictionary<CampaignId, List<LeadId>> undeliveredCampaignLeads = [];
+            Dictionary<CampaignId, List<LeadId>> unsubscribedCampaignLeads = [];
+
+            // send chunk by chunk
+            foreach (List<CampaignLead> dividedCampaignLead in dividedCampaignLeads)
+            {
+                Console.WriteLine(DateTime.Now + $" - Fetching delivery for for [{dividedCampaignLead.Count}] leads, index [{j} - {j + dividedCampaignLead.Count - 1}]. Total leads: [{campaignLeads.Count}]");
+
+                j += dividedCampaignLead.Count;
+
+                DeliveryViberMessageDto request = new()
+                {
+                    UserCredentials = credentials,
+                    IDList = dividedCampaignLead.Select(x => x.ViberMessageId).ToList()
+                };
+
+                // send delivery request
+                DeliveryViberMessageResponseDto? response = await viberService.DeliveryById(request)
+                    ?? throw new Exception($"Failed to get delivery response.");
+
+                Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
+
+                // check responses
+                foreach (DeliveryViberMessageResponse item in response.ViberMessageResponses)
+                {
+                    // get campaign lead
+                    CampaignLead? campaignLead = campaignLeads.FirstOrDefault(x => x.ViberMessageId == item.MessageId);
+
+                    // update campaign lead status
+                    if (campaignLead != null)
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Updating delivery status for lead ViberMessageId [{item.MessageId}]. Old status: [{campaignLead.ViberStatus}]; New status: [{item.MessageStatus.Status}]");
+
+                        campaignLead.ViberStatus = (CampaignLeadViberStatus)item.MessageStatus.Status;
+
+                        // check if link in message is clicked TODO: Do we need to check for button URL here?
+                        if (/*campaign.ViberButtonUrl != null && */ item.ClickInfo.ClickCount > 0)
+                        {
+                            campaignLead.ViberStatus = CampaignLeadViberStatus.Clicked;
+                        }
+
+                        // check if message is undelivered
+                        if ((CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Undelivered)
+                        {
+                            if (!undeliveredCampaignLeads.ContainsKey(campaignLead.CampaignId))
+                            {
+                                undeliveredCampaignLeads.Add(campaignLead.CampaignId, new List<LeadId>());
+                            }
+                            
+                            undeliveredCampaignLeads[campaignLead.CampaignId].Add(campaignLead.LeadId);
+                        }
+
+                        if (item.MessageStatus.SubStatus == DeliveryViberSubstatus.SRVC_USER_BLOCKED)
+                        {
+                            if (!unsubscribedCampaignLeads.ContainsKey(campaignLead.CampaignId))
+                            {
+                                unsubscribedCampaignLeads.Add(campaignLead.CampaignId, new List<LeadId>());
+                            }
+                            
+                            unsubscribedCampaignLeads[campaignLead.CampaignId].Add(campaignLead.LeadId);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Lead ViberMessageId [{item.MessageId}] not found during delivery update.");
+                    }
+                }
+            }
+
+            // send fallback SMS messages to undelivered campaign leads
+            foreach (CampaignId campaignId in undeliveredCampaignLeads.Keys)
+            {
+                Campaign? campaign = last49HoursViberCampaigns.FirstOrDefault(x => x.Id == campaignId);
+                
+                if (campaign == null) continue;
+                
+                if (!undeliveredCampaignLeads.ContainsKey(campaignId) || undeliveredCampaignLeads[campaignId].Count <= 0) continue;
+                
+                if (campaign.FallbackToSMS)
+                {
+                    Console.WriteLine(DateTime.Now + $" - Found [{undeliveredCampaignLeads[campaignId].Count}] undelivered leads in campaign [{campaignId}]. Initializing SMS fallback...");
+                    
+                    List<Domain.LeadAggregate.Lead> leads = await leadRepository
+                        .GetAllInLeadIdList(campaign.CompanyId, undeliveredCampaignLeads[campaignId]);
+
+                    await SmsSendingService.SendSmsToLeads(
+                        campaign,
+                        leads,
+                        companyRepository,
+                        campaignRepository,
+                        campaignLeadRepository,
+                        httpClientFactory,
+                        stringTemplatingService,
+                        unitOfWork);
+                }
+            }
+
+            foreach (CampaignId campaignId in unsubscribedCampaignLeads.Keys)
+            {
+                Campaign? campaign = last49HoursViberCampaigns.FirstOrDefault(x => x.Id == campaignId);
+
+                if (campaign == null) continue;
+                
+                if (!unsubscribedCampaignLeads.ContainsKey(campaignId) || unsubscribedCampaignLeads[campaignId].Count <= 0) continue;
+
+                // mark leads as unsubscribed
+                Console.WriteLine(DateTime.Now + $" - Found [{unsubscribedCampaignLeads[campaignId].Count}] unsubscribed leads in campaign [{campaignId}]. Updating flags...");
+                
+                List<Domain.LeadAggregate.Lead> leads = await leadRepository
+                    .GetAllInLeadIdList(campaign.CompanyId, unsubscribedCampaignLeads[campaignId]);
+
+                foreach (var lead in leads)
+                {
+                    lead.IsUnsubscribed = true;
+                }
+            }
+            
+            await unitOfWork.SaveChangesAsync();
+        }
+        
+        public static async Task GetViberDeliveryForApiMessages(
+            CompanyId companyId,
+            List<ApiMessage> apiMessages,
+            ICompanyRepository companyRepository,
+            IHttpClientFactory httpClientFactory,
+            IOptions<ViberSettings> viberSettings,
+            IUnitOfWork unitOfWork)
+        {
+            // create HTTP client
+            HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
+
+            ViberService viberService = new(httpClient);
+
+            ViberUserCredentials credentials = new()
+            {
+                UserName = viberSettings.Value.Username,
+                Password = viberSettings.Value.Password
+            };
+
+            // divide campaign leads into chunks
+            List<List<ApiMessage>> dividedApiMessages = [];
+
+            for (int i = 0; i < apiMessages.Count; i += MAX_RECORDS_PER_REQUEST)
+            {
+                dividedApiMessages.Add(apiMessages.GetRange(i, Math.Min(MAX_RECORDS_PER_REQUEST, apiMessages.Count - i)));
+            }
+
+            int j = 0;
+
+            List<ApiMessage> undeliveredApiMessages = new List<ApiMessage>();
+            List<ApiMessage> unsubscribedApiMessages = new List<ApiMessage>();
+
+            // send chunk by chunk
+            foreach (List<ApiMessage> dividedApiMessage in dividedApiMessages)
+            {
+                Console.WriteLine(DateTime.Now + $" - Fetching delivery for for [{dividedApiMessage.Count}] Viber API messages, index [{j} - {j + dividedApiMessage.Count - 1}]. Total Viber API Messages: [{apiMessages.Count}]");
+
+                j += dividedApiMessage.Count;
+
+                DeliveryViberMessageDto request = new()
+                {
+                    UserCredentials = credentials,
+                    IDList = dividedApiMessage.Select(x => x.ViberMessageId).ToList()
+                };
+
+                // send delivery request
+                DeliveryViberMessageResponseDto? response = await viberService.DeliveryById(request)
+                    ?? throw new Exception($"Failed to get delivery response.");
+
+                Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] Viber API messages during delivery.");
+
+                // check responses
+                foreach (DeliveryViberMessageResponse item in response.ViberMessageResponses)
+                {
+                    // get campaign lead
+                    ApiMessage? apiMessage = apiMessages.FirstOrDefault(x => x.ViberMessageId == item.MessageId);
+
+                    // update campaign lead status
+                    if (apiMessage != null)
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Updating delivery status for Viber API Message ViberMessageId [{item.MessageId}]. Old status: [{apiMessage.ViberStatus}]; New status: [{item.MessageStatus.Status}]");
+
+                        apiMessage.ViberStatus = (CampaignLeadViberStatus)item.MessageStatus.Status;
+
+                        // check if link in message is clicked
+                        if (item.ClickInfo.ClickCount > 0)
+                        {
+                            apiMessage.ViberStatus = CampaignLeadViberStatus.Clicked;
+                        }
+
+                        // check if message is undelivered
+                        if ((CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Undelivered)
+                        {
+                            undeliveredApiMessages.Add(apiMessage);
+                        }
+
+                        if (item.MessageStatus.SubStatus == DeliveryViberSubstatus.SRVC_USER_BLOCKED)
+                        {
+                            unsubscribedApiMessages.Add(apiMessage);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Viber API Message ViberMessageId [{item.MessageId}] not found during delivery update.");
+                    }
+                }
+            }
+
+            if (undeliveredApiMessages.Any())
+            {
+                Console.WriteLine(DateTime.Now + $" - Found [{undeliveredApiMessages.Count}] undelivered Viber API messages.");
+                
+                List<ApiMessage> fallbackApiMessages = new List<ApiMessage>();
+                
+                // send fallback SMS messages to undelivered API messages
+                foreach (ApiMessage apiMessage in undeliveredApiMessages)
+                {
+                    if (apiMessage.HasSmsFallback)
+                    {
+                        fallbackApiMessages.Add(apiMessage);
+                    }
+                }
+
+                if (fallbackApiMessages.Any())
+                {
+                    Console.WriteLine(DateTime.Now + $" - Found [{undeliveredApiMessages.Count}] undelivered Viber API messages with fallback enabled. Initializing SMS fallback...");
+                    
+                    await SmsSendingService.SendApiSmsMessages(
+                        companyId,
+                        undeliveredApiMessages,
+                        companyRepository,
+                        httpClientFactory,
+                        unitOfWork);
+                }
+            }
+            
+            if (unsubscribedApiMessages.Any())
+            {
+                Console.WriteLine(DateTime.Now + $" - Found [{unsubscribedApiMessages.Count}] unsubscribed Viber API messages. Updating flags...");
+                
+                // send fallback SMS messages to undelivered API messages
+                foreach (ApiMessage apiMessage in unsubscribedApiMessages)
+                {
+                    //
+                }
+            }
+            
+            await unitOfWork.SaveChangesAsync();
+        }
+        
+        public static async Task GetViberTestDeliveryForLast48Hours(
+            ITestMessageRepository testMessageRepository,
+            IHttpClientFactory httpClientFactory,
+            IOptions<ViberSettings> viberSettings,
+            IUnitOfWork unitOfWork)
+        {
+            List<TestMessage> testMessages = await testMessageRepository.GetViberTestMessagesForLast48Hours();
+            
+            // create HTTP client
+            HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
+
+            ViberService viberService = new(httpClient);
+
+            ViberUserCredentials credentials = new()
+            {
+                UserName = viberSettings.Value.Username,
+                Password = viberSettings.Value.Password
+            };
+
+            // divide test messages into chunks
+            List<List<TestMessage>> dividedTestMessages = [];
+
+            for (int i = 0; i < testMessages.Count; i += MAX_RECORDS_PER_REQUEST)
+            {
+                dividedTestMessages.Add(testMessages.GetRange(i, Math.Min(MAX_RECORDS_PER_REQUEST, testMessages.Count - i)));
+            }
+
+            int j = 0;
+
+            // send chunk by chunk
+            foreach (List<TestMessage> dividedTestMessage in dividedTestMessages)
+            {
+                Console.WriteLine(DateTime.Now + $" - Fetching test delivery for for [{dividedTestMessage.Count}] messages, index [{j} - {j + dividedTestMessage.Count - 1}]. Total test messages: [{testMessages.Count}]");
+
+                j += dividedTestMessage.Count;
+
+                DeliveryViberMessageDto request = new()
+                {
+                    UserCredentials = credentials,
+                    IDList = dividedTestMessage.Select(x => x.ViberId).ToList()
+                };
+
+                // send delivery request
+                DeliveryViberMessageResponseDto? response = await viberService.DeliveryById(request)
+                    ?? throw new Exception($"Failed to get delivery response.");
+
+                Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
+
+                // check responses
+                foreach (DeliveryViberMessageResponse item in response.ViberMessageResponses)
+                {
+                    // get campaign lead
+                    TestMessage? testMessage = testMessages.FirstOrDefault(x => x.ViberId == item.MessageId);
+
+                    // update campaign lead status
+                    if (testMessage != null)
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Updating delivery status for test message ViberMessageId [{item.MessageId}].");
+                        
+                        if ((CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Delivered
+                            || (CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Seen)
+                        {
+                            testMessage.IsDelivered = true;
+                        }
+                        
+                        if (item.ClickInfo.ClickCount > 0)
+                        {
+                            testMessage.IsDelivered = true;
+                            testMessage.IsClicked = true;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Test message ViberMessageId [{item.MessageId}] not found during delivery update.");
+                    }
+                }
+            }
+            
+            await unitOfWork.SaveChangesAsync();
+        }
+        
+        public static async Task GetViberAnswersForLast49Hours(
+            ICampaignRepository campaignRepository,
+            ICampaignLeadRepository campaignLeadRepository,
+            IHttpClientFactory httpClientFactory,
+            IOptions<ViberSettings> viberSettings,
+            IUnitOfWork unitOfWork)
+        {
+            List<Campaign> last49HoursViberTwoWayCampaigns = await campaignRepository.GetLast49HoursViberTwoWayCampaigns();
+
+            // create HTTP client
+            HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
+
+            ViberService viberService = new(httpClient);
+
+            ViberUserCredentials credentials = new()
+            {
+                UserName = viberSettings.Value.Username,
+                Password = viberSettings.Value.Password
+            };
+            
+            // get all answerable campaign leads to check
+            List<CampaignLead> campaignLeads = await campaignLeadRepository
+                .GetAnswerableCampaignLeadsForCampaignIdsAsync(
+                    last49HoursViberTwoWayCampaigns.Select(x => x.Id).ToList()
+                );
+
+            // divide campaign leads into chunks
+            List<List<CampaignLead>> dividedCampaignLeads = [];
+
+            for (int i = 0; i < campaignLeads.Count; i += MAX_RECORDS_PER_REQUEST)
+            {
+                dividedCampaignLeads.Add(campaignLeads.GetRange(i, Math.Min(MAX_RECORDS_PER_REQUEST, campaignLeads.Count - i)));
+            }
+
+            int j = 0;
+
+            List<ReceivedMessage> receivedMessages = [];
+
+            // send chunk by chunk
+            foreach (List<CampaignLead> dividedCampaignLead in dividedCampaignLeads)
+            {
+                Console.WriteLine(DateTime.Now + $" - Fetching answers for [{dividedCampaignLead.Count}] leads, index [{j} - {j + dividedCampaignLead.Count - 1}]. Total leads: [{campaignLeads.Count}]");
+
+                j += dividedCampaignLead.Count;
+
+                AnswerViberMessageDto request = new()
+                {
+                    UserCredentials = credentials,
+                    IDList = dividedCampaignLead.Select(x => x.ViberMessageId).ToList(),
+                };
+
+                // send answer request
+                AnswerViberMessageResponseDto? response = await viberService.AnswersById(request)
+                    ?? throw new Exception($"Failed to get answer response.");
+
+                // check responses
+                foreach (ViberAnswer entry in response.ViberAnswers)
+                {
+                    // get campaign lead
+                    CampaignLead? campaignLead = campaignLeads.FirstOrDefault(x => x.ViberMessageId == entry.MessageId);
+
+                    // update campaign lead status
+                    if (campaignLead != null)
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Updating answers for lead ViberMessageId [{entry.MessageId}].");
+
+                        receivedMessages.Add(new ReceivedMessage
+                        {
+                            CampaignLeadId = campaignLead.Id,
+                            MessageContent = entry.MessageText
+                        });
+                    }
+                    else
+                    {
+                        Console.WriteLine(DateTime.Now + $" - Lead ViberMessageId [{entry.MessageId}] not found during answers update.");
+                    }
+                }
+            }
+
+            await campaignLeadRepository.AddReceivedMessages(receivedMessages);
+
+            await unitOfWork.SaveChangesAsync();
+        }
+    }
+}

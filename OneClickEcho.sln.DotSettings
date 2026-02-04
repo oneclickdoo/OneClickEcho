@@ -1,0 +1,35 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Applicability/=File/@EntryIndexedValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/CustomProperties/=Extension/@EntryIndexedValue">cs</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/CustomProperties/=FileName/@EntryIndexedValue">AggregateRoot</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/CustomProperties/=ValidateFileName/@EntryIndexedValue">False</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Description/@EntryValue">AggregateRoot</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Reformat/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Text/@EntryValue">using $FILE_NAMESPACE$.ValueObjects;
+using $PROJECT_NAMESPACE$.Common.Primitives;
+
+namespace $FILE_NAMESPACE$;
+
+public sealed class $AGGREGATE_ROOT$ : AggregateRoot&lt;$AGGREGATE_ROOT$Id&gt;
+{   
+    // Used for EFCore
+    public $AGGREGATE_ROOT$() : base($AGGREGATE_ROOT$Id.CreateUnique()) { }
+}</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/UITag/@EntryValue">AggregateRoot</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=AGGREGATE_005FROOT/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=AGGREGATE_005FROOT/Expression/@EntryValue">getFileNameWithoutExtension()</s:String>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=AGGREGATE_005FROOT/Order/@EntryValue">2</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=FILE_005FNAMESPACE/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=FILE_005FNAMESPACE/Expression/@EntryValue">fileDefaultNamespace()</s:String>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=FILE_005FNAMESPACE/Order/@EntryValue">1</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=PROJECT_005FNAMESPACE/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=PROJECT_005FNAMESPACE/Expression/@EntryValue">getProjectName()</s:String>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Field/=PROJECT_005FNAMESPACE/Order/@EntryValue">0</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Scope/=C040821D1CED82449253405557DCEA32/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3C6BFB4F4A6990488AF2E7E534286067/Scope/=C040821D1CED82449253405557DCEA32/Type/@EntryValue">InAnyNetProject</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/QuickList/=30268A7051168441BABF0D6FEE32A9AE/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/QuickList/=30268A7051168441BABF0D6FEE32A9AE/Entry/=3C6BFB4F4A6990488AF2E7E534286067/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/QuickList/=30268A7051168441BABF0D6FEE32A9AE/Entry/=3C6BFB4F4A6990488AF2E7E534286067/EntryName/@EntryValue">AggregateRootId</s:String>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/QuickList/=30268A7051168441BABF0D6FEE32A9AE/Entry/=3C6BFB4F4A6990488AF2E7E534286067/Position/@EntryValue">6</s:Int64></wpf:ResourceDictionary>

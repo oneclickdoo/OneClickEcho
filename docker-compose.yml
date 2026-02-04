@@ -1,0 +1,29 @@
+services:
+  oneclickecho-seq:
+    image: datalust/seq:latest
+    container_name: oneclickecho.seq
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - 5341:5341
+      - 8081:80
+
+  redis:
+    image: redis:latest
+    container_name: oneclickecho.redis
+    ports:
+      - 6379:6379
+
+  postgres17:
+    image: postgres:17
+    container_name: oneclickecho.postgres17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgress
+    ports:
+      - "5433:5432"
+    volumes:
+      - oneclickecho_pg17:/var/lib/postgresql/data
+
+volumes:
+  oneclickecho_pg17:

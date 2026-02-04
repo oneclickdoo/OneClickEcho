@@ -1,0 +1,3 @@
+﻿namespace OneClickEcho.Application.Scheduling.Commands.ExpirePendingMessages;
+
+public record ExpirePendingMessagesResponse(int MessageCount);

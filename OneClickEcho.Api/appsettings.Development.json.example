@@ -1,0 +1,45 @@
+{
+  "ConnectionStrings": {
+    "Database": "Host=localhost;Port=5433;Username=;Password=;Database=oneclickecho;"
+  },
+  "OpenAi": {
+    "ApiKey": "",
+    "Model": "gpt-4o"
+  },
+  "Redis": {
+    "ConnectionString": "localhost:6379"
+  },
+  "Serilog": {
+    "Using": [
+      "Serilog.Sinks.Console",
+      "Serilog.Sinks.Seq"
+    ],
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Information"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console"
+      },
+      {
+        "Name": "Seq",
+        "Args": {
+          "serverUrl": "http://localhost:5341"
+        }
+      }
+    ],
+    "Enrich": [ "FromLogContext", "WithMachineName", "WithThreadId" ]
+  },
+  "SMS": {
+    "Username": "",
+    "Password": ""
+  },
+  "Viber": {
+    "Username": "",
+    "Password": "",
+    "UploadsUrl": "{UploadsUrl}"
+  }
+}

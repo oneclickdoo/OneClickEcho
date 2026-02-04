@@ -1,0 +1,40 @@
+.idea
+bin/
+obj/
+packages/
+**/bin/
+**/obj/
+**/packages/
+riderModule.iml
+/_ReSharper.Caches/
+/.vs
+.DS_Store/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# OneClickEcho specific
+/OneClickEcho.Api/UploadedFiles/*
+/OneClickEcho.Dashboard/node_modules/
+/OneClickEcho.Dashboard/.next/
+
+# Certificates
+/certificates/*

@@ -1,0 +1,461 @@
+stages:
+    - build
+    - deploy
+    - cleanup
+
+variables:
+    TEST_DOCKER_IMAGE_NAME_API: "test-oneclickecho-api-image"
+    DOCKER_IMAGE_NAME_API: "oneclickecho-api-image"
+    DOCKER_CONTAINER_NAME_API: "oneclickecho-api-container"
+    DOCKERFILE_PATH_API: "./docker/Dockerfile_Api"
+    
+    TEST_DOCKER_IMAGE_NAME_DASHBOARD: "test-oneclickecho-dashboard-image"
+    DOCKER_IMAGE_NAME_DASHBOARD: "oneclickecho-dashboard-image"
+    DOCKER_CONTAINER_NAME_DASHBOARD: "oneclickecho-dashboard-container"
+    DOCKERFILE_PATH_DASHBOARD: "./docker/Dockerfile_Dashboard"
+
+    APPLICATION: "OneClickEcho.Application/**/*"
+    DOMAIN: "OneClickEcho.Domain/**/*"
+    INFRASTRUCTURE: "OneClickEcho.Infrastructure/**/*"
+    PERSISTENCE: "OneClickEcho.Persistence/**/*"
+    API: "OneClickEcho.Api/**/*"
+    DASHBOARD: "OneClickEcho.Dashboard/**/*"
+
+    STAGING_RUNNER_TAG: "ubuntu-shell-dev"
+    PROD_RUNNER_TAG: "ubuntu-shell-oneclick-prod"
+
+    STAGING_HOST_UPLOADS_PATH: "/home/mcitak/oneclickecho-uploads"
+    PROD_HOST_UPLOADS_PATH: "/home/stefan/oneclickecho-uploads"
+    CONTAINER_MOUNT_PATH: "/app/UploadedFiles"
+
+    STAGING_DATABASE_BACKUP_SCRIPT: "/home/mcitak/scripts/oneclickecho_backup_to_gdrive.sh"
+    PROD_DATABASE_BACKUP_SCRIPT: "/home/stefan/scripts/oneclickecho_backup_to_gdrive.sh"
+
+    STAGING_API_URL: "https://dev.api.echo.oneclick.rs"
+    STAGING_DASHBOARD_URL: "https://dev.echo.oneclick.rs"
+    
+    PROD_API_URL: "https://api.echo.oneclick.rs"
+    PROD_DASHBOARD_URL: "https://echo.oneclick.rs"
+
+    ENVIRONMENT:
+        value: "staging"
+        options:
+            - "staging"
+            - "production"
+        description: "The deployment environment. Set to 'staging' by default."
+
+    PROJECT_TYPE:
+        value: "all"
+        options:
+            - "api"
+            - "dashboard"
+            - "all"
+        description: "Choose the project to deploy."
+
+##
+# FEATURE BRANCHES BUILD TEST
+##
+build_image_api_test:
+    stage: build
+    rules:
+        # Prevent triggering on new branch creation from main
+        - if: '$CI_PIPELINE_SOURCE == "push" &&
+            $CI_COMMIT_BEFORE_SHA == "0000000000000000000000000000000000000000"'
+          when: never
+
+        # Allow running only on valid pushes and merge requests, not on main branch, with relevant changes
+        - if: '$CI_COMMIT_BRANCH != "main" &&
+            ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event")'
+          changes:
+            - $APPLICATION
+            - $DOMAIN
+            - $INFRASTRUCTURE
+            - $API
+          when: on_success
+    tags:
+        - $STAGING_RUNNER_TAG
+    script:
+        - |
+          docker build \
+          -t $TEST_DOCKER_IMAGE_NAME_API \
+          -f $DOCKERFILE_PATH_API .
+
+build_image_dashboard_test:
+    stage: build
+    rules:
+        # Prevent triggering on new branch creation from main
+        - if: '$CI_PIPELINE_SOURCE == "push" &&
+            $CI_COMMIT_BEFORE_SHA == "0000000000000000000000000000000000000000"'
+          when: never
+
+        # Allow running only on valid pushes and merge requests, not on main branch, with relevant changes
+        - if: '$CI_COMMIT_BRANCH != "main" &&
+            ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event")'
+          changes:
+            - $DASHBOARD
+          when: on_success
+    tags:
+        - $STAGING_RUNNER_TAG
+    script:
+        - |
+          docker build \
+          -t $TEST_DOCKER_IMAGE_NAME_DASHBOARD \
+          -f $DOCKERFILE_PATH_DASHBOARD .
+
+##
+# STAGING ENVIRONMENT
+##
+build_image_staging_api:
+    stage: build
+    environment:
+        name: staging
+    rules:
+        # Automated trigger
+        - changes:
+            - $APPLICATION
+            - $DOMAIN
+            - $INFRASTRUCTURE
+            - $API
+          if: '$CI_COMMIT_BRANCH == "main" &&
+            $CI_PIPELINE_SOURCE != "web"'
+          when: on_success
+
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "staging" && 
+            ($PROJECT_TYPE == "api" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $STAGING_RUNNER_TAG
+    script:
+        - |
+          docker build \
+          -t $DOCKER_IMAGE_NAME_API \
+          -f $DOCKERFILE_PATH_API .
+
+deploy_to_staging_api:
+    stage: deploy
+    environment:
+        name: staging
+    needs: 
+        - build_image_staging_api
+    rules:
+        # Automated trigger
+        - changes:
+            - $APPLICATION
+            - $DOMAIN
+            - $INFRASTRUCTURE
+            - $API
+          if: '$CI_COMMIT_BRANCH == "main" && 
+            $CI_PIPELINE_SOURCE != "web"'
+          when: on_success
+
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "staging" && 
+            ($PROJECT_TYPE == "api" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $STAGING_RUNNER_TAG
+    script:
+        # Uncomment for Debugging
+        # - set -x
+
+        # Check if the container exists before attempting to stop and remove it
+        - |
+          if docker ps -a --format '{{.Names}}' | grep -Eq "^$DOCKER_CONTAINER_NAME_API$"; then
+              docker stop $DOCKER_CONTAINER_NAME_API
+              docker rm $DOCKER_CONTAINER_NAME_API
+          fi
+        - |
+          docker run -d \
+          -e ASPNETCORE_ENVIRONMENT=Staging \
+          -e OpenAi__ApiKey=$OPENAI_APIKEY_STAGING \
+          -e ConnectionStrings__Database=$CONNECTION_STRING_STAGING \
+          -v $STAGING_HOST_UPLOADS_PATH:$CONTAINER_MOUNT_PATH \
+          --name $DOCKER_CONTAINER_NAME_API \
+          --network host \
+          $DOCKER_IMAGE_NAME_API
+
+        # Wait for a few seconds to let the container start
+        - |
+          echo "Waiting for container to start..."
+          sleep 10
+
+        # Check the container state
+        - |
+          container_state=$(docker inspect -f '{{.State.Status}}' $DOCKER_CONTAINER_NAME_API)
+          if [ "$container_state" != "running" ]; then
+              echo -e "Container failed to start. Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_API
+              exit 1
+          else
+              echo -e "Container started successfully! Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_API
+          fi
+
+build_image_staging_dashboard:
+    stage: build
+    environment:
+        name: staging
+    rules:
+        # Automated trigger
+        - changes:
+            - $DASHBOARD
+          if: '$CI_COMMIT_BRANCH == "main" && 
+            $CI_PIPELINE_SOURCE != "web"'
+          when: on_success
+
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "staging" && 
+            ($PROJECT_TYPE == "dashboard" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $STAGING_RUNNER_TAG
+    script:
+        - |
+          docker build \
+          --build-arg NEXT_PUBLIC_API_URL=$STAGING_API_URL \
+          -t $DOCKER_IMAGE_NAME_DASHBOARD \
+          -f $DOCKERFILE_PATH_DASHBOARD .
+
+deploy_to_staging_dashboard:
+    stage: deploy 
+    environment:
+        name: staging
+        url: $STAGING_DASHBOARD_URL
+    needs: 
+        - build_image_staging_dashboard
+    rules:
+        # Automated trigger
+        - changes:
+            - $DASHBOARD
+          if: '$CI_COMMIT_BRANCH == "main" && 
+            $CI_PIPELINE_SOURCE != "web"'
+          when: on_success
+
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "staging" && 
+            ($PROJECT_TYPE == "dashboard" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $STAGING_RUNNER_TAG
+    script:
+        # Uncomment for Debugging
+        # - set x
+        # Check if the container exists before attempting to stop and remove it
+        - |
+          if docker ps -a --format '{{.Names}}' | grep -Eq "^$DOCKER_CONTAINER_NAME_DASHBOARD$"; then
+              docker stop $DOCKER_CONTAINER_NAME_DASHBOARD
+              docker rm $DOCKER_CONTAINER_NAME_DASHBOARD
+          fi
+        - |
+          docker run -d \
+          --name $DOCKER_CONTAINER_NAME_DASHBOARD \
+          --network host \
+          $DOCKER_IMAGE_NAME_DASHBOARD
+
+        # Wait for a few seconds to let the container start
+        - |
+          echo "Waiting for container to start..."
+          sleep 2
+
+        # Check the container state
+        - |
+          container_state=$(docker inspect -f '{{.State.Status}}' $DOCKER_CONTAINER_NAME_DASHBOARD)
+          if [ "$container_state" != "running" ]; then
+              echo -e "Container failed to start. Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_DASHBOARD
+              exit 1
+          else
+              echo -e "Container started successfully! Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_DASHBOARD
+          fi
+
+remove_unused_images_staging:
+    stage: cleanup
+    environment:
+        name: staging
+    rules:
+        # Prevent triggering on new branch creation from main
+        - if: '$CI_PIPELINE_SOURCE == "push" && 
+            $CI_COMMIT_BEFORE_SHA == "0000000000000000000000000000000000000000"'
+          when: never
+
+        # Automated trigger
+        - changes:
+            - $APPLICATION
+            - $DOMAIN
+            - $INFRASTRUCTURE
+            - $PERSISTENCE
+            - $API
+            - $SEEDER
+            - $DASHBOARD
+            - $PRESENTATION
+          if: '$CI_PIPELINE_SOURCE != "web"'
+          when: always
+
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "staging"'
+          when: always
+    tags:
+        - $STAGING_RUNNER_TAG
+    script:
+        - echo "Removing unused Docker images..."
+        - result=$(docker image prune -af)
+        - echo "$result"
+        
+##
+# PRODUCTION ENVIRONMENT
+##
+build_image_prod_api:
+    stage: build
+    environment:
+        name: production
+    rules:
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "production" && 
+            ($PROJECT_TYPE == "api" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $PROD_RUNNER_TAG
+    script:
+        - |
+          docker build \
+          -t $DOCKER_IMAGE_NAME_API \
+          -f $DOCKERFILE_PATH_API .
+
+deploy_to_prod_api:
+    stage: deploy
+    environment:
+        name: production
+    needs: 
+        - build_image_prod_api
+    rules:
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "production" && 
+            ($PROJECT_TYPE == "api" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $PROD_RUNNER_TAG
+    script:
+        # Uncomment for Debugging
+        # - set -x
+
+        # Check if the container exists before attempting to stop and remove it
+        - |
+          if docker ps -a --format '{{.Names}}' | grep -Eq "^$DOCKER_CONTAINER_NAME_API$"; then
+              docker stop $DOCKER_CONTAINER_NAME_API
+              docker rm $DOCKER_CONTAINER_NAME_API
+          fi
+        - |
+          docker run -d \
+          -e ASPNETCORE_ENVIRONMENT=Production \
+          -e OpenAi__ApiKey=$OPENAI_APIKEY_PROD \
+          -e ConnectionStrings__Database=$CONNECTION_STRING_PROD \
+          -v $PROD_HOST_UPLOADS_PATH:$CONTAINER_MOUNT_PATH \
+          --name $DOCKER_CONTAINER_NAME_API \
+          --network host \
+          $DOCKER_IMAGE_NAME_API
+
+        # Wait for a few seconds to let the container start
+        - |
+          echo "Waiting for container to start..."
+          sleep 10
+
+        # Check the container state
+        - |
+          container_state=$(docker inspect -f '{{.State.Status}}' $DOCKER_CONTAINER_NAME_API)
+          if [ "$container_state" != "running" ]; then
+              echo -e "Container failed to start. Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_API
+              exit 1
+          else
+              echo -e "Container started successfully! Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_API
+          fi
+
+build_image_prod_dashboard:
+    stage: build
+    environment:
+        name: production
+    rules:
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "production" && 
+            ($PROJECT_TYPE == "dashboard" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $PROD_RUNNER_TAG
+    script:
+        - |
+          docker build \
+          --build-arg NEXT_PUBLIC_API_URL=$PROD_API_URL \
+          -t $DOCKER_IMAGE_NAME_DASHBOARD \
+          -f $DOCKERFILE_PATH_DASHBOARD .
+
+deploy_to_prod_dashboard:
+    stage: deploy 
+    environment:
+        name: production
+        url: $STAGING_DASHBOARD_URL
+    needs: 
+        - build_image_prod_dashboard
+    rules:
+        # Manual trigger
+        - if: '$CI_PIPELINE_SOURCE == "web" && 
+            $ENVIRONMENT == "production" && 
+            ($PROJECT_TYPE == "dashboard" || $PROJECT_TYPE == "all")'
+          when: on_success
+    tags:
+        - $PROD_RUNNER_TAG
+    script:
+        # Uncomment for Debugging
+        # - set x
+        # Check if the container exists before attempting to stop and remove it
+        - |
+          if docker ps -a --format '{{.Names}}' | grep -Eq "^$DOCKER_CONTAINER_NAME_DASHBOARD$"; then
+              docker stop $DOCKER_CONTAINER_NAME_DASHBOARD
+              docker rm $DOCKER_CONTAINER_NAME_DASHBOARD
+          fi
+        - |
+          docker run -d \
+          --name $DOCKER_CONTAINER_NAME_DASHBOARD \
+          --network host \
+          $DOCKER_IMAGE_NAME_DASHBOARD
+
+        # Wait for a few seconds to let the container start
+        - |
+          echo "Waiting for container to start..."
+          sleep 2
+
+        # Check the container state
+        - |
+          container_state=$(docker inspect -f '{{.State.Status}}' $DOCKER_CONTAINER_NAME_DASHBOARD)
+          if [ "$container_state" != "running" ]; then
+              echo -e "Container failed to start. Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_DASHBOARD
+              exit 1
+          else
+              echo -e "Container started successfully! Logs:\n"
+              docker logs $DOCKER_CONTAINER_NAME_DASHBOARD
+          fi
+
+remove_unused_images_prod:
+    stage: cleanup
+    environment:
+        name: production
+    rules:
+        - if: '$ENVIRONMENT == "production"'
+          when: always
+    tags:
+        - $PROD_RUNNER_TAG
+    script:
+        - echo "Removing unused Docker images..."
+        - result=$(docker image prune -af)
+        - echo "$result"

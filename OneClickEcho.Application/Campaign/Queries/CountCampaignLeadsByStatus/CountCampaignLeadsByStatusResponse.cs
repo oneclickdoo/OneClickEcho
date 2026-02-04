@@ -1,0 +1,5 @@
+﻿using OneClickEcho.Domain.CampaignLeadAggregate.Repositories;
+
+namespace OneClickEcho.Application.Campaign.Queries.CountCampaignLeadsByStatus;
+
+public record CountCampaignLeadsByStatusResponse(CountCampaignLeadsByStatusDto CountCampaignLeadsByStatusDto);

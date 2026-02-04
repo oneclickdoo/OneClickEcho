@@ -1,0 +1,61 @@
+@OneClickEcho_HostAddress = http://localhost:5000
+
+### Create Lead Collection
+POST {{OneClickEcho_HostAddress}}/api/LeadCollection
+Content-Type: application/json
+
+{
+  "collectionName": "Sample Collection"
+}
+
+> {%
+    client.global.set("LeadCollectionId", response.body.id);
+%}
+
+### Get Lead Collection
+GET {{OneClickEcho_HostAddress}}/api/LeadCollection/{{LeadCollectionId}}
+Accept: application/json
+
+### Update Lead Collection
+PUT {{OneClickEcho_HostAddress}}/api/LeadCollection
+Content-Type: application/json
+
+{
+  "LeadCollectionId": "{{LeadCollectionId}}",
+  "CollectionName": "Updated Sample Collection"
+}
+
+### Delete Lead Collection
+DELETE {{OneClickEcho_HostAddress}}/api/LeadCollection/{{LeadCollectionId}}
+
+### List Lead Collections
+GET {{OneClickEcho_HostAddress}}/api/LeadCollection
+Accept: application/json
+
+### Assign Leads to Collection
+POST {{OneClickEcho_HostAddress}}/api/LeadCollection/AssignLeads
+Content-Type: application/json
+
+{
+  "LeadCollectionId": "{{LeadCollectionId}}",
+  "Leads": [{
+    "LeadId": "a96ef241-f9c3-4bd3-af15-6c2d30283694"
+  }]
+}
+
+### Upload And Assign Leads to Collection
+POST {{OneClickEcho_HostAddress}}/api/LeadCollection/UploadAndAssignLeads
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="LeadCollectionId"
+
+{{LeadCollectionId}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="Data"; filename="leads.csv"
+Content-Type: text/csv
+
+PhoneNumber,FirstName,LastName,Gender,Email,DateOfBirth,City,State,Country
+123-456-7899,John,Doe,,john.doe@example.com,,,,
+098-765-4321,Jane,Smith,,jane.smith@example.com,,,,
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
