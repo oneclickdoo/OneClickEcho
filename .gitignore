@@ -38,3 +38,6 @@ msbuild.wrn
 
 # Certificates
 /certificates/*
+OneClickEcho.Api/appsettings.Development.json
+OneClickEcho.Api/appsettings.Production.json
+OneClickEcho.Api/appsettings.Staging.json
