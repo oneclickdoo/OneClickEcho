@@ -1,0 +1,1 @@
+OneClickEcho.Api/appsettings.Development.json OneClickEcho.Api/appsettings.Production.json OneClickEcho.Api/appsettings.Staging.json add .gitignoregit commit -m "Ignore environment appsettings"
