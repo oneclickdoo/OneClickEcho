@@ -1,0 +1,49 @@
+# Use the official .NET SDK base image for build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build 
+
+# Set the working directory within the container to /src
+WORKDIR /src
+
+# Copy the project files (csproj) for each layer into the container
+COPY ["OneClickEcho.Application/OneClickEcho.Application.csproj", "/src/OneClickEcho.Application/"]
+COPY ["OneClickEcho.Domain/OneClickEcho.Domain.csproj", "/src/OneClickEcho.Domain/"]
+COPY ["OneClickEcho.Infrastructure/OneClickEcho.Infrastructure.csproj", "/src/OneClickEcho.Infrastructure/"]
+COPY ["OneClickEcho.Persistence/OneClickEcho.Persistence.csproj", "/src/OneClickEcho.Persistence/"]
+COPY ["OneClickEcho.Api/OneClickEcho.Api.csproj", "/src/OneClickEcho.Api/"]
+
+# Restores dependencies for the entire solution
+RUN dotnet restore "/src/OneClickEcho.Api/OneClickEcho.Api.csproj"
+
+# Copy the entire project source code into the container
+COPY . .
+
+# Change the working directory to the API project
+WORKDIR "/src/OneClickEcho.Api"
+
+# Build the Application
+RUN dotnet build "OneClickEcho.Api.csproj" -c Release -o /app/build
+
+# Create a Publish stage
+FROM build AS publish
+
+# Publish the application to the /app/publish directory
+RUN dotnet publish "OneClickEcho.Api.csproj" -c Release -o /app/publish --no-restore
+
+# Create final Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+# Set launch option profile (environment variables) that will be used
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://localhost:3901/
+
+# Set Working Directory
+WORKDIR /app
+
+# Copy the published application from the 'Publish' stage to the Runtime stage
+COPY --from=publish /app/publish .
+
+# Path to the folder to be mounted on the host machine
+VOLUME app/UploadedFiles
+
+# Specify the entry point for the container, which is the command to run the application
+ENTRYPOINT [ "dotnet", "OneClickEcho.Api.dll" ]

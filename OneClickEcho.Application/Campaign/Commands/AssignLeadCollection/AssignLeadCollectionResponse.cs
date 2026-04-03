@@ -1,0 +1,3 @@
+﻿namespace OneClickEcho.Application.Campaign.Commands.AssignLeadCollection;
+
+public record AssignLeadCollectionResponse;

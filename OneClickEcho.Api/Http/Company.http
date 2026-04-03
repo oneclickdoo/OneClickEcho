@@ -1,0 +1,30 @@
+@OneClickEcho_HostAddress = https://localhost:5100
+
+### Create Company
+POST {{OneClickEcho_HostAddress}}/api/Company
+Content-Type: application/json
+Authorization: Bearer {{AccessToken}}
+
+{
+  "companyName": "Testing HTTP"
+}
+
+### Update Company
+PUT {{OneClickEcho_HostAddress}}/api/Company
+Content-Type: application/json
+Authorization: Bearer {{AccessToken}}
+
+{
+  "companyId": "e8cab7e1-e389-48d1-9aa5-e85489418c48",
+  "name": "Testing HTTP Update"
+}
+
+### Delete Company
+DELETE {{OneClickEcho_HostAddress}}/api/Company/5f72499b-cdc7-4183-a7b9-8a909bb4e044
+Accept: application/json
+Authorization: Bearer {{AccessToken}}
+
+### Get Analytics
+GET {{OneClickEcho_HostAddress}}/api/Company/a0538b58-07e5-4b59-97fd-f349511d5a75/Analytics
+    ?StartDate=2025-01-01T23%3A00%3A00.000Z&EndDate=2025-01-31T23%3A00%3A00.000Z
+Authorization: Bearer {{AccessToken}}

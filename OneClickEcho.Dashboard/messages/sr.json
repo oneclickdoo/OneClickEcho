@@ -1,0 +1,950 @@
+{
+  "Login": {
+    "title": "Prijavite se na OneClick Echo",
+    "email": "Email",
+    "password": "Lozinka",
+    "signIn": "Prijava",
+    "orWith": "ili preko",
+    "google": "Prijava putem Google-a",
+    "unauthorizedTitle": "Neovlašćen pristup",
+    "unauthorizedDesc": "Podaci nisu tačni.",
+    "tosPrefix": "Prijavom prihvatate naše",
+    "terms": "uslove korišćenja",
+    "and": "i",
+    "privacy": "politiku privatnosti"
+  },
+  "Sidebar": {
+    "admin": "Administrator",
+    "coreNavigation": "Osnovna navigacija",
+    "coreMobileNavigation": "Mobilna navigacija",
+    "overview": "Pregled",
+    "campaigns": "Kampanje",
+    "leadLists": "Liste leadova",
+    "leads": "Leadovi",
+    "apiMessages": "API poruke",
+    "companies": "Kompanije",
+    "shortcuts": "Prečice",
+    "shortcutsAria": "Prečice",
+    "openSidebar": "Otvori meni",
+    "mobileTitle": "Meni",
+    "workspaces": "Radni prostori",
+    "member": "Član"
+  },
+  "Overview": {
+    "title": "Pregled",
+    "companyAnalytics": "Analitika kompanije",
+    "messagesSentViber": "Poslate poruke (Viber)",
+    "messagesSentSms": "Poslate poruke (SMS)",
+    "viberReactions": "Viber reakcije",
+    "contacts": "Kontakti",
+    "uniqueContacts": "Jedinstveni kontakti",
+    "viberCost": "Viber trošak",
+    "smsCost": "SMS trošak",
+    "unsubscribed": "Odjavljeni",
+    "numberOfCampaigns": "Broj kampanja",
+    "numberOfTests": "Broj testova",
+    "numberOfApiMessages": "Broj API poruka",
+    "delivery": "Isporuka",
+    "forPeriod": "za period",
+    "clickedOf": "{clicked} od {delivered} kliknulo",
+    "pleaseSelectDateRange": "Izaberite opseg datuma da biste videli analitiku.",
+    "loading": "Učitavanje...",
+    "newCampaign": "Nova kampanja",
+    "createCampaignTitle": "Kreiraj novu kampanju",
+    "createCampaignDescription": "Da bi kreirala novu kampanju, unesi naziv kampanje. Ostala podešavanja će postati dostupna nakon kreiranja kampanje.",
+    "campaignNamePlaceholder": "Unesi naziv kampanje",
+    "goBack": "Nazad",
+    "create": "Kreiraj",
+    "errors": {
+      "unexpected": "Došlo je do neočekivane greške."
+    }
+  },
+  "Common": {
+    "campaignSendingType": {
+      "immediate": "Odmah",
+      "scheduledDateTime": "Zakazano (datum i vreme)",
+      "byDateOfBirth": "Po datumu rođenja"
+    },
+    "loading": "Učitavanje...",
+    "adminDashboard": "Admin panel",
+    "appName": "OneClick Echo",
+    "save": "Sačuvaj",
+    "cancel": "Otkaži",
+    "close": "Zatvori",
+    "search": "Pretraga",
+    "filter": "Filter",
+    "clearFilters": "Očisti filtere",
+    "from": "Od",
+    "to": "Do",
+    "yes": "Da",
+    "no": "Ne",
+    "selected": "izabrano",
+    "edit": "Izmeni",
+    "resetFilters": "Resetuj filtere",
+    "delete": "Obriši",
+    "select": "Izaberi",
+    "selectCondition": "Izaberi uslov",
+    "amountPlaceholder": "0",
+    "filterBy": "Filtriraj po {title}",
+    "apply": "Primeni",
+    "reset": "Resetuj",
+    "view": "Prikaz",
+    "displayProperties": "Prikazane kolone",
+    "reorder": "Promeni redosled: {label}",
+    "movedColumnAnnouncement": "Pomerili ste {label} sa pozicije {from} na poziciju {to} od ukupno {total}.",
+    "and": "i",
+    "moreCount": "još {count}",
+    "actions": "Akcije",
+    "status": "Status",
+    "createdAt": "Kreirano",
+    "updatedAt": "Ažurirano",
+    "searchBy": "Pretraži po {field}...",
+    "noData": "Nema podataka.",
+    "error": "Došlo je do greske...",
+    "unknown": "Nepoznato",
+    "pagination": {
+      "firstPage": "Prva strana",
+      "previousPage": "Prethodna strana",
+      "nextPage": "Sledeća strana",
+      "lastPage": "Poslednja strana",
+      "showing": "Prikazano",
+      "of": "od",
+      "selectedCount": "Izabrano: {selected} od {total} red(ova)."
+    },
+    "table": {
+      "noResults": "Nema rezultata."
+    },
+    "shortcuts": {
+      "remove": "Ukloni prečicu"
+    },
+    "theme": "Tema",
+    "light": "Svetla",
+    "dark": "Tamna",
+    "system": "Sistemska",
+    "switchToLightMode": "Prebaci na svetlu temu",
+    "switchToDarkMode": "Prebaci na tamnu temu",
+    "switchToSystemMode": "Prebaci na sistemsku temu",
+    "settings": "Podešavanja",
+    "presentation": "Prezentacija",
+    "signOut": "Odjavi se",
+    "openSidebar": "Otvori meni",
+    "coreMobileNavigation": "Glavna mobilna navigacija",
+    "shortcutsAria": "Prečice",
+    "addNewWorkspace": "Dodaj novi workspace",
+    "freePlanWorkspaceLimit": "U besplatnom paketu možeš dodati do 10 workspace-ova.",
+    "workspaceName": "Naziv workspace-a",
+    "workspaceNamePlaceholder": "moj_workspace",
+    "starterKit": "Početni šablon",
+    "starterKitEmpty": "Nijedan - prazan workspace",
+    "starterKitCommerceAnalytics": "Commerce analitika",
+    "starterKitProductAnalytics": "Product analitika",
+    "databaseRegion": "Region baze",
+    "databaseRegionHint": "Za najbolje performanse izaberi region najbliži tvojoj aplikaciji.",
+    "databaseConfiguration": "Konfiguracija baze",
+    "recommended": "Preporučeno",
+    "goBack": "Nazad",
+    "addWorkspace": "Dodaj workspace",
+    "coreNavigation": "Glavna navigacija",
+    "userSettings": "Korisnička podešavanja",
+    "showingRange": "Prikaz {from}-{to} od {total}",
+    "previous": "Prethodna",
+    "next": "Sledeća",
+    "firstPage": "Prva strana",
+    "lastPage": "Poslednja strana",
+    "success": "Uspešno",
+    "export": "Izvoz",
+    "campaignStatus": {
+      "draft": "Nacrt",
+      "queued": "Na čekanju",
+      "inProgress": "U toku",
+      "done": "Završeno",
+      "failed": "Neuspešno"
+    },
+    "leadGender": {
+      "male": "Muški",
+      "female": "Ženski"
+    },
+    "somethingWentWrong": "Došlo je do greške.",
+    "lead": {
+      "updateDetails": "Ažuriraj podatke o lead-u",
+      "firstName": "Ime",
+      "lastName": "Prezime",
+      "gender": "Pol",
+      "dateOfBirth": "Datum rođenja",
+      "email": "Email",
+      "city": "Grad",
+      "state": "Region/Država",
+      "country": "Zemlja",
+      "blacklisted": "Na blacklisti",
+      "phoneNumber": "Broj telefona",
+      "searchPhonePlaceholder": "telefon",
+      "newLead": "Novi lead",
+      "createAndAssignTitle": "Kreiraj i dodeli lead",
+      "createAndAssignHint": "Da bi kreirala i dodelila novi lead, unesi broj telefona. Ostala podešavanja će biti dostupna nakon kreiranja lead-a.",
+      "enterPhonePlaceholder": "Unesi broj telefona lead-a",
+      "createAndAssign": "Kreiraj i dodeli",
+      "uploadCsv": "Otpremi CSV",
+      "uploadMoreLeads": "Otpremi još lead-ova",
+      "exportLeads": "Izvezi lead-ove",
+      "loadingLeads": "Učitavanje lead-ova..."
+    },
+    "common": {
+      "select": "Izaberi",
+      "goBack": "Nazad",
+      "delete": "Obriši",
+      "save": "Sačuvaj",
+      "edit": "Izmeni",
+      "reset": "Resetuj",
+      "add": "Dodaj",
+      "create": "Kreiraj"
+    },
+    "toasts": {
+      "success": "Uspešno",
+      "error": "Greška",
+      "leadCreatedAssigned": "Lead je kreiran i dodeljen.",
+      "leadsUploaded": "Lead-ovi su otpremljeni.",
+      "companyLeadsExported": "Lead-ovi kompanije su izvezeni.",
+      "leadListSaved": "Lista lead-ova je sačuvana.",
+      "leadListDeleted": "Lista lead-ova je obrisana.",
+      "companySaved": "Kompanija je sačuvana.",
+      "companyDeleted": "Kompanija je obrisana.",
+      "senderSaved": "Pošiljalac je sačuvan.",
+      "senderDeleted": "Pošiljalac je obrisan.",
+      "userAssigned": "Korisnik je dodeljen.",
+      "userCreated": "Korisnik je kreiran."
+    },
+    "errors": {
+      "unexpected": "Došlo je do neočekivane greške."
+    },
+    "collectionSettings": {
+      "mainInformationTitle": "Glavne informacije",
+      "mainInformationDescription": "Upravljaj osnovnim podacima liste lead-ova.",
+      "nameLabel": "Naziv",
+      "saveLeadList": "Sačuvaj listu",
+      "dangerZoneTitle": "Zona rizika",
+      "dangerZoneDescription": "Upravljaj opštim podešavanjima. Kontaktiraj sistem administratora za više informacija.",
+      "deleteLeadListTitle": "Obriši listu lead-ova",
+      "deleteLeadListWarning": "Lista lead-ova će biti trajno obrisana."
+    },
+    "companyUsersModal": {
+      "updateUser": "Izmena korisnika",
+      "newPassword": "Nova lozinka",
+      "enablePasswordEditing": "Omogući izmenu lozinke.",
+      "enableUserDelete": "Omogući brisanje korisnika."
+    },
+    "usersTable": {
+      "email": "Email",
+      "userId": "ID korisnika"
+    },
+    "companyGeneral": {
+      "mainInformationTitle": "Glavne informacije",
+      "mainInformationDescription": "Upravljaj osnovnim podacima kompanije.",
+      "nameLabel": "Naziv",
+      "pricesTitle": "Cene",
+      "viberPriceLabel": "Viber cena po poruci (€)",
+      "smsPriceLabel": "SMS cena po poruci (€)",
+      "smsCredentialsTitle": "SMS kredencijali",
+      "smsUsernameLabel": "SMS korisničko ime",
+      "smsPasswordLabel": "SMS lozinka",
+      "apiPasswordLabel": "API lozinka",
+      "saveCompany": "Sačuvaj kompaniju",
+      "dangerZoneTitle": "Zona rizika",
+      "dangerZoneDescription": "Upravljaj opštim podešavanjima. Kontaktiraj sistem administratora za više informacija.",
+      "deleteCompanyTitle": "Obriši kompaniju",
+      "deleteCompanyWarning": "Brisanjem kompanije obrisaće se sve kampanje povezane sa njom."
+    },
+    "companySenders": {
+      "viberTitle": "Viber pošiljaoci",
+      "viberDescription": "Upravljaj Viber pošiljaocima.",
+      "smsTitle": "SMS pošiljaoci",
+      "smsDescription": "Upravljaj SMS pošiljaocima.",
+      "nameLabel": "Naziv"
+    },
+    "companyUsers": {
+      "newUserButton": "Novi korisnik",
+      "newUserTitle": "Kreiraj novog korisnika",
+      "newUserHint": "Unesi email korisnika, a lozinka će biti automatski generisana.",
+      "emailPlaceholder": "Unesi email korisnika",
+      "generatedPassword": "Lozinka:",
+      "copyAndClose": "Kopiraj i zatvori",
+      "assignUserButton": "Dodeli korisnika",
+      "assignUserTitle": "Dodeli korisnika",
+      "assignUserHint": "Dodeli korisnika kompaniji na osnovu email adrese.",
+      "assign": "Dodeli",
+      "noUsersFound": "Nema rezultata",
+      "loading": "Učitavanje..."
+    }
+  },
+  "Auth": {
+    "logout": "Odjava",
+    "sessionExpiredTitle": "Sesija je istekla",
+    "sessionExpiredDesc": "Prijavite se ponovo."
+  },
+  "Toasts": {
+    "successTitle": "Uspešno",
+    "errorTitle": "Greška",
+    "warningTitle": "Upozorenje",
+    "infoTitle": "Informacija",
+    "savedDesc": "Izmene su sačuvane.",
+    "deletedDesc": "Stavka je obrisana."
+  },
+  "Errors": {
+    "unknown": "Došlo je do greške.",
+    "network": "Greška u mreži. Pokušajte ponovo.",
+    "unauthorized": "Niste autorizovani.",
+    "forbidden": "Nemate dozvolu za ovu akciju.",
+    "notFound": "Nije pronađeno.",
+    "validation": "Proverite polja u formi.",
+    "networkResponseNotOk": "Mrežni odgovor nije bio ispravan."
+  },
+  "Validation": {
+    "required": "Ovo polje je obavezno.",
+    "invalidEmail": "Unesite ispravan email."
+  },
+  "Campaigns": {
+    "title": "Kampanje",
+    "newCampaign": "Nova kampanja",
+    "createCampaignTitle": "Kreiraj novu kampanju",
+    "createCampaignDescription": "Da bi kreirala novu kampanju, unesi naziv kampanje. Ostala podešavanja će postati dostupna nakon kreiranja kampanje.",
+    "campaignNamePlaceholder": "Unesi naziv kampanje",
+    "goBack": "Nazad",
+    "create": "Kreiraj",
+    "errors": {
+      "unexpected": "Došlo je do neočekivane greške."
+    },
+    "columns": {
+      "name": "Naziv",
+      "status": "Status",
+      "createdAt": "Kreirano",
+      "sentAt": "Poslato",
+      "actions": "Akcije"
+    },
+    "filters": {
+      "status": "Status",
+      "createdAt": "Kreirano",
+      "sentAt": "Poslato"
+    },
+    "search": {
+      "fieldName": "nazivu"
+    },
+    "actions": {
+      "duplicate": "Dupliraj",
+      "delete": "Obriši"
+    },
+    "deleteDialog": {
+      "title": "Brisanje kampanje",
+      "description": "Da li ste sigurni da želite da obrišete kampanju \"{name}\"? Ova akcija ne može da se opozove.",
+      "cancel": "Otkaži",
+      "confirm": "Obriši",
+      "deleting": "Brisanje..."
+    },
+    "toasts": {
+      "deleteSuccessTitle": "Kampanja je obrisana",
+      "deleteSuccessDescription": "Kampanja je uspešno obrisana.",
+      "deleteErrorTitle": "Brisanje nije uspelo",
+      "deleteErrorDescription": "Kampanja nije mogla da bude obrisana."
+    },
+    "common": {
+      "unknown": "Nepoznato"
+    },
+    "leadGender": {
+      "male": "Muški",
+      "female": "Ženski"
+    }
+  },
+  "CampaignPage": {
+    "shortcutTitle": "Kampanja ({name})",
+    "pageTitle": "Kampanja ({name})",
+    "statusUnknown": "Nepoznato",
+    "buttons": {
+      "end": "Završi kampanju",
+      "pause": "Pauziraj kampanju",
+      "saveLaunch": "Sačuvaj i pokreni kampanju"
+    },
+    "tabs": {
+      "messaging": "Poruke",
+      "leadLists": "Liste kontakata",
+      "test": "Test",
+      "analytics": "Analitika",
+      "settings": "Podešavanja"
+    },
+    "toasts": {
+      "errorTitle": "Greška",
+      "successTitle": "Uspešno",
+      "launchSuccess": "Kampanja je pokrenuta.",
+      "pauseSuccess": "Kampanja je pauzirana.",
+      "endSuccess": "Kampanja je završena.",
+      "viberOutOfHours": "Nije moguće pokrenuti Viber kampanju između 20:00 i 09:00."
+    }
+  },
+  "SingleCampaign": {
+    "Tables": {
+      "CampaignCollections": {
+        "name": "Naziv",
+        "count": "Broj",
+        "createdAt": "Kreirano",
+        "unassign": "Ukloni dodelu"
+      },
+      "CampaignLeads": {
+        "firstName": "Ime",
+        "lastName": "Prezime",
+        "phone": "Broj telefona",
+        "phoneNumber": "Broj telefona",
+        "searchPhonePlaceholder": "Pretraži po broju telefona...",
+        "email": "Email",
+        "gender": "Pol",
+        "dob": "Datum rodjenja",
+        "city": "Grad",
+        "country": "Drzava",
+        "status": "Status",
+        "channel": "Kanal",
+        "sentAt": "Poslato",
+        "deliveredAt": "Isporučeno",
+        "failedAt": "Neuspešno",
+        "clickedAt": "Kliknuto",
+        "unsubscribedAt": "Odjava",
+        "details": "Detalji",
+        "blacklisted": "Crna lista",
+        "edit": "Izmeni",
+        "resetFilters": "Resetuj filtere",
+        "actions": {
+          "assignToCollection": "Dodeli kolekciji",
+          "duplicate": "Dupliraj",
+          "delete": "Obriši",
+          "deleteConfirm": "Da li ste sigurni da želite da obrišete ovu kampanju?"
+        }
+      },
+      "CampaignLeadsAssign": {
+        "name": "Naziv",
+        "createdAt": "Kreirano",
+        "searchNamePlaceholder": "Pretraga po nazivu...",
+        "resetFilters": "Resetuj filtere",
+        "assign": "Dodeli"
+      }
+    },
+    "Modals": {
+      "AddToCollectionFromStatus": {
+        "trigger": "Dodaj u kolekciju",
+        "title": "Dodaj u kolekciju",
+        "description": "Izaberite kolekciju u koju želite da dodate filtrirane leadove.",
+        "placeholder": "Izaberite kolekciju...",
+        "assign": "Dodaj",
+        "goBack": "Otkaži",
+        "toastSuccessTitle": "Dodato",
+        "toastSuccessDescription": "Leadovi su dodati u kolekciju.",
+        "toastErrorTitle": "Greška",
+        "toastErrorDescription": "Dodavanje leadova u kolekciju nije uspelo. Pokušajte ponovo."
+      },
+      "AssignCollection": {
+        "trigger": "Dodeli kolekciju",
+        "title": "Dodela kolekciji",
+        "description": "Izaberite kolekciju kojoj želite da dodelite izabrane leadove.",
+        "placeholder": "Izaberite kolekciju...",
+        "assign": "Dodeli",
+        "goBack": "Otkaži"
+      },
+      "CampaignLeadsTable": {
+        "subtitle": "Izmenite podatke leada.",
+        "firstName": "Ime",
+        "lastName": "Prezime",
+        "email": "Email",
+        "gender": "Pol",
+        "dateOfBirth": "Datum rođenja",
+        "country": "Država",
+        "state": "Region",
+        "city": "Grad",
+        "blacklisted": "Blacklistovan",
+        "selectPlaceholder": "Izaberite...",
+        "save": "Sačuvaj",
+        "delete": "Obriši",
+        "goBack": "Zatvori",
+        "toastSaveSuccessTitle": "Sačuvano",
+        "toastSaveSuccessDescription": "Lead je ažuriran.",
+        "toastSaveErrorTitle": "Greška",
+        "toastSaveErrorDescription": "Čuvanje izmena nije uspelo. Pokušajte ponovo.",
+        "toastDeleteSuccessTitle": "Obrisano",
+        "toastDeleteSuccessDescription": "Lead je obrisan.",
+        "toastDeleteErrorTitle": "Greška",
+        "toastDeleteErrorDescription": "Brisanje leada nije uspelo. Pokušajte ponovo."
+      },
+      "CreateCollectionFromStatus": {
+        "trigger": "Kreiraj kolekciju",
+        "title": "Kreiraj kolekciju",
+        "description": "Kreirajte novu kolekciju na osnovu trenutnog filtera.",
+        "placeholder": "Unesite naziv kolekcije",
+        "create": "Kreiraj",
+        "goBack": "Otkaži",
+        "validationRequired": "Naziv kolekcije je obavezan.",
+        "toastSuccessTitle": "Kreirano",
+        "toastSuccessDescription": "Kolekcija je kreirana.",
+        "toastErrorTitle": "Greška",
+        "errorUnexpected": "Nešto je pošlo naopako. Pokušajte ponovo."
+      }
+    },
+    "Tabs": {
+      "CampaignMessaging": {
+        "general": {
+          "title": "Poruke",
+          "subtitle": "Podesite sadržaj poruke, kanal i vreme slanja."
+        },
+        "fields": {
+          "sendingType": {
+            "label": "Tip slanja"
+          },
+          "sendingDatetime": {
+            "label": "Datum i vreme slanja"
+          },
+          "channel": {
+            "label": "Kanal",
+            "viber": "Viber",
+            "fallbackToSms": "Fallback na SMS",
+            "sms": "SMS"
+          }
+        },
+        "warnings": {
+          "viberWorkingHours": "Viber poruke se isporučuju samo u radno vreme."
+        },
+        "viber": {
+          "title": "Viber poruka",
+          "subtitle": "Napišite Viber poruku i opciono dodajte rich media.",
+          "fields": {
+            "sender": "Viber pošiljalac",
+            "message": "Poruka",
+            "media": "Medija",
+            "thumbnail": "Thumbnail",
+            "transactional": "Transakciona poruka",
+            "enableReplies": "Omogući odgovore",
+            "validity": "Period važenja (sekunde)",
+            "buttonText": "Tekst dugmeta",
+            "buttonUrl": "URL dugmeta",
+            "characters": "Karakteri"
+          },
+          "tooltips": {
+            "transactional": "Transakcione poruke se koriste za servisna obaveštenja i mogu imati drugačija pravila isporuke.",
+            "enableReplies": "Omogućava primaocima da odgovore na ovu Viber poruku.",
+            "formattingHint": "Viber koristi markdown: *podebljano*, _kurziv_, ~precrtano~. HTML oznake (<b>, <i>) nisu podržane u tekstu poruke. Posle zatvarajućeg znaka mora razmak pre sledeće reči (npr. *Zdravo* tamo).",
+            "underlineNotSupported": "Podvučen tekst nije podržan u Viber poslovnim porukama (zvanični API: podebljano, kurziv, precrtano, monospace)."
+          },
+          "formatting": {
+            "previewLabel": "Pregled (približan)",
+            "strikethroughTitle": "Precrtano"
+          },
+          "actions": {
+            "selectExistingMedia": "Izaberi postojeću mediju",
+            "selectImageTitle": "Izaberi sliku",
+            "imageAlt": "Izabrana slika"
+          }
+        },
+        "sms": {
+          "title": "SMS poruka",
+          "subtitle": "Napišite sadržaj SMS poruke za SMS kampanje ili Viber fallback.",
+          "fields": {
+            "sender": "SMS pošiljalac",
+            "message": "Poruka",
+            "characters": "Karakteri"
+          }
+        },
+        "actions": {
+          "save": "Sačuvaj"
+        },
+        "toasts": {
+          "saved": "Podešavanja poruka su sačuvana."
+        }
+      },
+      "CampaignSettings": {
+        "main": {
+          "title": "Glavna podešavanja",
+          "subtitle": "Izmenite osnovne informacije o kampanji.",
+          "nameLabel": "Naziv kampanje"
+        },
+        "actions": {
+          "save": "Sačuvaj",
+          "delete": "Obriši"
+        },
+        "danger": {
+          "title": "Zona opasnosti",
+          "subtitle": "Akcije u ovoj sekciji su trajne i ne mogu se poništiti.",
+          "deleteTitle": "Obriši kampanju",
+          "deleteDescription": "Ovo će trajno obrisati kampanju i sve povezane podatke."
+        },
+        "toasts": {
+          "savedTitle": "Sačuvano",
+          "savedDescription": "Podešavanja kampanje su sačuvana.",
+          "deletedTitle": "Obrisano",
+          "deletedDescription": "Kampanja je obrisana."
+        }
+      },
+      "CampaignTest": {
+        "title": "Test poruka",
+        "subtitle": "Pošaljite test poruku da proverite podešavanja kampanje.",
+        "actions": {
+          "send": "Pošalji"
+        },
+        "toasts": {
+          "errorTitle": "Greška",
+          "invalidPhoneTitle": "Neispravan broj telefona",
+          "invalidPhoneDescription": "Unesite ispravan broj telefona (npr. +381... ).",
+          "phoneBlockedDescription": "Ovaj broj je na crnoj listi ili je odjavljen i ne može da prima test poruke.",
+          "successTitle": "Poslato",
+          "successDescription": "Test poruka je poslata.",
+          "unknownTitle": "Nešto je pošlo naopako",
+          "unknownDescription": "Pokušajte ponovo kasnije."
+        }
+      },
+      "CampaignAnalytics": {
+        "export": {
+          "successDescription": "Leadovi su uspešno izvezeni.",
+          "errorDescription": "Izvoz leadova nije uspeo. Pokušajte ponovo."
+        },
+        "notLaunchedYet": "Analitika će biti dostupna kada kampanja bude pokrenuta.",
+        "cards": {
+          "contacts": {
+            "title": "Kontakti",
+            "subtitle": "Ukupan broj kontakata u kampanji"
+          },
+          "messagesSent": {
+            "title": "Viber primaoci (kampanja)",
+            "subtitle": "Poslate poruke (bez odgovora)",
+            "deliveredToUser": "Dostavljeno korisniku: {count}",
+            "undelivered": "Neisporučeno: {count}",
+            "notSentToViber": "Neposlato ka Comtrade-u (viber_status = 0): {count}"
+          },
+          "reaction": {
+            "title": "Reakcija",
+            "clicks": "Klikovi",
+            "unsubscribed": "Odjave"
+          }
+        },
+        "funnel": {
+          "total": "Ukupno"
+        },
+        "viber": {
+          "mutuallyExclusiveHint": "Viber i SMS statusi se međusobno isključuju. Izaberite jedan prilikom kreiranja ili dodavanja kolekcije."
+        }
+      },
+      "CampaignCollections": {
+        "totalLeads": "Ukupno leadova"
+      }
+    }
+  },
+  "LeadLists": {
+    "title": "Liste leadova",
+    "new": "Nova lista leadova",
+    "empty": "Nema lista leadova."
+  },
+  "Leads": {
+    "title": "Leadovi",
+    "new": "Novi lead",
+    "empty": "Nema leadova."
+  },
+  "LeadsPage": {
+    "title": "Kontakti",
+    "buttons": {
+      "export": "Izvezi kontakte",
+      "uploadBlacklist": "Otpremi blacklist"
+    },
+    "downloadExample": "Preuzmi primer CSV fajla",
+    "toasts": {
+      "successTitle": "Uspešno",
+      "errorTitle": "Greška",
+      "exported": "Kontakti kompanije su izvezeni.",
+      "exampleDownloaded": "Primer CSV fajla je preuzet.",
+      "blacklistUploaded": "Blacklist je otpremljen."
+    },
+    "errors": {
+      "networkNotOk": "Greška pri slanju fajla"
+    }
+  },
+  "ApiMessages": {
+    "title": "API poruke",
+    "empty": "Nema API poruka.",
+    "table": {
+      "columns": {
+        "phoneNumber": "Broj telefona",
+        "message": "Poruka",
+        "type": "Tip",
+        "smsFallback": "SMS fallback",
+        "viberStatus": "Viber status",
+        "smsStatus": "SMS status",
+        "createdAt": "Kreirano"
+      },
+      "types": {
+        "viber": "Viber",
+        "sms": "SMS"
+      },
+      "filters": {
+        "phonePlaceholder": "telefonu"
+      }
+    }
+  },
+  "Companies": {
+    "title": "Kompanije",
+    "new": "Nova kompanija",
+    "empty": "Nema kompanija.",
+    "createTitle": "Kreiraj novu kompaniju",
+    "createDescription": "Da bi kreirala novu kompaniju, unesi naziv kompanije. Ostala podešavanja će postati dostupna nakon kreiranja kompanije.",
+    "namePlaceholder": "Unesi naziv kompanije",
+    "goBack": "Nazad",
+    "create": "Kreiraj",
+    "toasts": {
+      "successTitle": "Uspešno",
+      "created": "Kompanija je kreirana."
+    },
+    "errors": {
+      "unexpected": "Došlo je do neočekivane greške."
+    }
+  },
+  "CompanyPage": {
+    "shortcutTitle": "Kompanija ({name})",
+    "title": "Kompanija ({name})",
+    "companyIdLabel": "ID kompanije",
+    "loginAsCompany": "Uloguj se kao kompanija",
+    "tabs": {
+      "general": "Osnovno",
+      "users": "Korisnici",
+      "senders": "Pošiljaoci"
+    }
+  },
+  "CompaniesTable": {
+    "loading": "Nema kompanija",
+    "columns": {
+      "name": "Naziv",
+      "createdAt": "Kreirano"
+    }
+  },
+  "Collections": {
+    "title": "Kolekcije",
+    "new": "Nova",
+    "createTitle": "Kreiraj novu kolekciju",
+    "createDescription": "Kreirajte kolekciju leadova koju možete koristiti u kampanjama.",
+    "namePlaceholder": "Unesite naziv kolekcije",
+    "goBack": "Otkaži",
+    "create": "Kreiraj",
+    "errors": {
+      "unexpected": "Nešto je pošlo naopako. Pokušajte ponovo."
+    },
+    "table": {
+      "name": "Naziv",
+      "createdAt": "Kreirano",
+      "edit": "Izmeni",
+      "searchByNamePlaceholder": " nazivu"
+    }
+  },
+  "CollectionPage": {
+    "shortcutTitle": "Kolekcija: {name}",
+    "pageTitle": "Kolekcija: {name}",
+    "downloadExample": "Preuzmi primer CSV-a",
+    "tabs": {
+      "leads": "Leadovi",
+      "settings": "Podešavanja"
+    },
+    "toasts": {
+      "successTitle": "Uspešno",
+      "exampleDownloaded": "Primer CSV fajla je preuzet."
+    }
+  },
+  "Settings": {
+    "title": "Podešavanja",
+    "language": "Jezik",
+    "english": "Engleski",
+    "serbian": "Srpski"
+  },
+  "SettingsPage": {
+    "title": "Podešavanja",
+    "tabs": {
+      "general": "Osnovno"
+    }
+  },
+  "UserMenu": {
+    "theme": "Tema",
+    "light": "Svetla",
+    "dark": "Tamna",
+    "system": "Sistemska",
+    "settings": "Podešavanja",
+    "presentation": "Prezentacija",
+    "signOut": "Odjava",
+    "aria": {
+      "light": "Prebaci na svetlu temu",
+      "dark": "Prebaci na tamnu temu",
+      "system": "Prebaci na sistemsku temu"
+    }
+  },
+  "Workspaces": {
+    "addNewTitle": "Dodaj novi workspace",
+    "addNewDescription": "U besplatnom planu možeš da dodaš do 10 workspace-ova.",
+    "workspaceNameLabel": "Naziv workspace-a",
+    "workspaceNamePlaceholder": "moj_workspace",
+    "starterKitLabel": "Početni paket",
+    "starterKit": {
+      "none": "Nijedan - prazan workspace",
+      "commerce": "Commerce analitika",
+      "product": "Product analitika"
+    },
+    "databaseRegionLabel": "Region baze",
+    "databaseRegionHelp": "Za najbolje performanse izaberi region najbliži tvojoj aplikaciji.",
+    "databaseConfigLabel": "Konfiguracija baze",
+    "recommended": "Preporučeno",
+    "goBack": "Nazad",
+    "addWorkspace": "Dodaj workspace",
+    "dbPlans": {
+      "base": {
+        "label": "Osnovne performanse",
+        "description": "1/8 vCPU, 1 GB RAM"
+      },
+      "advanced": {
+        "label": "Napredne performanse",
+        "description": "1/4 vCPU, 2 GB RAM"
+      },
+      "turbo": {
+        "label": "Turbo performanse",
+        "description": "1/2 vCPU, 4 GB RAM"
+      }
+    }
+  },
+  "WorkspacesDropdown": {
+    "workspaces": "Radni prostori",
+    "role": {
+      "admin": "Administrator",
+      "member": "Član"
+    }
+  },
+  "UserProfile": {
+    "aria": {
+      "userSettings": "Korisnička podešavanja"
+    }
+  },
+  "AdminAnalytics": {
+    "title": "Admin analitika",
+    "messagesSent": "Poslate poruke",
+    "messagesDelivered": "Isporučene poruke",
+    "financial": "Finansije",
+    "viber": "Viber",
+    "sms": "SMS",
+    "revenue": "Prihod",
+    "profit": "Profit",
+    "period": {
+      "range": "izabrani period",
+      "total": "ukupno"
+    },
+    "selectDateRange": "Izaberi opseg datuma da vidiš analitiku.",
+    "loading": "Učitavanje...",
+    "error": "Greška",
+    "noData": "Nema dostupnih podataka."
+  },
+  "CompanyAnalytics": {
+    "title": "Analitika kompanije",
+    "selectDateRange": "Izaberi opseg datuma da bi video analitiku.",
+    "loading": "Učitavanje...",
+    "error": "Greška",
+    "noData": "Nema dostupnih podataka.",
+    "cards": {
+      "messagesSentViber": "Viber primaoci (kampanje)",
+      "messagesSentSms": "Poslate poruke (SMS)",
+      "viberReactions": "Viber reakcije",
+      "contacts": "Kontakti",
+      "viberCost": "Viber trošak",
+      "smsCost": "SMS trošak",
+      "unsubscribed": "Odjavljeni",
+      "numberOfCampaigns": "Broj kampanja",
+      "numberOfTests": "Broj testova",
+      "numberOfApiMessages": "Broj API poruka"
+    },
+    "labels": {
+      "delivery": "Dostava",
+      "forPeriod": "Za izabrani period",
+      "contacts": "Kontakti",
+      "uniqueContacts": "Jedinstveni kontakti",
+      "clickedOf": "{clicked} kliknulo od {delivered} dostavljenih",
+      "viberDeliveredCount": "Dostavljeno korisniku: {count}",
+      "viberUndeliveredCount": "Neisporučeno: {count}",
+      "viberNotSentCount": "Neposlato ka Comtrade-u (viber_status = 0): {count}"
+    },
+    "charts": {
+      "messagesSent": "Obim poruka",
+      "viberNotSent": "Neposlato (status 0, Comtrade)",
+      "viberSubmitted": "Prosleđeno Comtrade-u (status ≠ 0)",
+      "viberDelivery": "Viber dostava",
+      "viberDeliveryScopeHint": "Samo među porukama poslatim ka Viberu (bez neposlatih).",
+      "smsDelivery": "SMS dostava",
+      "viber": "Viber",
+      "sms": "SMS",
+      "viberDelivered": "Dostavljeno",
+      "viberUndelivered": "Nedostavljeno",
+      "viberExpired": "Isteklo",
+      "viberSeen": "Viđeno",
+      "viberClicked": "Kliknuto",
+      "smsDelivered": "Dostavljeno",
+      "smsFailed": "Neuspešno"
+    }
+  },
+  "Kpi": {
+    "systemReceived": "Primljeno u sistem",
+    "pending": "Na čekanju",
+    "sent": "Poslato",
+    "notSent": "Neposlato (status 0, Comtrade)",
+    "delivered": "Isporučeno",
+    "failed": "Neuspešno",
+    "undelivered": "Neisporučeno",
+    "expired": "Isteklo",
+    "seen": "Viđeno",
+    "clicked": "Kliknuto",
+    "unsubscribed": "Odjavljeno",
+    "blacklisted": "Na crnoj listi",
+    "error": "Greška",
+    "other": "Ostalo"
+  },
+  "CampaignAnalytics": {
+    "notLaunchedYet": "Kampanja još nije pokrenuta.",
+    "export": {
+      "successDescription": "Izabrani leadovi su izvezeni."
+    },
+    "cards": {
+      "contacts": {
+        "title": "Kontakti",
+        "subtitle": "Broj jedinstvenih kontakata"
+      },
+      "messagesSent": {
+        "title": "Poslate poruke",
+        "subtitle": "Ukupan broj poslatih poruka"
+      },
+      "reaction": {
+        "title": "Reakcije",
+        "clicks": "Broj klikova",
+        "unsubscribed": "Odjavljeni"
+      }
+    },
+    "funnel": {
+      "total": "Ukupno"
+    },
+    "viber": {
+      "mutuallyExclusiveHint": "Statusi ispod su međusobno isključivi; prikazuje se samo trenutni status. Na primer, \"Viđeno\" se ne računa pod \"Isporučeno\"."
+    }
+  },
+  "Enums": {
+    "campaignSendingType": {
+      "scheduledDateTime": "Zakazano (datum/vreme)",
+      "byDateOfBirth": "Po datumu rođenja",
+      "immediate": "Odmah"
+    },
+    "campaignStatus": {
+      "draft": "Nacrt",
+      "queued": "Na čekanju",
+      "inProgress": "U toku",
+      "done": "Završeno"
+    },
+    "leadGender": {
+      "male": "Muški",
+      "female": "Ženski"
+    }
+  },
+  "LeadsTable": {
+    "columns": {
+      "phoneNumber": "Telefon",
+      "email": "Email",
+      "firstName": "Ime",
+      "lastName": "Prezime",
+      "createdAt": "Kreirano"
+    },
+    "loading": "Nema leadova"
+  }
+}

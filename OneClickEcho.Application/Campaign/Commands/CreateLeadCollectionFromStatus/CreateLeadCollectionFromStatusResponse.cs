@@ -1,0 +1,3 @@
+﻿namespace OneClickEcho.Application.Campaign.Commands.CreateLeadCollectionFromStatus;
+
+public record CreateLeadCollectionFromStatusResponse(Guid NewLeadCollectionId);

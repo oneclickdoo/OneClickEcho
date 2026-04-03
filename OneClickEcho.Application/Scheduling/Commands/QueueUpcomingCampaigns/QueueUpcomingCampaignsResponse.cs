@@ -1,0 +1,3 @@
+﻿namespace OneClickEcho.Application.Scheduling.Commands.QueueUpcomingCampaigns;
+
+public record QueueUpcomingCampaignsResponse(List<Domain.CampaignAggregate.Campaign> UpcomingCampaigns);

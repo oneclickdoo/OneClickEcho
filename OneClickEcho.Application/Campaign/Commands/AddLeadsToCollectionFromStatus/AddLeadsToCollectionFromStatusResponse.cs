@@ -1,0 +1,3 @@
+﻿namespace OneClickEcho.Application.Campaign.Commands.AddLeadsToCollectionFromStatus;
+
+public record AddLeadsToCollectionFromStatusResponse;

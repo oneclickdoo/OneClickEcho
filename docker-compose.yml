@@ -1,0 +1,32 @@
+# Optional: build both images with repo root as context (analytics JSON must match frontend):
+#   docker compose build api dashboard
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile_Api
+    image: oneclickecho-api:local
+    profiles: ["full"]
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile_Dashboard
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3901}
+    image: oneclickecho-dashboard:local
+    ports:
+      - "3800:3800"
+    profiles: ["full"]
+  oneclickecho-seq:
+    image: datalust/seq:latest
+    container_name: oneclickecho.seq
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - 5341:5341
+      - 8081:80
+  redis:
+    image: redis:latest
+    container_name: oneclickecho.redis
+    ports:
+      - 6379:6379

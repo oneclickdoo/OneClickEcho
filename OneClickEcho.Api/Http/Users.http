@@ -1,0 +1,25 @@
+@host = https://localhost:5100
+
+### Get Token
+POST {{host}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = password &
+username = itocs@oneclick.rs &
+password = Testing123! &
+scope = offline_access
+
+> {%
+    client.global.set("AccessToken", response.body.access_token);
+    client.global.set("RefreshToken", response.body.refresh_token);
+%}
+
+
+### Get Users that belong to a Company
+GET {{host}}/api/User?Page=1&PageSize=10&OrderBy=&Filter=CompanyIds eq b565ce71-a92f-4313-921c-11ee1e513a97
+Authorization: Bearer {{AccessToken}}
+
+
+### Get User by Id
+GET {{host}}/api/User?Filter=Id eq 4854f904-badb-46c1-aed2-916273b8f070
+Authorization: Bearer {{AccessToken}}

@@ -1,0 +1,80 @@
+@OneClickEcho_HostAddress = https://localhost:5100
+
+### Create Campaign
+@LeadCollectionId = 22aa522a-91e4-4a00-b9e7-f445787c2253
+
+POST {{OneClickEcho_HostAddress}}/api/Campaign
+Content-Type: application/json
+Accept-Language: en-US,en;q=0.5
+
+{
+  "CompanyId": "f3a5bd54-6a36-4ff5-b087-d3cb9c94ad06",
+  "LeadCollectionId": "{{LeadCollectionId}}",
+  "IsViber": true,
+  "IsViberReceivable": true,
+  "ViberTitle": "Sample Viber Title",
+  "ViberMessage": "Sample Viber Message",
+  "ViberUrl": "https://example.com",
+  "ViberUrlTitle": "Sample URL Title",
+  "IsSms": false,
+  "SmsMessage": null,
+  "SendingType": 1,
+  "SendingDatetime": "2023-10-01T10:00:00Z"
+}
+
+> {%
+    client.global.set("CampaignId", response.body.id);
+%}
+
+### Update Campaign
+PUT {{OneClickEcho_HostAddress}}/api/Campaign
+Content-Type: application/json
+Accept-Language: en-US,en;q=0.5
+
+{
+  "CampaignId": "{{CampaignId}}",
+  "CompanyId": "f3a5bd54-6a36-4ff5-b087-d3cb9c94ad06",
+  "IsViber": true,
+  "IsViberReceivable": true,
+  "ViberTitle": "Sample Viber Title",
+  "ViberMessage": "Sample Viber Message",
+  "ViberUrl": "https://edit.com",
+  "ViberUrlTitle": "Sample URL Title",
+  "IsSms": false,
+  "SmsMessage": null,
+  "SendingType": 1,
+  "SendingDatetime": "2023-10-01T10:00:00Z"
+}
+
+### Get Campaign by ID
+GET {{OneClickEcho_HostAddress}}/api/Campaign/{{CampaignId}}
+Accept: application/json
+
+### Get All Campaigns Ordered by IsViber, CompanyId, Id
+GET {{OneClickEcho_HostAddress}}/api/Campaign?Page=1&PageSize=20&OrderBy=IsViber desc,CompanyId desc, Id desc
+Accept: application/json
+
+### Get Campaigns with Filters and Order by CreatedAt
+GET {{OneClickEcho_HostAddress}}/api/Campaign?Page=1&PageSize=20&OrderBy=CreatedAt desc&
+    Filter=IsSms eq 0 and Status eq 1 and ViberUrl co '.com'
+Accept: application/json
+
+### Get Campaigns Created Before Specific Date
+GET {{OneClickEcho_HostAddress}}/api/Campaign?Page=1&PageSize=20&OrderBy=CreatedAt desc&
+    Filter=CreatedAt le 2024-10-01T10:00:00Z
+Accept: application/json
+
+### Get Campaign by Specific ID
+GET {{OneClickEcho_HostAddress}}/api/Campaign?Page=1&PageSize=20&OrderBy=CreatedAt desc&
+    Filter=Id eq e97e03cb-225e-4619-bf45-d9c7aa942f66
+Accept: application/json
+
+### Get Campaigns by CompanyId
+GET {{OneClickEcho_HostAddress}}/api/Campaign?Page=1&PageSize=20&OrderBy=CreatedAt desc&
+    Filter=CompanyId eq 4854f904-badb-46c1-aed2-916273b8f070
+Accept: application/json
+
+### Delete CampaignLead by Campaign ID and Lead ID
+@LeadId = 18f50ef5-9211-4a42-ac05-497c8d54788d
+DELETE {{OneClickEcho_HostAddress}}/api/Campaign/{{CampaignId}}/lead/{{LeadId}}
+Accept: application/json

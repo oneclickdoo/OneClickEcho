@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+      <Compile Remove="i18n\**" />
+      <Compile Remove="src\app\%28dashboard%29\**" />
+      <Compile Remove="src\app\[locale]\auth\**" />
+      <EmbeddedResource Remove="i18n\**" />
+      <EmbeddedResource Remove="src\app\%28dashboard%29\**" />
+      <EmbeddedResource Remove="src\app\[locale]\auth\**" />
+      <None Remove="i18n\**" />
+      <None Remove="src\app\%28dashboard%29\**" />
+      <None Remove="src\app\[locale]\auth\**" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Remove="i18n.ts" />
+    </ItemGroup>
+</Project>

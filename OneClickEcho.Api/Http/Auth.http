@@ -1,0 +1,45 @@
+@host = https://localhost:5100
+@companyId = "aaefeeaa-3844-4ce1-81fd-5a11851d0cac"
+
+### Get .well-known
+GET {{host}}/.well-known/openid-configuration
+
+### Get .well-known
+GET {{host}}/.well-known/jwks
+
+### Register Account
+POST {{host}}/api/User
+Content-Type: application/json
+Authorization: Bearer {{AccessToken}}
+
+{
+  "companyId": {{companyId}},
+  "role": 1,
+  "email": "itocs@oneclick.rs",
+  "password": "Testing123!"
+}
+
+### Get Token
+POST {{host}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = password &
+username = itocs@oneclick.rs &
+password = Testing123! &
+scope = offline_access
+
+> {%
+    client.global.set("AccessToken", response.body.access_token);
+    client.global.set("RefreshToken", response.body.refresh_token);
+%}
+
+### Refresh Token
+POST {{host}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = refresh_token &
+refresh_token = {{RefreshToken}}
+
+### Get Resource
+GET {{host}}/api/User/CurrentUser
+Authorization: Bearer {{AccessToken}}

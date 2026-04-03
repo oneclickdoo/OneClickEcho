@@ -1,0 +1,3 @@
+﻿namespace OneClickEcho.Application.Scheduling.Commands.EnqueueCampaign;
+
+public record EnqueueCampaignResponse;

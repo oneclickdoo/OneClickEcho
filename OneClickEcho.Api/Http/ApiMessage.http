@@ -1,0 +1,33 @@
+@OneClickEcho_HostAddress = http://localhost:5050
+@OneClickEcho_HostAddress_Prod = https://echo.oneclick.rs
+
+### Send message dev
+POST {{OneClickEcho_HostAddress}}/api/message/send
+Content-Type: application/json
+
+{
+  "companyId": "b25cfadc-8a0f-4306-be83-821116ca6e2e",
+  "apiPassword": "TestPassword",
+  "apiMessageType": 1,
+  "sender": "OneClickTest",
+  
+  "phoneNumber": "+381621671771",
+  "message": "Test message.",
+  "viberMedia": "https://www.worldanimalprotection.ca/cdn-cgi/image/width=800,format=auto,fit=cover/siteassets/article/hero3_1032346_final.jpg",
+  "viberButtonUrl": "https://echo.oneclick.rs",
+  "viberButtonUrlTitle": "Test button"
+}
+
+### Send message prod
+POST {{OneClickEcho_HostAddress_Prod}}/api/message/send
+Content-Type: application/json
+
+{
+  "companyId": "01dec13d-be5f-42fb-876e-a5311a255e65",
+  "apiPassword": "TestPassword",
+  "apiMessageType": 2,
+  "sender": "KOMENTAR",
+
+  "phoneNumber": "+38163218347",
+  "message": "Test message."
+}
