@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using OneClickEcho.Application.Common.Helpers;
 using OneClickEcho.Application.Common.Services;
 using OneClickEcho.Domain.ApiMessageAggregate;
 using OneClickEcho.Domain.ApiMessageAggregate.Enums;
@@ -279,8 +280,21 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 throw new Exception($"Campaign [{campaign.Id.Value}] - Viber sender is not defined.");
             }
 
-            // check if Viber message is defined
-            if (string.IsNullOrEmpty(campaign.ViberMessage))
+            if (IsPromoViberVideoOnly(campaign))
+            {
+                if (string.IsNullOrEmpty(campaign.ViberVideoThumbnail))
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber video-only (promotional) requires a thumbnail image.");
+                }
+
+                if (campaign.ViberFileSize is null || campaign.ViberVideoDuration is null)
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber video-only requires file size and duration (re-upload the video if missing).");
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(campaign.ViberMessage))
             {
                 throw new Exception($"Campaign [{campaign.Id.Value}] - Viber message is not defined.");
             }
@@ -300,6 +314,28 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
             {
                 throw new Exception($"Campaign [{campaign.Id.Value}] - SMS message is not defined.");
             }
+        }
+    }
+
+    private static bool IsPromoViberVideoOnly(Campaign campaign)
+    {
+        if (string.IsNullOrEmpty(campaign.ViberMedia) || !string.IsNullOrEmpty(campaign.ViberButtonUrl))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(campaign.ViberMessage))
+        {
+            return false;
+        }
+
+        try
+        {
+            return MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Video;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

@@ -35,6 +35,8 @@ public class GetCampaignByIdHandler(ICampaignRepository campaignRepository)
             campaign.ViberButtonUrl,
             campaign.ViberButtonUrlTitle,
             campaign.ViberVideoThumbnail,
+            campaign.ViberFileSize,
+            campaign.ViberVideoDuration,
             campaign.ViberValidity,
             campaign.IsSms,
             campaign.SmsSender,

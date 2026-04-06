@@ -36,6 +36,12 @@ msbuild.wrn
 OneClickEcho.Dashboard/OneClickEcho.Dashboard.zip
 /artifacts/
 /OneClickEcho.Api/UploadedFiles/*
+**/uploaded_files/**
+*.pdf
+# Environment-specific secrets — keep locally only
+OneClickEcho.Api/appsettings.Development.json
+OneClickEcho.Api/appsettings.Production.json
+OneClickEcho.Api/appsettings.Staging.json
 /OneClickEcho.Dashboard/node_modules/
 /OneClickEcho.Dashboard/.next/
 

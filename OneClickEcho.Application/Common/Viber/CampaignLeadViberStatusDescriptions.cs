@@ -60,7 +60,8 @@ public static class CampaignLeadViberStatusDescriptions
             ViberMessageResponseStatus.MSG_UNAUTHORIZED => "neovlašćeno",
             ViberMessageResponseStatus.MSG_NO_CREDIT => "nema kredita",
             ViberMessageResponseStatus.MSG_WRONG_DESTINATION => "pogrešna destinacija",
-            ViberMessageResponseStatus.MSG_WRONG_DISPLAY => "pogrešan prikaz (display)",
+            ViberMessageResponseStatus.MSG_WRONG_DISPLAY =>
+                "neispravan Viber pošiljalac (API polje Display): proverite „Viber sender” u kampanji — mora tačno odgovarati imenu odobrenom kod provajdera; ovo nije greška slike ili videa",
             _ => s.ToString()
         };
 
@@ -84,6 +85,18 @@ public static class CampaignLeadViberStatusDescriptions
             DeliveryViberSubstatus.SRVC_BILLING_FAILURE => "Razlog: greška naplate.",
             DeliveryViberSubstatus.SRVC_NO_MORE_MESSAGES => "Razlog: nema više poruka u kvoti.",
             DeliveryViberSubstatus.SRVC_BAD_LABEL => "Razlog: neispravna oznaka (label).",
+            DeliveryViberSubstatus.SRVC_INVALID_TTL => "Razlog: neispravno vreme važenja (TTL).",
+            DeliveryViberSubstatus.SRVC_WAIT_FOR_USER_RESPONSE => "Razlog: čeka se odgovor korisnika.",
+            DeliveryViberSubstatus.SRVC_INVALID_PHONE_NUMBER => "Razlog: neispravan broj telefona.",
+            DeliveryViberSubstatus.SRVC_FILE_NOT_PERMITTED => "Razlog: tip fajla nije dozvoljen.",
+            DeliveryViberSubstatus.SRVC_BAD_FILE_NAME_LENGTH => "Razlog: neispravna dužina imena fajla.",
+            DeliveryViberSubstatus.SRVC_BAD_THUMBNAIL => "Razlog: neispravna minijatura (thumbnail).",
+            DeliveryViberSubstatus.SRVC_BAD_FILE_SIZE => "Razlog: neispravna veličina fajla.",
+            DeliveryViberSubstatus.SRVC_BAD_DURATION => "Razlog: neispravno trajanje videa.",
+            DeliveryViberSubstatus.TEMPLATE_NOT_FOUND => "Razlog: šablon nije pronađen.",
+            DeliveryViberSubstatus.TEMPLATE_VALIDATION_ERROR => "Razlog: greška validacije šablona.",
+            DeliveryViberSubstatus.SRVC_SURVEY_VALIDATION_ERROR => "Razlog: greška validacije ankete/liste.",
+            DeliveryViberSubstatus.SRVC_CAROUSEL_VALIDATION_ERROR => "Razlog: greška validacije karusela.",
             _ => $"Razlog: {sub}."
         };
 }

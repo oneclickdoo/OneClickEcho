@@ -522,17 +522,23 @@
           "tooltips": {
             "transactional": "Transactional messages are used for service notifications and may follow different delivery rules.",
             "enableReplies": "Allow recipients to reply to this Viber message.",
-            "formattingHint": "Viber uses markdown: *bold*, _italic_, ~strikethrough~. HTML tags are not supported in message text. There must be a space after the closing marker before the next word (e.g. *Hi* there).",
-            "underlineNotSupported": "Underline is not supported in Viber business message text (official API: bold, italic, strikethrough, monospace)."
+            "formattingHint": "Formatting: *bold* and _italic_ (Viber markdown). Put a space after the closing marker before the next word (e.g. *Hi* there). You can insert stickers below.",
+            "videoPromoOnly": "Video selected, no button: you can leave the message empty for promotional video-only (thumbnail required). Add text if you want video + caption."
           },
           "formatting": {
-            "previewLabel": "Preview (approximate)",
-            "strikethroughTitle": "Strikethrough"
+            "previewLabel": "Preview (approximate)"
           },
           "actions": {
             "selectExistingMedia": "Select existing media",
             "selectImageTitle": "Select image",
             "imageAlt": "Selected image"
+          },
+          "mediaUpload": {
+            "dropzoneImage": "Drag & drop your image, or click to select it. Recommended image dimensions are 500×500.",
+            "dropzoneMedia": "Drag & drop your media, or click to select it. Recommended image dimensions are 500×500 for images. For video, use MP4.",
+            "videoMeta": "File size: {fileSize} · Duration: {duration}",
+            "durationPending": "Detecting…",
+            "videoUnsupported": "Your browser does not support video playback."
           }
         },
         "sms": {

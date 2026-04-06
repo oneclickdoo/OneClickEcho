@@ -73,7 +73,9 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
             ViberSendMessageType messageType = ViberService.DetermineMessageType(campaign);
 
-            string testViberText = ViberMessageFormatting.MigrateLegacyHtmlToMarkdown(campaign.ViberMessage!);
+            string? testViberText = string.IsNullOrWhiteSpace(campaign.ViberMessage)
+                ? null
+                : ViberMessageFormatting.MigrateLegacyHtmlToMarkdown(campaign.ViberMessage);
 
             for (int i = 0; i < dividedPhoneNumbers.Length; i++)
             {
@@ -92,7 +94,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = testViberText,
+                                MessageText = testViberText!,
                                 // Must have
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
@@ -108,7 +110,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = testViberText,
+                                MessageText = testViberText!,
                                 // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 ButtonUrl = campaign.ViberButtonUrl,
@@ -127,13 +129,30 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = testViberText,
+                                MessageText = testViberText!,
                                 // Image
                                 ImageUrl = imageUrl, // "{UploadsUrl}/abf1617b-c5a1-4eb7-bec8-86f35e85a583.png"
                                 // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 ButtonUrl = campaign.ViberButtonUrl,
                                 // Must have
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = testPhoneNumber,
+                                MessageId = testMessage.ViberId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayVideo:
+                            viberMessage = new()
+                            {
+                                ButtonUrl = videoUrl,
+                                Thumbnail = videoThumbnailUrl,
+                                FileSize = fileSize,
+                                Duration = duration,
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
                                 MSISDN = testPhoneNumber,
@@ -153,7 +172,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 FileSize = fileSize,
                                 Duration = duration,
                                 // Text
-                                MessageText = testViberText,
+                                MessageText = testViberText!,
                                 // Must have
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
@@ -174,7 +193,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 FileSize = fileSize,
                                 Duration = duration,
                                 // Text
-                                MessageText = testViberText,
+                                MessageText = testViberText!,
                                 // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 // Must have
@@ -315,9 +334,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                     campaignLeadsByViberMessageId[campaignLead.ViberMessageId] = campaignLead;
 
-                    // Message personalization
-                    string message = stringTemplatingService.SubstituteLeadInfo(campaign.ViberMessage!, lead);
-                    message = ViberMessageFormatting.MigrateLegacyHtmlToMarkdown(message);
+                    string? personalizedMarkdown = null;
+                    if (messageType != ViberSendMessageType.OneWayVideo)
+                    {
+                        personalizedMarkdown = ViberMessageFormatting.MigrateLegacyHtmlToMarkdown(
+                            stringTemplatingService.SubstituteLeadInfo(campaign.ViberMessage ?? string.Empty, lead));
+                    }
 
                     ViberMessage viberMessage;
                     
@@ -329,7 +351,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = message,
+                                MessageText = personalizedMarkdown!,
                                 // Must have
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
@@ -345,7 +367,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = message,
+                                MessageText = personalizedMarkdown!,
                                 // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 ButtonUrl = campaign.ViberButtonUrl,
@@ -364,13 +386,30 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = message,
+                                MessageText = personalizedMarkdown!,
                                 // Image
                                 ImageUrl = imageUrl, // "{UploadsUrl}/abf1617b-c5a1-4eb7-bec8-86f35e85a583.png"
                                 // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 ButtonUrl = campaign.ViberButtonUrl,
                                 // Must have
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = lead.PhoneNumber,
+                                MessageId = campaignLead.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayVideo:
+                            viberMessage = new()
+                            {
+                                ButtonUrl = videoUrl,
+                                Thumbnail = videoThumbnailUrl,
+                                FileSize = fileSize,
+                                Duration = duration,
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
                                 MSISDN = lead.PhoneNumber,
@@ -390,7 +429,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 FileSize = fileSize,
                                 Duration = duration,
                                 // Text
-                                MessageText = message,
+                                MessageText = personalizedMarkdown!,
                                 // Must have
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
@@ -411,7 +450,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 FileSize = fileSize,
                                 Duration = duration,
                                 // Text
-                                MessageText = message,
+                                MessageText = personalizedMarkdown!,
                                 // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 // Must have
@@ -535,23 +574,31 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 {
                     ViberMessage viberMessage;
 
-                    string apiViberText = ViberMessageFormatting.MigrateLegacyHtmlToMarkdown(apiMessage.Message ?? string.Empty);
-                    
                     // 24 hours
                     int validity = apiMessage.ViberValidity ?? 86400;
                     ViberSendMessageType messageType = ViberService.DetermineApiMessageType(apiMessage);
-                    
+
+                    string? apiViberText = messageType == ViberSendMessageType.OneWayVideo
+                        ? null
+                        : ViberMessageFormatting.MigrateLegacyHtmlToMarkdown(apiMessage.Message ?? string.Empty);
+
                     // Get data for Media
                     string? imageUrl = null;
+                    string? videoUrl = null;
 
                     if (apiMessage.ViberMedia is not null)
                     {
-                        // get campaign media type
-                        CampaignMediaType? mediaType = MediaHelper.GetMediaType(apiMessage.ViberMedia);
+                        CampaignMediaType mediaType = MediaHelper.GetMediaType(apiMessage.ViberMedia);
 
                         if (mediaType == CampaignMediaType.Image)
                         {
                             imageUrl = apiMessage.ViberMedia;
+                        }
+                        else
+                        {
+                            videoUrl = apiMessage.ViberMedia.Contains("://", StringComparison.Ordinal)
+                                ? apiMessage.ViberMedia
+                                : $"{UploadsUrl}/{apiMessage.ViberMedia}";
                         }
                     }
 
@@ -561,7 +608,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = apiViberText,
+                                MessageText = apiViberText!,
                                 // Must have
                                 Display = apiMessage.Sender!,
                                 Label = "promotion",
@@ -596,13 +643,58 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             viberMessage = new()
                             {
                                 // Text
-                                MessageText = apiViberText,
+                                MessageText = apiViberText!,
                                 // Image
                                 ImageUrl = imageUrl, // "{UploadsUrl}/abf1617b-c5a1-4eb7-bec8-86f35e85a583.png"
                                 // Button
                                 ButtonCaption = apiMessage.ViberButtonUrlTitle,
                                 ButtonUrl = apiMessage.ViberButtonUrl,
                                 // Must have
+                                Display = apiMessage.Sender!,
+                                Label = "promotion",
+                                MSISDN = apiMessage.PhoneNumber,
+                                MessageId = apiMessage.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayVideo:
+                            viberMessage = new()
+                            {
+                                ButtonUrl = videoUrl,
+                                Display = apiMessage.Sender!,
+                                Label = "promotion",
+                                MSISDN = apiMessage.PhoneNumber,
+                                MessageId = apiMessage.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayVideoText:
+                            viberMessage = new()
+                            {
+                                ButtonUrl = videoUrl,
+                                MessageText = apiViberText!,
+                                Display = apiMessage.Sender!,
+                                Label = "promotion",
+                                MSISDN = apiMessage.PhoneNumber,
+                                MessageId = apiMessage.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayVideoTextButton:
+                            viberMessage = new()
+                            {
+                                ButtonUrl = videoUrl,
+                                MessageText = apiViberText!,
+                                ButtonCaption = apiMessage.ViberButtonUrlTitle,
                                 Display = apiMessage.Sender!,
                                 Label = "promotion",
                                 MSISDN = apiMessage.PhoneNumber,

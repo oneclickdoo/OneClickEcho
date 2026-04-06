@@ -522,17 +522,23 @@
           "tooltips": {
             "transactional": "Transakcione poruke se koriste za servisna obaveštenja i mogu imati drugačija pravila isporuke.",
             "enableReplies": "Omogućava primaocima da odgovore na ovu Viber poruku.",
-            "formattingHint": "Viber koristi markdown: *podebljano*, _kurziv_, ~precrtano~. HTML oznake (<b>, <i>) nisu podržane u tekstu poruke. Posle zatvarajućeg znaka mora razmak pre sledeće reči (npr. *Zdravo* tamo).",
-            "underlineNotSupported": "Podvučen tekst nije podržan u Viber poslovnim porukama (zvanični API: podebljano, kurziv, precrtano, monospace)."
+            "formattingHint": "Formatiranje: *podebljano* i _kurziv_ (Viber markdown). Posle zatvarajućeg znaka mora razmak pre sledeće reči (npr. *Zdravo* tamo). Ispod možete umetnuti stikere.",
+            "videoPromoOnly": "Izabran je video bez dugmeta: poruku možete ostaviti praznu za promotivni video bez teksta (obavezna minijatura). Dodajte tekst ako želite video sa natpisom."
           },
           "formatting": {
-            "previewLabel": "Pregled (približan)",
-            "strikethroughTitle": "Precrtano"
+            "previewLabel": "Pregled (približan)"
           },
           "actions": {
             "selectExistingMedia": "Izaberi postojeću mediju",
             "selectImageTitle": "Izaberi sliku",
             "imageAlt": "Izabrana slika"
+          },
+          "mediaUpload": {
+            "dropzoneImage": "Prevucite i pustite sliku ili kliknite da je izaberete. Preporučene dimenzije slike su 500×500.",
+            "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Za slike su preporučene dimenzije 500×500. Za video koristite MP4.",
+            "videoMeta": "Veličina fajla: {fileSize} · Trajanje: {duration}",
+            "durationPending": "Otkrivanje…",
+            "videoUnsupported": "Vaš pregledač ne podržava reprodukciju videa."
           }
         },
         "sms": {

@@ -241,12 +241,14 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 return ViberSendMessageType.OneWayTextButton;
             }
 
-            // Video with text
+            // Video without button: 230 = video only (promo), 231 = video + text
             if (!string.IsNullOrEmpty(campaign.ViberMedia) && string.IsNullOrEmpty(campaign.ViberButtonUrl))
             {
                 if (MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Video)
                 {
-                    return ViberSendMessageType.OneWayVideoText;
+                    return string.IsNullOrWhiteSpace(campaign.ViberMessage)
+                        ? ViberSendMessageType.OneWayVideo
+                        : ViberSendMessageType.OneWayVideoText;
                 }
             }
 
@@ -287,7 +289,9 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             {
                 if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Video)
                 {
-                    return ViberSendMessageType.OneWayVideoText;
+                    return string.IsNullOrWhiteSpace(apiMessage.Message)
+                        ? ViberSendMessageType.OneWayVideo
+                        : ViberSendMessageType.OneWayVideoText;
                 }
             }
 

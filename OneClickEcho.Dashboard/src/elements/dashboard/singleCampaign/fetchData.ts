@@ -42,6 +42,10 @@ export type CampaignDto = {
     viberButtonUrl?: string;
     viberButtonUrlTitle?: string;
     viberVideoThumbnail?: string;
+    /** Bytes; set when video is uploaded (server + client). */
+    viberFileSize?: number | null;
+    /** Seconds; set for Viber video. */
+    viberVideoDuration?: number | null;
     viberValidity?: number;
 
     isSms: boolean;

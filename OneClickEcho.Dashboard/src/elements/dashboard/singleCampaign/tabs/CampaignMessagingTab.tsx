@@ -172,11 +172,6 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
         handleChange("viberMessage", nextValue as any);
     };
 
-    const applyViberStrikethrough = () => {
-        const nextValue = wrapSelectedText(viberMessageInputRef.current, formData.viberMessage, "~", "~");
-        handleChange("viberMessage", nextValue as any);
-    };
-
     const insertViberSticker = (sticker: string) => {
         const nextValue = insertAtCursor(viberMessageInputRef.current, formData.viberMessage, ` ${sticker} `);
         handleChange("viberMessage", nextValue as any);
@@ -193,7 +188,17 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
             await updateCampaign(payload, authFetch);
 
             if (formData.isViber && media && media instanceof File) {
-                await uploadCampaignViberMedia(formData.campaignId, false, media, authFetch, duration);
+                const data = await uploadCampaignViberMedia(formData.campaignId, false, media, authFetch, duration);
+                if (data.path) {
+                    handleChange("viberMedia", data.path as any);
+                    handleChange("viberFileSize", media.size as any);
+                    const isVideoFile = media.type.startsWith("video/");
+                    if (isVideoFile && duration != null) {
+                        handleChange("viberVideoDuration", duration as any);
+                    } else if (!isVideoFile) {
+                        handleChange("viberVideoDuration", null as any);
+                    }
+                }
             }
 
             if (formData.isViber && thumbnail && thumbnail instanceof File) {
@@ -247,7 +252,16 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
 
             if (media && media instanceof File) {
                 const data = await uploadCampaignViberMedia(formData.campaignId, false, media, authFetch, duration);
-                if (data.path) handleChange("viberMedia", data.path as any);
+                if (data.path) {
+                    handleChange("viberMedia", data.path as any);
+                    handleChange("viberFileSize", media.size as any);
+                    const isVideoFile = media.type.startsWith("video/");
+                    if (isVideoFile && duration != null) {
+                        handleChange("viberVideoDuration", duration as any);
+                    } else if (!isVideoFile) {
+                        handleChange("viberVideoDuration", null as any);
+                    }
+                }
             }
 
             if (thumbnail && thumbnail instanceof File) {
@@ -440,26 +454,6 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     >
                                         <em>I</em>
                                     </Button>
-
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        title={t("viber.formatting.strikethroughTitle")}
-                                        disabled={!formData.isViber || formData.status !== CampaignStatus.Draft}
-                                        onClick={applyViberStrikethrough}
-                                    >
-                                        <span className="line-through">S</span>
-                                    </Button>
-
-                                    <span className="inline-flex">
-                                        <Tooltip side="top" content={t("viber.tooltips.underlineNotSupported")}>
-                                            <span className="inline-flex cursor-default">
-                                                <Button type="button" variant="secondary" disabled className="pointer-events-none opacity-60">
-                                                    <span className="underline">U</span>
-                                                </Button>
-                                            </span>
-                                        </Tooltip>
-                                    </span>
                                 </div>
 
                                 <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -488,6 +482,12 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                 <small>
                                     {(formData.viberMessage?.length ?? 0)} / 1000 {t("viber.fields.characters")}
                                 </small>
+
+                                {!formData.isTransactional && checkIsThumbnailVisible() && !formData.viberButtonUrl ? (
+                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        {t("viber.tooltips.videoPromoOnly")}
+                                    </p>
+                                ) : null}
 
                                 {formData.viberMessage && formData.viberMessage.trim().length > 0 && (
                                     <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900/50">
@@ -607,6 +607,14 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     handleChange={handleChange as any}
                                     imageOnly={false}
                                     disabled={!formData.isViber || (formData.isTransactional as any) || formData.status !== CampaignStatus.Draft}
+                                    savedVideoMeta={
+                                        typeof media === "string"
+                                            ? {
+                                                  fileSizeBytes: formData.viberFileSize ?? null,
+                                                  durationSeconds: formData.viberVideoDuration ?? null
+                                              }
+                                            : undefined
+                                    }
                                 />
                             </div>
 

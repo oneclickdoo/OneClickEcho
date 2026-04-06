@@ -1,4 +1,4 @@
-﻿namespace OneClickEcho.Application.Common.Services.ViberService.Response.Enum
+namespace OneClickEcho.Application.Common.Services.ViberService.Response.Enum
 {
     public enum DeliveryViberSubstatus : int
     {
@@ -18,6 +18,20 @@
         SRVC_NOT_PERMITTED = 13,
         SRVC_BILLING_FAILURE = 14,
         SRVC_NO_MORE_MESSAGES = 17,
-        SRVC_BAD_LABEL = 18
+        SRVC_BAD_LABEL = 18,
+
+        // Comtrade Viber API (extended; see CT Viber API.pdf)
+        SRVC_INVALID_TTL = 20,
+        SRVC_WAIT_FOR_USER_RESPONSE = 21,
+        SRVC_INVALID_PHONE_NUMBER = 27,
+        SRVC_FILE_NOT_PERMITTED = 28,
+        SRVC_BAD_FILE_NAME_LENGTH = 29,
+        SRVC_BAD_THUMBNAIL = 30,
+        SRVC_BAD_FILE_SIZE = 31,
+        SRVC_BAD_DURATION = 32,
+        TEMPLATE_NOT_FOUND = 38,
+        TEMPLATE_VALIDATION_ERROR = 39,
+        SRVC_SURVEY_VALIDATION_ERROR = 40,
+        SRVC_CAROUSEL_VALIDATION_ERROR = 41
     }
 }

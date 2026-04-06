@@ -134,10 +134,34 @@ export type CampaignChannelsLike = {
 
     viberSender?: unknown;
     viberMessage?: unknown;
+    viberMedia?: unknown;
+    viberButtonUrl?: unknown;
+    viberVideoThumbnail?: unknown;
 
     smsSender?: unknown;
     smsMessage?: unknown;
 };
+
+/** Promotional Viber: video only (Comtrade type 230) — empty message, no button URL, .mp4/.avi media. */
+function isPromoViberVideoOnly(campaign: CampaignChannelsLike): boolean {
+    const media = campaign.viberMedia;
+    const button = campaign.viberButtonUrl;
+    const msg = campaign.viberMessage;
+    if (typeof media !== "string" || !media) {
+        return false;
+    }
+    if (typeof button === "string" && button.trim().length > 0) {
+        return false;
+    }
+    if (typeof msg === "string" && msg.trim().length > 0) {
+        return false;
+    }
+    try {
+        return getMediaType(media) === CampaignMediaType.Video;
+    } catch {
+        return false;
+    }
+}
 
 export const validateCampaignChannels = (
     campaign: CampaignChannelsLike,
@@ -156,7 +180,18 @@ export const validateCampaignChannels = (
             return false;
         }
 
-        if (!campaign.viberMessage) {
+        if (isPromoViberVideoOnly(campaign)) {
+            if (!campaign.viberVideoThumbnail || typeof campaign.viberVideoThumbnail !== "string") {
+                showErrorMessage(
+                    "Promotional video-only Viber requires a thumbnail image (upload video, then thumbnail)."
+                );
+                return false;
+            }
+        } else if (
+            typeof campaign.viberMessage !== "string" ||
+            !campaign.viberMessage ||
+            !String(campaign.viberMessage).trim()
+        ) {
             showErrorMessage("Campaign's Viber message is not defined.");
             return false;
         }
