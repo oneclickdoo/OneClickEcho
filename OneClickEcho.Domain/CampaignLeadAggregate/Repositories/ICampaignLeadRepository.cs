@@ -39,6 +39,10 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
     Task<List<Lead>> GetLeadsByCampaignIdWithViberStatusNoneAsync(CampaignId campaignId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Leads whose campaign_lead row still has SMSStatus None (SMS not yet sent for this campaign).</summary>
+    Task<List<Lead>> GetLeadsByCampaignIdWithSmsStatusNoneAsync(CampaignId campaignId,
+        CancellationToken cancellationToken = default);
+
     public Task<IPagedList<Lead>> GetPagedLeadsByCampaignIdAsync(CampaignId campaignId, IPagedQuery query,
         CancellationToken cancellationToken = default);
 

@@ -40,6 +40,19 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     private readonly IOptions<ViberSettings> _viberSettings = viberSettings;
     private readonly ISchedulerFactory _schedulerFactory = schedulerFactory;
 
+    /// <summary>Schedules SMS delivery polling jobs if they are not already registered (avoids duplicate Quartz jobs on retries).</summary>
+    private async Task EnsureSmsDeliveryJobsScheduledAsync(Campaign campaign)
+    {
+        IScheduler scheduler = await _schedulerFactory.GetScheduler();
+        JobKey jobKey = new($"delivery-job-campaign-{campaign.Id.Value}");
+        if (await scheduler.CheckExists(jobKey))
+        {
+            return;
+        }
+
+        await InitiateSmsDeliveryJob(campaign);
+    }
+
     public async Task InitiateSmsDeliveryJob(Campaign campaign)
     {
         DateTimeOffset jobDateTime = campaign.SendingType switch
@@ -86,11 +99,16 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     }
 
     public async Task SendMessagesForCampaignId(CampaignId campaignId, List<Lead>? leads = null,
-        bool viberOnlyForProvidedLeads = false)
+        bool viberOnlyForProvidedLeads = false, bool smsOnlyForProvidedLeads = false)
     {
         // get campaign
         Campaign campaign = await _campaignRepository.GetByIdAsync(campaignId)
              ?? throw new Exception($"Campaign [{campaignId}] not found.");
+
+        if (viberOnlyForProvidedLeads && smsOnlyForProvidedLeads)
+        {
+            throw new Exception($"Campaign [{campaign.Id.Value}] - cannot combine viber-only and sms-only retry.");
+        }
 
         // campaign must have a selected channel (Viber or SMS)
         ValidateCampaignChannels(campaign);
@@ -108,6 +126,19 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
             }
         }
 
+        if (smsOnlyForProvidedLeads)
+        {
+            if (!campaign.IsSms)
+            {
+                throw new Exception($"Campaign [{campaign.Id.Value}] - sms-only retry requires SMS channel.");
+            }
+
+            if (leads is null || leads.Count == 0)
+            {
+                throw new Exception($"Campaign [{campaign.Id.Value}] - sms-only retry requires a non-empty lead list.");
+            }
+        }
+
         // get leads
         leads ??= await _campaignLeadRepository.GetAllLeadsByCampaignIdAsync(campaignId);
 
@@ -120,7 +151,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
         }
 
         // Viber channel
-        if (campaign.IsViber)
+        if (campaign.IsViber && !smsOnlyForProvidedLeads)
         {
             await ViberSendingService.SendViberMessagesToLeads(
                 campaign,
@@ -145,7 +176,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 _stringTemplatingService,
                 _unitOfWork);
 
-            await InitiateSmsDeliveryJob(campaign);
+            await EnsureSmsDeliveryJobsScheduledAsync(campaign);
         }
     }
 

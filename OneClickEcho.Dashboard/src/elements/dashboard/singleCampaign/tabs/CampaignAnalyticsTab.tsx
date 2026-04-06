@@ -35,6 +35,8 @@ import {
 interface ICampaignAnalyticsTab {
     campaignId: string;
     status: CampaignStatus;
+    /** When false, analytics polling is disabled (user left the Analytics tab). */
+    isActive: boolean;
 }
 
 interface IFunnelChartData {
@@ -129,7 +131,12 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
         queryFn: () => getCampaignAnalytics(props.campaignId, authFetch),
         enabled: props.status !== CampaignStatus.Draft,
         refetchInterval:
-            props.status === CampaignStatus.Queued || props.status === CampaignStatus.InProgress ? 15_000 : false
+            props.isActive &&
+            (props.status === CampaignStatus.Queued ||
+                props.status === CampaignStatus.InProgress ||
+                props.status === CampaignStatus.Done)
+                ? 15_000
+                : false
     });
 
     //const getViberData = useCallback(

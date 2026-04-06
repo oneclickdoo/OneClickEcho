@@ -101,14 +101,22 @@ public class CampaignRepository(ApplicationDbContext dbContext) : ICampaignRepos
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<Campaign>> GetInProgressCampaignsForOutboundRetryAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Campaigns
+            .Where(c => c.Status == CampaignStatus.InProgress)
+            .Where(c => c.IsViber || c.IsSms)
+            .ToListAsync(cancellationToken);
+    }
+
     /// <summary>
-    /// Viber delivery polling: only campaigns in the last 49 hours (not all campaigns)—by
+    /// Viber delivery polling: campaigns touched in the last 48 hours—by
     /// <c>SendingDatetime</c> or by <c>campaign_leads</c> created in that window with a Viber message id.
     /// Avoids <c>ToUniversalTime()</c> on <c>timestamp without time zone</c> so it matches launch-time dates.
     /// </summary>
     public async Task<List<Campaign>> GetLast49HoursViberCampaigns(CancellationToken cancellationToken = default)
     {
-        const int hoursWindow = 49;
+        const int hoursWindow = 48;
         DateTime endDate = DateTime.Now;
         DateTime startDate = endDate.AddHours(-hoursWindow);
 
@@ -127,7 +135,7 @@ public class CampaignRepository(ApplicationDbContext dbContext) : ICampaignRepos
 
     public async Task<List<Campaign>> GetLast49HoursViberTwoWayCampaigns(CancellationToken cancellationToken = default)
     {
-        const int hoursWindow = 49;
+        const int hoursWindow = 48;
         DateTime endDate = DateTime.Now;
         DateTime startDate = endDate.AddHours(-hoursWindow);
 
@@ -147,7 +155,7 @@ public class CampaignRepository(ApplicationDbContext dbContext) : ICampaignRepos
 
     public async Task<List<Campaign>> GetExpiredViberCampaigns(CancellationToken cancellationToken = default)
     {
-        DateTime date = DateTime.Now.AddHours(-49);
+        DateTime date = DateTime.Now.AddHours(-48);
         
         List<Campaign> campaigns = await _dbContext.Campaigns
             .Where(c => c.Status == CampaignStatus.Done)

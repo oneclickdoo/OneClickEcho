@@ -282,7 +282,18 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                             disabled={formData.status !== CampaignStatus.Draft}
                             value={formData.sendingType?.toString()}
                             onValueChange={(sendingType) => {
-                                handleChange("sendingType", convertStringToEnum<CampaignSendingType>(sendingType));
+                                const newType = convertStringToEnum<CampaignSendingType>(sendingType);
+                                if (newType === CampaignSendingType.ScheduledDateTime) {
+                                    const defaultSendAt = new Date();
+                                    defaultSendAt.setMinutes(defaultSendAt.getMinutes() + 30);
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        sendingType: newType,
+                                        sendingDatetimeObject: defaultSendAt
+                                    }));
+                                } else {
+                                    handleChange("sendingType", newType);
+                                }
                             }}
                         >
                             <SelectTrigger id="sendingType" className="mt-2">

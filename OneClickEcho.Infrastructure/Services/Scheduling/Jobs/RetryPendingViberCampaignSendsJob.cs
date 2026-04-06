@@ -10,8 +10,8 @@ using Quartz;
 namespace OneClickEcho.Infrastructure.Services.Scheduling.Jobs;
 
 /// <summary>
-/// Retries Viber bulk send for leads still at viber_status None, for up to 2 hours after launch.
-/// Campaign stays InProgress until all Viber rows leave None or the window expires (then Completed anyway).
+/// Retries outbound sends for leads still at ViberStatus None and/or SMSStatus None (up to 2 hours after launch).
+/// Campaign stays InProgress until no such rows remain or the window expires (then Completed anyway).
 /// </summary>
 [DisallowConcurrentExecution]
 public class RetryPendingViberCampaignSendsJob(
@@ -31,14 +31,12 @@ public class RetryPendingViberCampaignSendsJob(
     {
         CancellationToken cancellationToken = context.CancellationToken;
 
-        List<Campaign> campaigns = await _campaignRepository.GetInProgressViberCampaignsAsync(cancellationToken);
+        List<Campaign> campaigns = await _campaignRepository.GetInProgressCampaignsForOutboundRetryAsync(cancellationToken);
 
         if (campaigns.Count == 0)
         {
             return;
         }
-
-        // Console.WriteLine($"{DateTime.UtcNow:O} - RetryPendingViberCampaignSendsJob: {campaigns.Count} in-progress Viber campaign(s).");
 
         foreach (Campaign campaign in campaigns)
         {
@@ -48,47 +46,64 @@ public class RetryPendingViberCampaignSendsJob(
 
     private async Task ProcessCampaignAsync(Campaign campaign, CancellationToken cancellationToken)
     {
-        List<Lead> pendingLeads =
-            await _campaignLeadRepository.GetLeadsByCampaignIdWithViberStatusNoneAsync(campaign.Id, cancellationToken);
+        List<Lead> pendingViber = campaign.IsViber
+            ? await _campaignLeadRepository.GetLeadsByCampaignIdWithViberStatusNoneAsync(campaign.Id, cancellationToken)
+            : [];
+
+        List<Lead> pendingSms = campaign.IsSms
+            ? await _campaignLeadRepository.GetLeadsByCampaignIdWithSmsStatusNoneAsync(campaign.Id, cancellationToken)
+            : [];
+
+        if (pendingViber.Count == 0 && pendingSms.Count == 0)
+        {
+            await _mediator.Send(new CompleteCampaignCommand(campaign.Id.Value), cancellationToken);
+            return;
+        }
 
         DateTime launchUtc = campaign.SendingDatetime.ToUniversalTime();
         bool pastRetryWindow = DateTime.UtcNow > launchUtc.AddHours(RetryWindowHours);
 
-        if (pendingLeads.Count == 0)
-        {
-            await _mediator.Send(new CompleteCampaignCommand(campaign.Id.Value), cancellationToken);
-            // Console.WriteLine($"{DateTime.UtcNow:O} - RetryPendingViber: campaign {campaign.Id.Value} — no Viber None left, marked Done.");
-            return;
-        }
-
         if (pastRetryWindow)
         {
             await _mediator.Send(new CompleteCampaignCommand(campaign.Id.Value), cancellationToken);
-            // Console.WriteLine(
-            //     $"{DateTime.UtcNow:O} - RetryPendingViber: campaign {campaign.Id.Value} — 2h window expired with {pendingLeads.Count} lead(s) still None, marked Done.");
             return;
         }
 
         try
         {
-            await _messageSendingService.SendMessagesForCampaignId(
-                campaign.Id,
-                pendingLeads,
-                viberOnlyForProvidedLeads: true);
+            if (pendingViber.Count > 0)
+            {
+                await _messageSendingService.SendMessagesForCampaignId(
+                    campaign.Id,
+                    pendingViber,
+                    viberOnlyForProvidedLeads: true,
+                    smsOnlyForProvidedLeads: false);
+            }
 
-            pendingLeads = await _campaignLeadRepository.GetLeadsByCampaignIdWithViberStatusNoneAsync(
-                campaign.Id,
-                cancellationToken);
+            if (pendingSms.Count > 0)
+            {
+                await _messageSendingService.SendMessagesForCampaignId(
+                    campaign.Id,
+                    pendingSms,
+                    viberOnlyForProvidedLeads: false,
+                    smsOnlyForProvidedLeads: true);
+            }
 
-            if (pendingLeads.Count == 0)
+            pendingViber = campaign.IsViber
+                ? await _campaignLeadRepository.GetLeadsByCampaignIdWithViberStatusNoneAsync(campaign.Id, cancellationToken)
+                : [];
+            pendingSms = campaign.IsSms
+                ? await _campaignLeadRepository.GetLeadsByCampaignIdWithSmsStatusNoneAsync(campaign.Id, cancellationToken)
+                : [];
+
+            if (pendingViber.Count == 0 && pendingSms.Count == 0)
             {
                 await _mediator.Send(new CompleteCampaignCommand(campaign.Id.Value), cancellationToken);
-                // Console.WriteLine($"{DateTime.UtcNow:O} - RetryPendingViber: campaign {campaign.Id.Value} — retry cleared all None, marked Done.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"{DateTime.UtcNow:O} - RetryPendingViber: campaign {campaign.Id.Value} FAILED: {ex}");
+            Console.WriteLine($"{DateTime.UtcNow:O} - RetryPendingOutbound: campaign {campaign.Id.Value} FAILED: {ex}");
         }
     }
 }

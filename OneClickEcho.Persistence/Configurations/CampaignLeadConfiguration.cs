@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CampaignLeadAggregate;
@@ -39,5 +40,9 @@ public class CampaignLeadConfiguration : EntityTypeConfiguration<CampaignLead, C
             .WithOne()
             .HasForeignKey(e => e.CampaignLeadId)
             .IsRequired();
+
+        builder.HasIndex(e => new { e.CampaignId, e.LeadId })
+            .IsUnique()
+            .HasDatabaseName("ix_campaign_leads_campaign_id_lead_id_unique");
     }
 }

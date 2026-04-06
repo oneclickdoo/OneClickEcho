@@ -34,6 +34,9 @@ public interface ICampaignRepository : IRepository<Campaign, CampaignId>
 
     /// <summary>Viber campaigns still <c>InProgress</c> (any launch time).</summary>
     Task<List<Campaign>> GetInProgressViberCampaignsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>In-progress campaigns that use outbound Viber and/or SMS (for retry of unsent rows).</summary>
+    Task<List<Campaign>> GetInProgressCampaignsForOutboundRetryAsync(CancellationToken cancellationToken = default);
     
     Task<List<Campaign>> GetLast49HoursViberCampaigns(CancellationToken cancellationToken = default);
     

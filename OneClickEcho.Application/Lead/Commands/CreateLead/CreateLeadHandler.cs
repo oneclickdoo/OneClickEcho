@@ -36,14 +36,13 @@ public class CreateLeadHandler(ICampaignRepository campaignRepository, ICampaign
                 ));
             }
 
-            // create new campaign lead
-            Domain.CampaignLeadAggregate.CampaignLead campaignLead = new(
-                leadId: lead.Id,
-                campaignId: campaign.Id
-            );
+            Domain.CampaignLeadAggregate.CampaignLead? existingLink =
+                await _campaignLeadRepository.GetByCampaignAndLeadId(campaign.Id, lead.Id, cancellationToken);
 
-            // save new campaign lead
-            _campaignLeadRepository.Add(campaignLead);
+            if (existingLink is null)
+            {
+                _campaignLeadRepository.Add(new Domain.CampaignLeadAggregate.CampaignLead(lead.Id, campaign.Id));
+            }
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -9,6 +9,7 @@ using OneClickEcho.Domain.Common.Shared;
 using OneClickEcho.Domain.LeadAggregate.Repositories;
 using System.Text.RegularExpressions;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
+using OneClickEcho.Domain.Common;
 
 namespace OneClickEcho.Application.Lead.Commands.UploadLeads;
 
@@ -51,11 +52,18 @@ public partial class UploadLeadsHandler(IFileStorageService fileStorageService, 
 
         // Same CSV / same upload: EF query may not see CampaignLeads added earlier in this loop before SaveChanges.
         HashSet<Guid> leadIdsAlreadyLinkedToCampaignThisUpload = [];
+        HashSet<string> normalizedPhonesSeenThisCsv = new(StringComparer.Ordinal);
 
         foreach (CsvLeadDto record in records)
         {
             // if phone number is not valid, ignore record
             if (!Regex.Match(record.PhoneNumber, RegexHelper.PHONE_NUMBER_REGEX).Success)
+            {
+                continue;
+            }
+
+            string phoneKey = PhoneNumberHelper.NormalizeKey(record.PhoneNumber);
+            if (string.IsNullOrEmpty(phoneKey) || !normalizedPhonesSeenThisCsv.Add(phoneKey))
             {
                 continue;
             }

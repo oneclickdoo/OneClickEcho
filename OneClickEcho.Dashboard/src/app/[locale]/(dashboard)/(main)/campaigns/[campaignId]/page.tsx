@@ -40,6 +40,8 @@ type BadgeVariant = "default" | "success" | "warning" | "error" | "neutral";
 const isBadgeVariant = (v: unknown): v is BadgeVariant =>
     v === "default" || v === "success" || v === "warning" || v === "error" || v === "neutral";
 
+const ANALYTICS_TAB = "tab4";
+
 export default function CampaignPage({ params }: { params: { campaignId: string } }) {
     const t = useTranslations("CampaignPage");
     const tCommon = useTranslations("Common");
@@ -68,6 +70,9 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
         queryFn: () => getCampaignById(params.campaignId, authFetch),
         enabled: Boolean(params.campaignId),
         refetchInterval: (q) => {
+            if (currentTab !== ANALYTICS_TAB) {
+                return false;
+            }
             const s = q.state.data?.status;
             if (
                 s === CampaignStatus.Queued ||
@@ -300,7 +305,11 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
                         </TabsContent>
 
                         <TabsContent value="tab4">
-                            <CampaignAnalyticsTab campaignId={params.campaignId} status={campaign.status} />
+                            <CampaignAnalyticsTab
+                                campaignId={params.campaignId}
+                                status={campaign.status}
+                                isActive={currentTab === ANALYTICS_TAB}
+                            />
                         </TabsContent>
 
                         <TabsContent value="tab5">

@@ -52,6 +52,15 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext) : ICampaignL
             .ToListAsync(cancellationToken);
     }
 
+    public Task<List<Lead>> GetLeadsByCampaignIdWithSmsStatusNoneAsync(CampaignId campaignId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Set<CampaignLead>()
+            .Where(cl => cl.CampaignId == campaignId && cl.SMSStatus == CampaignLeadSMSStatus.None)
+            .Join(_dbContext.Leads, cl => cl.LeadId, l => l.Id, (cl, l) => l)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IPagedList<Lead>> GetPagedLeadsByCampaignIdAsync(CampaignId campaignId, IPagedQuery query,
         CancellationToken cancellationToken = default)
     {
@@ -87,11 +96,11 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext) : ICampaignL
 
     public async Task<List<CampaignLead>> GetNonTerminalCampaignLeadsForCampaignIdsAsync(List<CampaignId> campaignIds, CancellationToken cancellationToken = default)
     {
+        // Delivery polling updates all statuses except terminal Clicked and Expired (incl. Undelivered — provider may correct).
         List<CampaignLead> campaignLeads = await _dbContext.CampaignLeads
             .Where(x => campaignIds.Contains(x.CampaignId))
             .Where(x =>
                 x.ViberStatus != CampaignLeadViberStatus.Expired &&
-                x.ViberStatus != CampaignLeadViberStatus.Undelivered &&
                 x.ViberStatus != CampaignLeadViberStatus.Clicked)
             .ToListAsync(cancellationToken);
 

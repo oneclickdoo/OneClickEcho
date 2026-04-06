@@ -96,13 +96,12 @@ public class SmsSendingService
                 }
 
                 campaignLead.SMSReferenceId = response.Reference;
+                await unitOfWork.SaveChangesAsync();
             }
 
             // pause for 200 ms before another API call
             await Task.Delay(200);
         }
-
-        await unitOfWork.SaveChangesAsync();
 
         // await Task.Delay(10000);
         // await SmsDeliveryService.GetSmsDeliveryForCampaignId(
