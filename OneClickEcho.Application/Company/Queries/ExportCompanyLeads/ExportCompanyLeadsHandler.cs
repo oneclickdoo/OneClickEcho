@@ -1,4 +1,4 @@
-﻿using OneClickEcho.Application.Common.Messaging;
+using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Domain.Common.Shared;
 using OneClickEcho.Domain.CompanyAggregate.Repositories;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
@@ -39,7 +39,12 @@ namespace OneClickEcho.Application.Company.Queries.ExportCompanyLeads
                 leads = await _leadRepository.GetAllByCompanyId(company.Id, cancellationToken);
             }
 
-            if (leads.Count == 0)
+            if (query.BlacklistedOnly)
+            {
+                leads = leads.Where(l => l.IsBlacklisted).ToList();
+            }
+
+            if (leads.Count == 0 && !query.BlacklistedOnly)
             {
                 return Result.Failure<ExportCompanyLeadsResponse>(new Error(
                     "Leads.NotFound",

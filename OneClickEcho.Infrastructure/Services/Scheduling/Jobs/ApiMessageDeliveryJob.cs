@@ -13,7 +13,7 @@ public class ApiMessageDeliveryJob(ISchedulerFactory schedulerFactory, IMediator
     
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine($"{DateTime.Now} - Running ApiMessageDeliveryJob...");
+        // Console.WriteLine($"{DateTime.Now} - Running ApiMessageDeliveryJob...");
 
         var response = await _mediator.Send(new GetSentMessagesQuery());
         
@@ -48,9 +48,9 @@ public class ApiMessageDeliveryJob(ISchedulerFactory schedulerFactory, IMediator
             IScheduler scheduler = await _schedulerFactory.GetScheduler();
             await scheduler.ScheduleJob(job, trigger);
 
-            Console.WriteLine($"{DateTime.Now} - Scheduled {group.Key.MessageType}ApiMessageDeliveryJob for company ID [{group.Key.CompanyId}] with {group.Count()} messages");
+            // Console.WriteLine($"{DateTime.Now} - Scheduled {group.Key.MessageType}ApiMessageDeliveryJob for company ID [{group.Key.CompanyId}] with {group.Count()} messages");
         }
 
-        Console.WriteLine($"{DateTime.Now} - ApiMessageDeliveryJob completed successfully. Scheduled {messageGroups.Count} delivery jobs.");
+        // Console.WriteLine($"{DateTime.Now} - ApiMessageDeliveryJob completed successfully. Scheduled {messageGroups.Count} delivery jobs.");
     }
 }

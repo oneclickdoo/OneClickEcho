@@ -1,4 +1,4 @@
-﻿using OneClickEcho.Application.Common.Messaging;
+using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Application.Common.Services.GptService;
 using OneClickEcho.Domain.Common.Shared;
 using OneClickEcho.Domain.GptRequestAggregate.Enums;
@@ -18,6 +18,11 @@ public class EnhanceCampaignMessageHandler(IGptService gptService)
             RequestType = GptRequestType.EnhanceCampaignMessage,
             CampaignId = request.CampaignId
         }, cancellationToken);
+
+        if (response.IsFailure)
+        {
+            return Result.Failure<EnhanceCampaignMessageResponse>(response.Error);
+        }
 
         return new EnhanceCampaignMessageResponse(response.Value.Id.Value, response.Value.ResponseMessage);
     }

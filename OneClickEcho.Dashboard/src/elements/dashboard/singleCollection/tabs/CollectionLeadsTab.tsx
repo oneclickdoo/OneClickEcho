@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
@@ -229,11 +229,7 @@ export const CollectionLeadsTab = ({ collectionId }: ICollectionLeadsTab) => {
                 <Loading text={tCommon("lead.loadingLeads")} />
             ) : (
                 <div className={`${hasLeads ? "hidden" : ""}`}>
-                    {hasLeads ? (
-                        <CsvUpload file={file} setFile={setFile} />
-                    ) : (
-                        <CsvUpload file={file} setFile={setFile} refObject={uploadInputRef} />
-                    )}
+                    <CsvUpload file={file} setFile={setFile} refObject={uploadInputRef} />
 
                     {file ? (
                         <div className="flex justify-center mt-3">

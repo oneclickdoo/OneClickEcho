@@ -150,7 +150,9 @@ public class CompanyRepository(ApplicationDbContext dbContext) : ICompanyReposit
                     COALESCE(COUNT(DISTINCT c.id), 0) AS number_of_campaigns,
                     COALESCE(COUNT(*), 0) AS viber_total_leads,
                     -- Not sent to Comtrade / gateway: only None (0), not Received(1) or later
-                    COALESCE(SUM(CASE WHEN l.viber_status = 0 THEN 1 ELSE 0 END), 0) AS viber_not_sent
+                    COALESCE(SUM(CASE WHEN l.viber_status = 0 THEN 1 ELSE 0 END), 0) AS viber_not_sent,
+                    COALESCE(SUM(CASE WHEN l.viber_status = 1 THEN 1 ELSE 0 END), 0) AS viber_received,
+                    COALESCE(SUM(CASE WHEN l.viber_status = 3 THEN 1 ELSE 0 END), 0) AS viber_delivered_only
                 FROM campaign_leads l
                 JOIN leads le ON le.id = l.lead_id
                 JOIN campaigns c ON c.id = l.campaign_id

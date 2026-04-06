@@ -604,10 +604,11 @@
           },
           "messagesSent": {
             "title": "Viber primaoci (kampanja)",
-            "subtitle": "Poslate poruke (bez odgovora)",
-            "deliveredToUser": "Dostavljeno korisniku: {count}",
+            "subtitle": "Pregled isporuke po kontaktima",
+            "received": "Primljeno kod provajdera (status 1 — još nema konačan status isporuke na uređaju): {count}",
+            "deliveredDevice": "Isporučeno: {count}",
             "undelivered": "Neisporučeno: {count}",
-            "notSentToViber": "Neposlato ka Comtrade-u (viber_status = 0): {count}"
+            "notSent": "Neposlate poruke: {count}"
           },
           "reaction": {
             "title": "Reakcija",
@@ -616,7 +617,26 @@
           }
         },
         "funnel": {
-          "total": "Ukupno"
+          "total": "Ukupno",
+          "totalMessages": "Ukupno poruka",
+          "receivedMessages": "Primljeno (status 1)",
+          "pendingMessages": "Na čekanju (status 2)",
+          "deliveredDeviceMessages": "Isporučeno",
+          "notSentMessages": "Neposlate poruke",
+          "undeliveredMessages": "Neisporučeno",
+          "seenMessages": "Viđene poruke",
+          "clickedMessages": "Kliknute poruke"
+        },
+        "pie": {
+          "notSent": "Neposlato",
+          "systemReceived": "Primljeno (status 1)",
+          "pending": "Na čekanju",
+          "delivered": "Isporučeno",
+          "seen": "Viđeno",
+          "clicked": "Klik",
+          "undelivered": "Neispor.",
+          "unsubscribed": "Odjava",
+          "expired": "Isteklo"
         },
         "viber": {
           "mutuallyExclusiveHint": "Viber i SMS statusi se međusobno isključuju. Izaberite jedan prilikom kreiranja ili dodavanja kolekcije."
@@ -640,8 +660,20 @@
   "LeadsPage": {
     "title": "Kontakti",
     "buttons": {
+      "importPhones": "Uvezi telefone",
       "export": "Izvezi kontakte",
-      "uploadBlacklist": "Otpremi blacklist"
+      "exportBlacklist": "Izvezi blacklistu"
+    },
+    "importPhones": {
+      "title": "Uvezi telefone",
+      "description": "Nalepite jedan broj po liniji, ili ih odvojite zarezom ili tačkom-zarezom. Brojevi koji počinju sa 06 normalizuju se u +381. Duplikati u listi se uklanjaju; nevažeći unosi se ne uvoze.",
+      "placeholder": "+381641234567\n0641234567",
+      "invalidLabel": "Nevažeći (preskočeno)",
+      "duplicatesRemoved": "{count, plural, one {Uklonjen je # duplikat.} few {Uklonjena su # duplikata.} other {Uklonjeno je # duplikata.}}",
+      "validCount": "{count, plural, one {# ispravan broj spreman za uvoz.} few {# ispravna broja spremna za uvoz.} other {# ispravnih brojeva spremno za uvoz.}}",
+      "submit": "Uvezi",
+      "cancel": "Otkaži",
+      "noValid": "Nema ispravnih brojeva telefona za uvoz."
     },
     "downloadExample": "Preuzmi primer CSV fajla",
     "toasts": {
@@ -649,10 +681,11 @@
       "errorTitle": "Greška",
       "exported": "Kontakti kompanije su izvezeni.",
       "exampleDownloaded": "Primer CSV fajla je preuzet.",
-      "blacklistUploaded": "Blacklist je otpremljen."
+      "imported": "Brojevi telefona su uvezeni.",
+      "blacklistExported": "Kontakti sa blackliste su izvezeni."
     },
     "errors": {
-      "networkNotOk": "Greška pri slanju fajla"
+      "networkNotOk": "Došlo je do greške. Proverite vezu ili pokušajte ponovo."
     }
   },
   "ApiMessages": {
@@ -855,9 +888,11 @@
       "contacts": "Kontakti",
       "uniqueContacts": "Jedinstveni kontakti",
       "clickedOf": "{clicked} kliknulo od {delivered} dostavljenih",
-      "viberDeliveredCount": "Dostavljeno korisniku: {count}",
+      "viberReceivedCount": "Primljeno kod provajdera (status 1 — još nema konačan status na uređaju): {count}",
+      "viberDeliveredOnDeviceCount": "Isporučeno: {count}",
+      "viberDeliveredCount": "Dostavljeno / viđeno / klik (ukupno): {count}",
       "viberUndeliveredCount": "Neisporučeno: {count}",
-      "viberNotSentCount": "Neposlato ka Comtrade-u (viber_status = 0): {count}"
+      "viberNotSentCount": "Neposlato: {count}"
     },
     "charts": {
       "messagesSent": "Obim poruka",
@@ -868,7 +903,9 @@
       "smsDelivery": "SMS dostava",
       "viber": "Viber",
       "sms": "SMS",
-      "viberDelivered": "Dostavljeno",
+      "viberReceived": "Primljeno (status 1)",
+      "viberDeliveredOnDevice": "Isporučeno (uređaj)",
+      "viberDelivered": "Dostavljeno (zbir)",
       "viberUndelivered": "Nedostavljeno",
       "viberExpired": "Isteklo",
       "viberSeen": "Viđeno",
@@ -878,10 +915,10 @@
     }
   },
   "Kpi": {
-    "systemReceived": "Primljeno u sistem",
+    "systemReceived": "Primljeno",
     "pending": "Na čekanju",
     "sent": "Poslato",
-    "notSent": "Neposlato (status 0, Comtrade)",
+    "notSent": "Neposlato",
     "delivered": "Isporučeno",
     "failed": "Neuspešno",
     "undelivered": "Neisporučeno",

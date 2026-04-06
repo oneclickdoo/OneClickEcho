@@ -78,6 +78,10 @@ export type CompanyAnalyticsDto = {
         numberOfApiSms: number;
         viberTotalLeads: number;
         viberNotSent: number;
+        /** Viber status 1 — primljeno od provajdera */
+        viberReceived?: number;
+        /** Viber status 3 — isporučeno na uređaj (striktno) */
+        viberDeliveredOnly?: number;
     };
 };
 

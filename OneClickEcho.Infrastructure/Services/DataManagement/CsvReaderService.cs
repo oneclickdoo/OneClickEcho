@@ -1,4 +1,5 @@
 using CsvHelper;
+using CsvHelper.Configuration;
 using OneClickEcho.Application.Common.Services;
 using System.Globalization;
 
@@ -10,10 +11,22 @@ public class CsvReaderService : ICsvReaderService
     {
         try
         {
-            // read file
-            using StreamReader reader = new(Path.Combine(FileStorageService.UploadPath, filename));
+            string path = Path.Combine(FileStorageService.UploadPath, filename);
+            string? firstLine;
+            using (StreamReader peekReader = new(path))
+            {
+                firstLine = peekReader.ReadLine();
+            }
 
-            using CsvReader csv = new(reader, CultureInfo.InvariantCulture);
+            char delimiter = firstLine is not null && firstLine.Contains(';') ? ';' : ',';
+
+            CsvConfiguration config = new(CultureInfo.InvariantCulture)
+            {
+                Delimiter = delimiter.ToString()
+            };
+
+            using StreamReader reader = new(path);
+            using CsvReader csv = new(reader, config);
 
             IEnumerable<CsvLeadDto> records = csv.GetRecords<CsvLeadDto>();
 

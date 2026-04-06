@@ -83,6 +83,24 @@ public class CampaignRepository(ApplicationDbContext dbContext) : ICampaignRepos
         return campaigns;
     }
 
+    public async Task<bool> TryMarkAsInProgressFromQueuedAsync(CampaignId id, CancellationToken cancellationToken = default)
+    {
+        int updated = await _dbContext.Campaigns
+            .Where(c => c.Id == id && c.Status == CampaignStatus.Queued)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(c => c.Status, CampaignStatus.InProgress),
+                cancellationToken);
+        return updated > 0;
+    }
+
+    public async Task<List<Campaign>> GetInProgressViberCampaignsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Campaigns
+            .Where(c => c.Status == CampaignStatus.InProgress)
+            .Where(c => c.IsViber)
+            .ToListAsync(cancellationToken);
+    }
+
     /// <summary>
     /// Viber delivery polling: only campaigns in the last 49 hours (not all campaigns)—by
     /// <c>SendingDatetime</c> or by <c>campaign_leads</c> created in that window with a Viber message id.

@@ -604,10 +604,11 @@
           },
           "messagesSent": {
             "title": "Viber recipients (campaign)",
-            "subtitle": "Sent messages (excluding replies)",
-            "deliveredToUser": "Delivered to user: {count}",
+            "subtitle": "Delivery overview per contact",
+            "received": "Accepted by gateway (status 1 — not yet a final on-device delivery status): {count}",
+            "deliveredDevice": "Delivered: {count}",
             "undelivered": "Undelivered: {count}",
-            "notSentToViber": "Not sent to gateway (viber_status = 0): {count}"
+            "notSent": "Not sent: {count}"
           },
           "reaction": {
             "title": "Reaction",
@@ -616,7 +617,26 @@
           }
         },
         "funnel": {
-          "total": "Total"
+          "total": "Total",
+          "totalMessages": "Total messages",
+          "receivedMessages": "Received (status 1)",
+          "pendingMessages": "Pending (status 2)",
+          "deliveredDeviceMessages": "Delivered",
+          "notSentMessages": "Not sent",
+          "undeliveredMessages": "Undelivered",
+          "seenMessages": "Seen",
+          "clickedMessages": "Clicked"
+        },
+        "pie": {
+          "notSent": "Not sent",
+          "systemReceived": "Received (status 1)",
+          "pending": "Pending",
+          "delivered": "Delivered",
+          "seen": "Seen",
+          "clicked": "Click",
+          "undelivered": "Undeliv.",
+          "unsubscribed": "Unsub",
+          "expired": "Expired"
         },
         "viber": {
           "mutuallyExclusiveHint": "Viber and SMS statuses are mutually exclusive. Select one when creating or adding a collection."
@@ -640,8 +660,20 @@
   "LeadsPage": {
     "title": "Contacts",
     "buttons": {
+      "importPhones": "Import phone numbers",
       "export": "Export contacts",
-      "uploadBlacklist": "Upload blacklist"
+      "exportBlacklist": "Export blacklist"
+    },
+    "importPhones": {
+      "title": "Import phone numbers",
+      "description": "Paste one number per line, or separate with commas or semicolons. Serbian numbers starting with 06 are normalized to +381. Duplicates in the list are removed; invalid entries are not imported.",
+      "placeholder": "+381641234567\n0641234567",
+      "invalidLabel": "Invalid (skipped)",
+      "duplicatesRemoved": "{count, plural, one {# duplicate removed.} other {# duplicates removed.}}",
+      "validCount": "{count, plural, one {# valid number ready to import.} other {# valid numbers ready to import.}}",
+      "submit": "Import",
+      "cancel": "Cancel",
+      "noValid": "No valid phone numbers to import."
     },
     "downloadExample": "Download example CSV file",
     "toasts": {
@@ -649,10 +681,11 @@
       "errorTitle": "Error",
       "exported": "Company contacts have been exported.",
       "exampleDownloaded": "Example CSV file has been downloaded.",
-      "blacklistUploaded": "Blacklist has been uploaded."
+      "imported": "Phone numbers have been imported.",
+      "blacklistExported": "Blacklisted contacts have been exported."
     },
     "errors": {
-      "networkNotOk": "Error while uploading file"
+      "networkNotOk": "Something went wrong. Check your connection or try again."
     }
   },
   "ApiMessages": {
@@ -855,9 +888,11 @@
       "contacts": "Contacts",
       "uniqueContacts": "Unique contacts",
       "clickedOf": "{clicked} clicked out of {delivered} delivered",
-      "viberDeliveredCount": "Delivered (to user): {count}",
+      "viberReceivedCount": "Accepted by gateway (status 1 — not yet final on-device status): {count}",
+      "viberDeliveredOnDeviceCount": "Delivered: {count}",
+      "viberDeliveredCount": "Delivered / seen / clicked (total): {count}",
       "viberUndeliveredCount": "Undelivered: {count}",
-      "viberNotSentCount": "Not sent to gateway (viber_status = 0): {count}"
+      "viberNotSentCount": "Not sent: {count}"
     },
     "charts": {
       "messagesSent": "Message volume",
@@ -868,7 +903,9 @@
       "smsDelivery": "SMS delivery",
       "viber": "Viber",
       "sms": "SMS",
-      "viberDelivered": "Delivered",
+      "viberReceived": "Received (status 1)",
+      "viberDeliveredOnDevice": "Delivered (device)",
+      "viberDelivered": "Delivered (aggregate)",
       "viberUndelivered": "Undelivered",
       "viberExpired": "Expired",
       "viberSeen": "Seen",
@@ -878,10 +915,10 @@
     }
   },
   "Kpi": {
-    "systemReceived": "Received in system",
+    "systemReceived": "Received",
     "pending": "Pending",
     "sent": "Sent",
-    "notSent": "Not sent (status 0)",
+    "notSent": "Not sent",
     "delivered": "Delivered",
     "failed": "Failed",
     "undelivered": "Undelivered",

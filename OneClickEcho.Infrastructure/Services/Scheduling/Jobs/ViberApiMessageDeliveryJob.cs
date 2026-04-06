@@ -14,7 +14,7 @@ public class ViberApiMessageDeliveryJob(IMessageDeliveryService messageDeliveryS
 
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine($"{DateTime.Now} - Running ViberApiMessageDeliveryJob...");
+        // Console.WriteLine($"{DateTime.Now} - Running ViberApiMessageDeliveryJob...");
         
         // Get CompanyId
         Guid companyIdGuid = context.JobDetail.JobDataMap.GetGuid("CompanyId");
@@ -32,6 +32,6 @@ public class ViberApiMessageDeliveryJob(IMessageDeliveryService messageDeliveryS
             await _messageDeliveryService.GetViberDeliveryForApiMessages(companyId, companyGroup.ToList());
         }
 
-        Console.WriteLine($"{DateTime.Now} - ViberApiMessageDeliveryJob completed successfully.");
+        // Console.WriteLine($"{DateTime.Now} - ViberApiMessageDeliveryJob completed successfully.");
     }
 } 

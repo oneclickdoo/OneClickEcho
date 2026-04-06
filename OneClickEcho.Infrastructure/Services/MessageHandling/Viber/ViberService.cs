@@ -1,4 +1,4 @@
-﻿using OneClickEcho.Application.Common.Helpers;
+using OneClickEcho.Application.Common.Helpers;
 using OneClickEcho.Application.Common.Services.ViberService;
 using OneClickEcho.Application.Common.Services.ViberService.Request;
 using OneClickEcho.Application.Common.Services.ViberService.Request.Enum;
@@ -26,26 +26,31 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     onRetry: (outcome, timespan, retryCount, context) =>
                     {
-                        Console.WriteLine($"Retry {retryCount} of Viber Send after {timespan.TotalSeconds} seconds.");
+                        // Console.WriteLine($"Retry {retryCount} of Viber Send after {timespan.TotalSeconds} seconds.");
                     });
             
-            // serialize the request body to JSON
-            StringContent content = new(JsonSerializer
-                .Serialize(request, new JsonSerializerOptions()
-                {
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                }), Encoding.UTF8, "application/json");
-
-            // create a new HttpRequestMessage
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/ViberCTOC/ReceivingService.svc/json/Send")
-            {
-                Content = content
-            };
+            int outboundCount = request.ViberMessages?.Count ?? 0;
+            string baseUrl = _httpClient.BaseAddress?.ToString().TrimEnd('/') ?? "(no BaseAddress)";
+            // Console.WriteLine(
+            //     $"[{DateTime.UtcNow:O}] [ComTrade] Viber bulk Send starting: {outboundCount} message(s) -> {baseUrl}/ViberCTOC/ReceivingService.svc/json/Send");
 
             try
             {
-                // send request
-                HttpResponseMessage response = await retryPolicy.ExecuteAsync(() => _httpClient.SendAsync(httpRequestMessage));
+                // Build a fresh request per attempt — StringContent/HttpRequestMessage must not be reused across Polly retries.
+                HttpResponseMessage response = await retryPolicy.ExecuteAsync(async () =>
+                {
+                    string json = JsonSerializer.Serialize(request, new JsonSerializerOptions()
+                    {
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    });
+                    using StringContent content = new(json, Encoding.UTF8, "application/json");
+                    using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/ViberCTOC/ReceivingService.svc/json/Send")
+                    {
+                        Content = content
+                    };
+                    return await _httpClient.SendAsync(httpRequestMessage);
+                });
+
                 response.EnsureSuccessStatusCode();
 
                 // get response
@@ -58,12 +63,21 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         PropertyNameCaseInsensitive = true
                     });
 
+                if (responseDto?.ViberMessageResponses is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Viber Send returned an empty or invalid JSON body. Raw length: {responseStream?.Length ?? 0}.");
+                }
+
+                // Console.WriteLine(
+                //     $"[{DateTime.UtcNow:O}] [ComTrade] Viber Send HTTP OK: {(int)response.StatusCode} {response.StatusCode}, {responseDto.ViberMessageResponses.Count} status row(s) in JSON body.");
+
                 return responseDto;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
-                return null;
+                throw;
             }
         }
 
@@ -77,22 +91,21 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     onRetry: (outcome, timespan, retryCount, context) =>
                     {
-                        Console.WriteLine($"Retry {retryCount} of Viber Send after {timespan.TotalSeconds} seconds.");
+                        // Console.WriteLine($"Retry {retryCount} of Viber Send after {timespan.TotalSeconds} seconds.");
                     });
-            
-            // serialize the request body to JSON
-            StringContent content = new(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-
-            // create a new HttpRequestMessage
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/ViberCTOC/ReceivingService.svc/json/DeliveryById")
-            {
-                Content = content
-            };
             
             try
             {
-                // send request
-                HttpResponseMessage response = await retryPolicy.ExecuteAsync(() => _httpClient.SendAsync(httpRequestMessage));
+                HttpResponseMessage response = await retryPolicy.ExecuteAsync(async () =>
+                {
+                    using StringContent content = new(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+                    using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/ViberCTOC/ReceivingService.svc/json/DeliveryById")
+                    {
+                        Content = content
+                    };
+                    return await _httpClient.SendAsync(httpRequestMessage);
+                });
+
                 response.EnsureSuccessStatusCode();
 
                 // get response
@@ -124,22 +137,21 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     onRetry: (outcome, timespan, retryCount, context) =>
                     {
-                        Console.WriteLine($"Retry {retryCount} of Viber Send after {timespan.TotalSeconds} seconds.");
+                        // Console.WriteLine($"Retry {retryCount} of Viber Send after {timespan.TotalSeconds} seconds.");
                     });
-            
-            // serialize the request body to JSON
-            StringContent content = new(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-
-            // create a new HttpRequestMessage
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/ViberCTOC/ReceivingService.svc/json/AnswersById")
-            {
-                Content = content
-            };
             
             try
             {
-                // send request
-                HttpResponseMessage response = await retryPolicy.ExecuteAsync(() => _httpClient.SendAsync(httpRequestMessage));
+                HttpResponseMessage response = await retryPolicy.ExecuteAsync(async () =>
+                {
+                    using StringContent content = new(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+                    using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/ViberCTOC/ReceivingService.svc/json/AnswersById")
+                    {
+                        Content = content
+                    };
+                    return await _httpClient.SendAsync(httpRequestMessage);
+                });
+
                 response.EnsureSuccessStatusCode();
 
                 // get response

@@ -66,7 +66,18 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
     const { data: fetchCampaign, refetch } = useQuery({
         queryKey: ["data", params.campaignId],
         queryFn: () => getCampaignById(params.campaignId, authFetch),
-        enabled: false
+        enabled: Boolean(params.campaignId),
+        refetchInterval: (q) => {
+            const s = q.state.data?.status;
+            if (
+                s === CampaignStatus.Queued ||
+                s === CampaignStatus.InProgress ||
+                s === CampaignStatus.Done
+            ) {
+                return 15_000;
+            }
+            return false;
+        }
     });
 
     // ✅ next-intl aware options (labels translated from Common.campaignStatus.*)
@@ -190,11 +201,6 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
             console.error(e);
         }
     };
-
-    useEffect(() => {
-        refetch();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     useEffect(() => {
         if (fetchCampaign) {

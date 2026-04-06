@@ -5,6 +5,7 @@ using OneClickEcho.Application.Common.Services.ViberService.Request.Common;
 using OneClickEcho.Application.Common.Services.ViberService.Response;
 using OneClickEcho.Application.Common.Services.ViberService.Response.Common;
 using OneClickEcho.Application.Common.Services.ViberService.Response.Enum;
+using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Domain.ApiMessageAggregate;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CampaignAggregate.Repositories;
@@ -75,7 +76,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             // send chunk by chunk
             foreach (List<CampaignLead> dividedCampaignLead in dividedCampaignLeads)
             {
-                Console.WriteLine(DateTime.Now + $" - Fetching delivery for for [{dividedCampaignLead.Count}] leads, index [{j} - {j + dividedCampaignLead.Count - 1}]. Total leads: [{campaignLeads.Count}]");
+                // Console.WriteLine(DateTime.Now + $" - Fetching delivery for for [{dividedCampaignLead.Count}] leads, index [{j} - {j + dividedCampaignLead.Count - 1}]. Total leads: [{campaignLeads.Count}]");
 
                 j += dividedCampaignLead.Count;
 
@@ -89,10 +90,18 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 DeliveryViberMessageResponseDto? response = await viberService.DeliveryById(request)
                     ?? throw new Exception($"Failed to get delivery response.");
 
-                Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
+                // Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
+
+                List<DeliveryViberMessageResponse> mergedResponses =
+                    DeliveryViberResponseDeduplicator.Deduplicate(response.ViberMessageResponses);
+                if (mergedResponses.Count < response.ViberMessageResponses.Count)
+                {
+                    // Console.WriteLine(DateTime.Now +
+                    //     $" - Deduplicated delivery rows: {response.ViberMessageResponses.Count} -> {mergedResponses.Count} (same MessageId).");
+                }
 
                 // check responses
-                foreach (DeliveryViberMessageResponse item in response.ViberMessageResponses)
+                foreach (DeliveryViberMessageResponse item in mergedResponses)
                 {
                     // get campaign lead
                     CampaignLead? campaignLead = campaignLeads.FirstOrDefault(x => x.ViberMessageId == item.MessageId);
@@ -100,15 +109,23 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     // update campaign lead status
                     if (campaignLead != null)
                     {
-                        Console.WriteLine(DateTime.Now + $" - Updating delivery status for lead ViberMessageId [{item.MessageId}]. Old status: [{campaignLead.ViberStatus}]; New status: [{item.MessageStatus.Status}]");
+                        // Console.WriteLine(DateTime.Now + $" - Updating delivery status for lead ViberMessageId [{item.MessageId}]. Old status: [{campaignLead.ViberStatus}]; New status: [{item.MessageStatus.Status}]");
 
-                        campaignLead.ViberStatus = (CampaignLeadViberStatus)item.MessageStatus.Status;
+                        CampaignLeadViberStatus deliveryStatus = (CampaignLeadViberStatus)item.MessageStatus.Status;
+                        bool clicked = item.ClickInfo.ClickCount > 0;
+                        CampaignLeadViberStatus newStatus = clicked ? CampaignLeadViberStatus.Clicked : deliveryStatus;
 
-                        // check if link in message is clicked TODO: Do we need to check for button URL here?
-                        if (/*campaign.ViberButtonUrl != null && */ item.ClickInfo.ClickCount > 0)
+                        // Stale duplicate row (e.g. Pending without click) must not downgrade Clicked.
+                        if (campaignLead.ViberStatus == CampaignLeadViberStatus.Clicked &&
+                            newStatus != CampaignLeadViberStatus.Clicked)
                         {
-                            campaignLead.ViberStatus = CampaignLeadViberStatus.Clicked;
+                            continue;
                         }
+
+                        campaignLead.ViberStatus = newStatus;
+
+                        campaignLead.ViberStatusDescription =
+                            CampaignLeadViberStatusDescriptions.ForDelivery(deliveryStatus, item.MessageStatus.SubStatus, clicked);
 
                         // check if message is undelivered
                         if ((CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Undelivered)
@@ -133,7 +150,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     }
                     else
                     {
-                        Console.WriteLine(DateTime.Now + $" - Lead ViberMessageId [{item.MessageId}] not found during delivery update.");
+                        // Console.WriteLine(DateTime.Now + $" - Lead ViberMessageId [{item.MessageId}] not found during delivery update.");
                     }
                 }
             }
@@ -161,7 +178,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         continue;
                     }
 
-                    Console.WriteLine(DateTime.Now + $" - Found [{undeliveredIds.Count}] undelivered leads in campaign [{campaignId}]. Initializing SMS fallback...");
+                    // Console.WriteLine(DateTime.Now + $" - Found [{undeliveredIds.Count}] undelivered leads in campaign [{campaignId}]. Initializing SMS fallback...");
                     
                     List<Domain.LeadAggregate.Lead> leads = await leadRepository
                         .GetAllInLeadIdList(campaign.CompanyId, undeliveredIds);
@@ -193,7 +210,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 if (!unsubscribedCampaignLeads.ContainsKey(campaignId) || unsubscribedCampaignLeads[campaignId].Count <= 0) continue;
 
                 // mark leads as unsubscribed
-                Console.WriteLine(DateTime.Now + $" - Found [{unsubscribedCampaignLeads[campaignId].Count}] unsubscribed leads in campaign [{campaignId}]. Updating flags...");
+                // Console.WriteLine(DateTime.Now + $" - Found [{unsubscribedCampaignLeads[campaignId].Count}] unsubscribed leads in campaign [{campaignId}]. Updating flags...");
                 
                 List<Domain.LeadAggregate.Lead> leads = await leadRepository
                     .GetAllInLeadIdList(campaign.CompanyId, unsubscribedCampaignLeads[campaignId]);
@@ -244,7 +261,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             // send chunk by chunk
             foreach (List<ApiMessage> dividedApiMessage in dividedApiMessages)
             {
-                Console.WriteLine(DateTime.Now + $" - Fetching delivery for for [{dividedApiMessage.Count}] Viber API messages, index [{j} - {j + dividedApiMessage.Count - 1}]. Total Viber API Messages: [{apiMessages.Count}]");
+                // Console.WriteLine(DateTime.Now + $" - Fetching delivery for for [{dividedApiMessage.Count}] Viber API messages, index [{j} - {j + dividedApiMessage.Count - 1}]. Total Viber API Messages: [{apiMessages.Count}]");
 
                 j += dividedApiMessage.Count;
 
@@ -258,10 +275,18 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 DeliveryViberMessageResponseDto? response = await viberService.DeliveryById(request)
                     ?? throw new Exception($"Failed to get delivery response.");
 
-                Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] Viber API messages during delivery.");
+                // Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] Viber API messages during delivery.");
+
+                List<DeliveryViberMessageResponse> mergedApiResponses =
+                    DeliveryViberResponseDeduplicator.Deduplicate(response.ViberMessageResponses);
+                if (mergedApiResponses.Count < response.ViberMessageResponses.Count)
+                {
+                    // Console.WriteLine(DateTime.Now +
+                    //     $" - Deduplicated API delivery rows: {response.ViberMessageResponses.Count} -> {mergedApiResponses.Count}.");
+                }
 
                 // check responses
-                foreach (DeliveryViberMessageResponse item in response.ViberMessageResponses)
+                foreach (DeliveryViberMessageResponse item in mergedApiResponses)
                 {
                     // get campaign lead
                     ApiMessage? apiMessage = apiMessages.FirstOrDefault(x => x.ViberMessageId == item.MessageId);
@@ -269,15 +294,22 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     // update campaign lead status
                     if (apiMessage != null)
                     {
-                        Console.WriteLine(DateTime.Now + $" - Updating delivery status for Viber API Message ViberMessageId [{item.MessageId}]. Old status: [{apiMessage.ViberStatus}]; New status: [{item.MessageStatus.Status}]");
+                        // Console.WriteLine(DateTime.Now + $" - Updating delivery status for Viber API Message ViberMessageId [{item.MessageId}]. Old status: [{apiMessage.ViberStatus}]; New status: [{item.MessageStatus.Status}]");
 
-                        apiMessage.ViberStatus = (CampaignLeadViberStatus)item.MessageStatus.Status;
+                        CampaignLeadViberStatus deliveryStatus = (CampaignLeadViberStatus)item.MessageStatus.Status;
+                        bool clicked = item.ClickInfo.ClickCount > 0;
+                        CampaignLeadViberStatus newApiStatus = clicked ? CampaignLeadViberStatus.Clicked : deliveryStatus;
 
-                        // check if link in message is clicked
-                        if (item.ClickInfo.ClickCount > 0)
+                        if (apiMessage.ViberStatus == CampaignLeadViberStatus.Clicked &&
+                            newApiStatus != CampaignLeadViberStatus.Clicked)
                         {
-                            apiMessage.ViberStatus = CampaignLeadViberStatus.Clicked;
+                            continue;
                         }
+
+                        apiMessage.ViberStatus = newApiStatus;
+
+                        apiMessage.ViberStatusDescription =
+                            CampaignLeadViberStatusDescriptions.ForDelivery(deliveryStatus, item.MessageStatus.SubStatus, clicked);
 
                         // check if message is undelivered
                         if ((CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Undelivered)
@@ -292,14 +324,14 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     }
                     else
                     {
-                        Console.WriteLine(DateTime.Now + $" - Viber API Message ViberMessageId [{item.MessageId}] not found during delivery update.");
+                        // Console.WriteLine(DateTime.Now + $" - Viber API Message ViberMessageId [{item.MessageId}] not found during delivery update.");
                     }
                 }
             }
 
             if (undeliveredApiMessages.Any())
             {
-                Console.WriteLine(DateTime.Now + $" - Found [{undeliveredApiMessages.Count}] undelivered Viber API messages.");
+                // Console.WriteLine(DateTime.Now + $" - Found [{undeliveredApiMessages.Count}] undelivered Viber API messages.");
                 
                 List<ApiMessage> fallbackApiMessages = new List<ApiMessage>();
                 
@@ -314,7 +346,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 if (fallbackApiMessages.Any())
                 {
-                    Console.WriteLine(DateTime.Now + $" - Found [{fallbackApiMessages.Count}] undelivered Viber API messages with fallback enabled. Initializing SMS fallback...");
+                    // Console.WriteLine(DateTime.Now + $" - Found [{fallbackApiMessages.Count}] undelivered Viber API messages with fallback enabled. Initializing SMS fallback...");
 
                     HashSet<string> fbKeys = fallbackApiMessages
                         .Select(m => PhoneNumberHelper.Standardize(m.PhoneNumber))
@@ -356,7 +388,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             
             if (unsubscribedApiMessages.Count > 0)
             {
-                Console.WriteLine(DateTime.Now + $" - Found [{unsubscribedApiMessages.Count}] unsubscribed Viber API messages. Blacklisting matching leads...");
+                // Console.WriteLine(DateTime.Now + $" - Found [{unsubscribedApiMessages.Count}] unsubscribed Viber API messages. Blacklisting matching leads...");
 
                 HashSet<string> normalizedPhones = unsubscribedApiMessages
                     .Select(m => PhoneNumberHelper.Standardize(m.PhoneNumber))
@@ -412,7 +444,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             // send chunk by chunk
             foreach (List<TestMessage> dividedTestMessage in dividedTestMessages)
             {
-                Console.WriteLine(DateTime.Now + $" - Fetching test delivery for for [{dividedTestMessage.Count}] messages, index [{j} - {j + dividedTestMessage.Count - 1}]. Total test messages: [{testMessages.Count}]");
+                // Console.WriteLine(DateTime.Now + $" - Fetching test delivery for for [{dividedTestMessage.Count}] messages, index [{j} - {j + dividedTestMessage.Count - 1}]. Total test messages: [{testMessages.Count}]");
 
                 j += dividedTestMessage.Count;
 
@@ -426,10 +458,18 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 DeliveryViberMessageResponseDto? response = await viberService.DeliveryById(request)
                     ?? throw new Exception($"Failed to get delivery response.");
 
-                Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
+                // Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] test messages during delivery.");
+
+                List<DeliveryViberMessageResponse> mergedTestResponses =
+                    DeliveryViberResponseDeduplicator.Deduplicate(response.ViberMessageResponses);
+                if (mergedTestResponses.Count < response.ViberMessageResponses.Count)
+                {
+                    // Console.WriteLine(DateTime.Now +
+                    //     $" - Deduplicated test delivery rows: {response.ViberMessageResponses.Count} -> {mergedTestResponses.Count}.");
+                }
 
                 // check responses
-                foreach (DeliveryViberMessageResponse item in response.ViberMessageResponses)
+                foreach (DeliveryViberMessageResponse item in mergedTestResponses)
                 {
                     // get campaign lead
                     TestMessage? testMessage = testMessages.FirstOrDefault(x => x.ViberId == item.MessageId);
@@ -437,7 +477,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     // update campaign lead status
                     if (testMessage != null)
                     {
-                        Console.WriteLine(DateTime.Now + $" - Updating delivery status for test message ViberMessageId [{item.MessageId}].");
+                        // Console.WriteLine(DateTime.Now + $" - Updating delivery status for test message ViberMessageId [{item.MessageId}].");
                         
                         if ((CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Delivered
                             || (CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Seen)
@@ -453,7 +493,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     }
                     else
                     {
-                        Console.WriteLine(DateTime.Now + $" - Test message ViberMessageId [{item.MessageId}] not found during delivery update.");
+                        // Console.WriteLine(DateTime.Now + $" - Test message ViberMessageId [{item.MessageId}] not found during delivery update.");
                     }
                 }
             }
@@ -502,7 +542,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             // send chunk by chunk
             foreach (List<CampaignLead> dividedCampaignLead in dividedCampaignLeads)
             {
-                Console.WriteLine(DateTime.Now + $" - Fetching answers for [{dividedCampaignLead.Count}] leads, index [{j} - {j + dividedCampaignLead.Count - 1}]. Total leads: [{campaignLeads.Count}]");
+                // Console.WriteLine(DateTime.Now + $" - Fetching answers for [{dividedCampaignLead.Count}] leads, index [{j} - {j + dividedCampaignLead.Count - 1}]. Total leads: [{campaignLeads.Count}]");
 
                 j += dividedCampaignLead.Count;
 
@@ -525,7 +565,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     // update campaign lead status
                     if (campaignLead != null)
                     {
-                        Console.WriteLine(DateTime.Now + $" - Updating answers for lead ViberMessageId [{entry.MessageId}].");
+                        // Console.WriteLine(DateTime.Now + $" - Updating answers for lead ViberMessageId [{entry.MessageId}].");
 
                         receivedMessages.Add(new ReceivedMessage
                         {
@@ -535,7 +575,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     }
                     else
                     {
-                        Console.WriteLine(DateTime.Now + $" - Lead ViberMessageId [{entry.MessageId}] not found during answers update.");
+                        // Console.WriteLine(DateTime.Now + $" - Lead ViberMessageId [{entry.MessageId}] not found during answers update.");
                     }
                 }
             }

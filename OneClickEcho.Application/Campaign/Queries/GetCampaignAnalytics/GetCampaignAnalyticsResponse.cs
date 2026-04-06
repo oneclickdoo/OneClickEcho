@@ -39,6 +39,12 @@ namespace OneClickEcho.Application.Campaign.Queries.GetCampaignAnalytics
 
         /// <summary>For funnel: Seen + Clicked.</summary>
         public int FunnelSeen { get; set; }
+
+        /// <summary>
+        /// Handed to Viber and not failed: Received + Pending + Delivered + Seen + Clicked + Expired.
+        /// Equals Sent minus Undelivered when each lead has exactly one Viber status.
+        /// </summary>
+        public int InViberPipeline { get; set; }
     }
 
     public class CampaignSmsAnalytics

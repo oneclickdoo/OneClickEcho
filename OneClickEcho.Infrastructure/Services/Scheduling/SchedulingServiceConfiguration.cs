@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using OneClickEcho.Infrastructure.Services.Scheduling.Jobs;
 using Quartz;
 using Quartz.Logging;
@@ -11,7 +11,8 @@ public class ConsoleLogProvider : ILogProvider
     {
         return (level, func, exception, parameters) =>
         {
-            if (level >= LogLevel.Info && func != null)
+            // Quartz Info would flood Docker (jobs every 10–60s); keep only Warn+.
+            if (level >= LogLevel.Warn && func != null)
             {
                 Console.WriteLine("[" + DateTime.Now.ToLongTimeString() + "] [" + level + "] " + func(), parameters);
             }
@@ -155,6 +156,17 @@ public static class SchedulingServiceConfiguration
                         .RepeatForever()),
                 jobConfigurator => jobConfigurator
                     .WithIdentity("expire-pending-messages-job")
+            );
+
+            q.ScheduleJob<RetryPendingViberCampaignSendsJob>(
+                triggerConfigurator => triggerConfigurator
+                    .WithIdentity("retry-pending-viber-campaign-sends-trigger")
+                    .ForJob("retry-pending-viber-campaign-sends-job")
+                    .WithSimpleSchedule(x => x
+                        .WithIntervalInSeconds(60)
+                        .RepeatForever()),
+                jobConfigurator => jobConfigurator
+                    .WithIdentity("retry-pending-viber-campaign-sends-job")
             );
         });
 

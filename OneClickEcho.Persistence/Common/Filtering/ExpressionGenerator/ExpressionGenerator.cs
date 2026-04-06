@@ -103,9 +103,15 @@ public class ExpressionGenerator
                 listType = filterTokenConstantList.ConstantValueList.GetType().GetGenericArguments()[0];
                 
                 List<CampaignStatus> campaignStatusList = new List<CampaignStatus>();
-                foreach (var listItem in filterTokenConstantList.ConstantValueList)
+                foreach (object? listItem in filterTokenConstantList.ConstantValueList)
                 {
-                    campaignStatusList.Add((CampaignStatus)Int16.Parse(listItem.ToString()));
+                    string? text = listItem?.ToString();
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        throw new InvalidOperationException("Campaign status filter list item is null or empty.");
+                    }
+
+                    campaignStatusList.Add((CampaignStatus)short.Parse(text));
                 }
                 
                 constant = Expression.Constant(campaignStatusList);

@@ -10,7 +10,7 @@ public class BirthdayCampaignsJob(IMediator mediator) : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine(DateTime.Now + " - Running BirthdayCampaigns job...");
+        // Console.WriteLine(DateTime.Now + " - Running BirthdayCampaigns job...");
         await _mediator.Send(new SendBirthdayMessagesCommand());
     }
 }

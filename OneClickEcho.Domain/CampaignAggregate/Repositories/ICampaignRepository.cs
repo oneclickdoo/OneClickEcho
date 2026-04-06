@@ -25,6 +25,15 @@ public interface ICampaignRepository : IRepository<Campaign, CampaignId>
 
     Task<List<Campaign>> GetScheduledCampaignsByStartDate(DateTime startDate, DateTime endDate,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically sets status to <see cref="CampaignStatus.InProgress"/> only if currently <see cref="CampaignStatus.Queued"/>.
+    /// Use so duplicate Quartz triggers or multiple app instances cannot run the same send twice.
+    /// </summary>
+    Task<bool> TryMarkAsInProgressFromQueuedAsync(CampaignId id, CancellationToken cancellationToken = default);
+
+    /// <summary>Viber campaigns still <c>InProgress</c> (any launch time).</summary>
+    Task<List<Campaign>> GetInProgressViberCampaignsAsync(CancellationToken cancellationToken = default);
     
     Task<List<Campaign>> GetLast49HoursViberCampaigns(CancellationToken cancellationToken = default);
     

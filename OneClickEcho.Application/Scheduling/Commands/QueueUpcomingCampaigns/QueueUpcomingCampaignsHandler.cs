@@ -1,4 +1,5 @@
-﻿using OneClickEcho.Application.Common.Messaging;
+using System.Linq;
+using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Domain.CampaignAggregate.Repositories;
 using OneClickEcho.Domain.Common.Shared;
 
@@ -11,10 +12,17 @@ public class QueueUpcomingCampaignsHandler(ICampaignRepository campaignRepositor
 
     public async Task<Result<QueueUpcomingCampaignsResponse>> Handle(QueueUpcomingCampaignsCommand request, CancellationToken cancellationToken)
     {
-        Console.WriteLine("Checking campaigns between " + DateTime.Now.AddMinutes(-1) + " and " + DateTime.Now.AddMinutes(31) + "...");
+        DateTime startUtc = DateTime.UtcNow.AddMinutes(-1);
+        DateTime endUtc = DateTime.UtcNow.AddMinutes(31);
+        // Console.WriteLine($"[{DateTime.UtcNow:O}] Checking scheduled campaigns (UTC window {startUtc:O} .. {endUtc:O})...");
 
         List<Domain.CampaignAggregate.Campaign> upcomingCampaigns = await _campaignRepository
-            .GetScheduledCampaignsByStartDate(DateTime.Now.AddMinutes(-1), DateTime.Now.AddMinutes(31), cancellationToken);
+            .GetScheduledCampaignsByStartDate(startUtc, endUtc, cancellationToken);
+
+        string ids = upcomingCampaigns.Count == 0
+            ? "(none)"
+            : string.Join(", ", upcomingCampaigns.Select(c => c.Id.Value));
+        // Console.WriteLine($"[{DateTime.UtcNow:O}] Scheduled campaigns in window: {upcomingCampaigns.Count}. IDs: {ids}");
 
         return new QueueUpcomingCampaignsResponse(upcomingCampaigns);
     }

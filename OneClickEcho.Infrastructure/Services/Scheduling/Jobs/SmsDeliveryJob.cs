@@ -12,11 +12,11 @@ namespace OneClickEcho.Infrastructure.Services.Scheduling.Jobs
         {
             Guid campaignId = context.JobDetail.JobDataMap.GetGuid("CampaignId");
 
-            Console.WriteLine(DateTime.Now + " - Running SmsDeliveryJob job for campaign ID: " + campaignId);
+            // Console.WriteLine(DateTime.Now + " - Running SmsDeliveryJob job for campaign ID: " + campaignId);
 
             await _messageDeliveryService.GetSmsDeliveryForCampaignId(CampaignId.Create(campaignId));
 
-            Console.WriteLine(DateTime.Now + " - SmsDeliveryJob job for campaign ID: " + campaignId + " completed successfully.");
+            // Console.WriteLine(DateTime.Now + " - SmsDeliveryJob job for campaign ID: " + campaignId + " completed successfully.");
         }
     }
 }

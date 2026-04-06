@@ -43,6 +43,15 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext) : ICampaignL
         return leads.ToListAsync(cancellationToken);
     }
 
+    public Task<List<Lead>> GetLeadsByCampaignIdWithViberStatusNoneAsync(CampaignId campaignId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Set<CampaignLead>()
+            .Where(cl => cl.CampaignId == campaignId && cl.ViberStatus == CampaignLeadViberStatus.None)
+            .Join(_dbContext.Leads, cl => cl.LeadId, l => l.Id, (cl, l) => l)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IPagedList<Lead>> GetPagedLeadsByCampaignIdAsync(CampaignId campaignId, IPagedQuery query,
         CancellationToken cancellationToken = default)
     {

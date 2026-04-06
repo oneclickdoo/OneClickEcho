@@ -1,22 +1,21 @@
-﻿using OneClickEcho.Application.Common.Messaging;
-using OneClickEcho.Domain.CampaignAggregate.Enums;
+using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Domain.CampaignAggregate.Repositories;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
-using OneClickEcho.Domain.Common.Repositories;
 using OneClickEcho.Domain.Common.Shared;
 
 namespace OneClickEcho.Application.Scheduling.Commands.EnqueueCampaign;
 
-public class EnqueueCampaignHandler(ICampaignRepository campaignRepository, IUnitOfWork unitOfWork)
+public class EnqueueCampaignHandler(ICampaignRepository campaignRepository)
     : ICommandHandler<EnqueueCampaignCommand, EnqueueCampaignResponse>
 {
     private readonly ICampaignRepository _campaignRepository = campaignRepository;
-    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async Task<Result<EnqueueCampaignResponse>> Handle(EnqueueCampaignCommand request, CancellationToken cancellationToken)
     {
+        CampaignId id = CampaignId.Create(request.CampaignId);
+
         Domain.CampaignAggregate.Campaign? campaign = await _campaignRepository
-            .GetByIdAsync(CampaignId.Create(request.CampaignId), cancellationToken);
+            .GetByIdAsync(id, cancellationToken);
 
         if (campaign is null)
         {
@@ -26,10 +25,8 @@ public class EnqueueCampaignHandler(ICampaignRepository campaignRepository, IUni
             ));
         }
 
-        campaign.Status = CampaignStatus.InProgress;
+        bool claimed = await _campaignRepository.TryMarkAsInProgressFromQueuedAsync(id, cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return new EnqueueCampaignResponse();
+        return Result.Success(new EnqueueCampaignResponse(claimed));
     }
 }

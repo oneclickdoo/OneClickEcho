@@ -21,30 +21,7 @@ public static class InfrastructureServiceRegistration
 {
     public static IServiceCollection AddInfrastructureService(this IServiceCollection services, IConfiguration configuration)
     {
-        // add OpenAI configuration
-        OpenAiSettings openAiSettings = new();
-
-        configuration.GetSection("OpenAi").Bind(openAiSettings);
-
-        if (string.IsNullOrEmpty(openAiSettings.ApiKey) || string.IsNullOrEmpty(openAiSettings.Model))
-        {
-            throw new Exception("OpenAi:ApiKey and OpenAi:Model must be defined.");
-        }
-
-        services.AddHttpClient("OpenAiHttpClient", client =>
-        {
-            client.BaseAddress = new Uri("https://api.openai.com/");
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {openAiSettings.ApiKey}");
-        });
-
         services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
-
-        // register OpenAI services
-        services.AddScoped<GenerateNewCampaignMessageStrategy>();
-        services.AddScoped<EnhanceCampaignMessageStrategy>();
-        services.AddScoped<ConvertNounCasesStrategy>();
-        services.AddScoped<GptRequestStrategyFactory>();
-        services.AddScoped<IGptService, GptService>();
 
         // add Redis configuration
         string? redisConfiguration = configuration.GetSection("Redis")["ConnectionString"];
@@ -71,19 +48,25 @@ public static class InfrastructureServiceRegistration
 
         configuration.GetSection("Viber").Bind(viberSettings);
 
-        if (string.IsNullOrEmpty(viberSettings.Username) || string.IsNullOrEmpty(viberSettings.Password))
-        {
-            throw new Exception("Viber:Username and Viber:Password must be defined.");
-        }
+        services.Configure<ViberSettings>(configuration.GetSection("Viber"));
+
+        bool viberConfigured =
+            !string.IsNullOrWhiteSpace(viberSettings.Username) && !string.IsNullOrWhiteSpace(viberSettings.Password);
 
         services.AddHttpClient("ViberHttpClient", client =>
         {
             client.BaseAddress = new Uri("http://publicbulk.comtrade.com/");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            //client.DefaultRequestHeaders.Add("Host", "publicbulk.comtrade.com");
         });
 
-        services.Configure<ViberSettings>(configuration.GetSection("Viber"));
+        if (viberConfigured)
+        {
+            services.AddScoped<IViberService, ViberService>();
+        }
+        else
+        {
+            services.AddScoped<IViberService, UnconfiguredViberService>();
+        }
 
         // add SMS configuration
         /*SMSSettings smsSettings = new();
@@ -106,20 +89,54 @@ public static class InfrastructureServiceRegistration
 
         // register message services
         services.AddScoped<IStringTemplatingService, StringTemplatingService>();
-        services.AddScoped<IViberService, ViberService>();
         services.AddScoped<ISmsService, SmsService>();
         services.AddScoped<IMessageSendingService, MessageSendingService>();
         services.AddScoped<IMessageDeliveryService, MessageDeliveryService>();
 
-        // register other services
+        // register other services (exclude Services.GptService: Scrutor would register IGptService/GptService and
+        // IGptRequestStrategy/* — a duplicate IGptService->GptService descriptor is still validated and fails
+        // without GptRequestStrategyFactory when OpenAI is off, or duplicates concrete strategy resolution)
         services
             .Scan(
                 selector => selector
                     .FromAssemblies(
                         Assembly.GetExecutingAssembly())
-                    .AddClasses(false)
+                    .AddClasses(
+                        classes => classes.Where(type =>
+                            type.Namespace != "OneClickEcho.Infrastructure.Services.GptService"),
+                        publicOnly: false)
                     .AsImplementedInterfaces()
                     .WithScopedLifetime());
+
+        // OpenAI / GPT — registered only here
+        OpenAiSettings openAiSettings = new();
+        configuration.GetSection("OpenAi").Bind(openAiSettings);
+
+        bool openAiConfigured =
+            !string.IsNullOrWhiteSpace(openAiSettings.ApiKey) && !string.IsNullOrWhiteSpace(openAiSettings.Model);
+
+        if (openAiConfigured)
+        {
+            string openAiBaseUrl = string.IsNullOrWhiteSpace(openAiSettings.BaseUrl)
+                ? "https://api.openai.com/"
+                : openAiSettings.BaseUrl.TrimEnd('/') + "/";
+
+            services.AddHttpClient("OpenAiHttpClient", client =>
+            {
+                client.BaseAddress = new Uri(openAiBaseUrl);
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {openAiSettings.ApiKey}");
+            });
+
+            services.AddScoped<GenerateNewCampaignMessageStrategy>();
+            services.AddScoped<EnhanceCampaignMessageStrategy>();
+            services.AddScoped<ConvertNounCasesStrategy>();
+            services.AddScoped<GptRequestStrategyFactory>();
+            services.AddScoped<IGptService, GptService>();
+        }
+        else
+        {
+            services.AddScoped<IGptService, UnconfiguredOpenAiGptService>();
+        }
 
         return services;
     }

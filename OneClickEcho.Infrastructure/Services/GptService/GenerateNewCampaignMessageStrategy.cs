@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using OneClickEcho.Application.Common.Services.GptService;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
 using OneClickEcho.Domain.Common.Shared;
@@ -6,6 +6,7 @@ using OneClickEcho.Domain.GptRequestAggregate;
 using OneClickEcho.Domain.GptRequestAggregate.Enums;
 using OneClickEcho.Infrastructure.Settings;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
@@ -21,28 +22,37 @@ public class GenerateNewCampaignMessageStrategy(IHttpClientFactory httpClientFac
     {
         HttpClient httpClient = _httpClientFactory.CreateClient("OpenAiHttpClient");
 
-        HttpResponseMessage response = await httpClient.PostAsync("/v1/chat/completions", new StringContent(JsonSerializer.Serialize(new
+        HttpResponseMessage response;
+        try
         {
-            model = _openAiSettings.Value.Model,
-            messages = new object[]
+            response = await httpClient.PostAsync("/v1/chat/completions", new StringContent(JsonSerializer.Serialize(new
             {
-                new
+                model = _openAiSettings.Value.Model,
+                messages = new object[]
                 {
-                    role = "system",
-                    content = "You are an assistant for writing phone message campaigns that are intended to be sent out" +
-                              "either via SMS or other messaging apps. The user will provide a short description in" +
-                              "either Serbian or English containing a general description about what the campaign should be about." +
-                              "Your reply should be in Serbian, should contain diacritical characters wherever needed, and can contain" +
-                              "the following two placeholders: {firstName:vocative} and/or {lastName:vocative} when addressing the consumer directly," +
-                              "{firstName:nominative} and/or {lastName:nominative} otherwise, but neither of these are mandatory."
-                },
-                new
-                {
-                    role = "user",
-                    content = request.RequestMessage
+                    new
+                    {
+                        role = "system",
+                        content = "You are an assistant for writing phone message campaigns that are intended to be sent out" +
+                                  "either via SMS or other messaging apps. The user will provide a short description in" +
+                                  "either Serbian or English containing a general description about what the campaign should be about." +
+                                  "Your reply should be in Serbian, should contain diacritical characters wherever needed, and can contain" +
+                                  "the following two placeholders: {firstName:vocative} and/or {lastName:vocative} when addressing the consumer directly," +
+                                  "{firstName:nominative} and/or {lastName:nominative} otherwise, but neither of these are mandatory."
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = request.RequestMessage
+                    }
                 }
-            }
-        }), Encoding.UTF8, "application/json"), cancellationToken);
+            }), Encoding.UTF8, "application/json"), cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is IOException
+            || (ex is TaskCanceledException t && !t.CancellationToken.IsCancellationRequested))
+        {
+            return OpenAiConnectionErrors.AsFailure(ex, httpClient.BaseAddress);
+        }
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -52,7 +62,16 @@ public class GenerateNewCampaignMessageStrategy(IHttpClientFactory httpClientFac
             ));
         }
 
-        string responseStream = await response.Content.ReadAsStringAsync(cancellationToken);
+        string responseStream;
+        try
+        {
+            responseStream = await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is IOException
+            || (ex is TaskCanceledException t && !t.CancellationToken.IsCancellationRequested))
+        {
+            return OpenAiConnectionErrors.AsFailure(ex, httpClient.BaseAddress);
+        }
 
         ChatCompletionResponseDto? responseContent = JsonSerializer.Deserialize<ChatCompletionResponseDto>(responseStream, new JsonSerializerOptions
         {

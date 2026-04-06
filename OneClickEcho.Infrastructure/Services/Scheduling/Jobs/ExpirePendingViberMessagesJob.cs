@@ -10,10 +10,10 @@ public class ExpirePendingViberMessagesJob(IMediator mediator) : IJob
     
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine($"{DateTime.Now} - Running ExpirePendingViberMessagesJob...");
+        // Console.WriteLine($"{DateTime.Now} - Running ExpirePendingViberMessagesJob...");
         
         var response = await _mediator.Send(new ExpirePendingMessagesCommand());
         
-        Console.WriteLine($"{DateTime.Now} - ExpirePendingViberMessagesJob completed successfully. {response.Value.MessageCount} messages marked as expired.");
+        // Console.WriteLine($"{DateTime.Now} - ExpirePendingViberMessagesJob completed successfully. {response.Value.MessageCount} messages marked as expired.");
     }
 }

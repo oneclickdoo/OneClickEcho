@@ -126,6 +126,7 @@ namespace OneClickEcho.Application.Campaign.Queries.GetCampaignAnalytics
             int sent = totalLeads - notSent;
             int funnelDelivered = delivered + seen + clicked;
             int funnelSeen = seen + clicked;
+            int inViberPipeline = received + pending + delivered + seen + clicked + expired;
 
             return new CampaignViberAnalytics
             {
@@ -140,7 +141,8 @@ namespace OneClickEcho.Application.Campaign.Queries.GetCampaignAnalytics
                 Clicked = clicked,
                 Expired = expired,
                 FunnelDelivered = funnelDelivered,
-                FunnelSeen = funnelSeen
+                FunnelSeen = funnelSeen,
+                InViberPipeline = inViberPipeline
             };
         }
 

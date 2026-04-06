@@ -44,9 +44,10 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     {
         DateTimeOffset jobDateTime = campaign.SendingType switch
         {
-            CampaignSendingType.Immediate => new DateTimeOffset(DateTime.Now).AddMinutes(1),
-            CampaignSendingType.ScheduledDateTime => new DateTimeOffset(campaign.SendingDatetime).AddMinutes(1),
-            _ => new DateTimeOffset(DateTime.Now).AddMinutes(1),
+            CampaignSendingType.Immediate => DateTimeOffset.UtcNow.AddMinutes(1),
+            CampaignSendingType.ScheduledDateTime =>
+                new DateTimeOffset(campaign.SendingDatetime.ToUniversalTime(), TimeSpan.Zero).AddMinutes(1),
+            _ => DateTimeOffset.UtcNow.AddMinutes(1),
         };
 
         ITrigger smsDeliveryTrigger = TriggerBuilder.Create()
@@ -81,10 +82,11 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
         await scheduler.ScheduleJob(smsDeliveryJob, smsDeliveryTrigger);
         await scheduler.ScheduleJob(smsDeliverySixHourJob, smsDeliverySixHourTrigger);
 
-        Console.WriteLine(DateTime.Now + $" - Successfully scheduled SmsDeliveryJob for upcoming campaign: {campaign.Id.Value} - {campaign.Name} for {jobDateTime.ToLocalTime()}");
+        // Console.WriteLine(DateTime.UtcNow + $" - Successfully scheduled SmsDeliveryJob for upcoming campaign: {campaign.Id.Value} - {campaign.Name} for {jobDateTime:O}");
     }
 
-    public async Task SendMessagesForCampaignId(CampaignId campaignId, List<Lead>? leads = null)
+    public async Task SendMessagesForCampaignId(CampaignId campaignId, List<Lead>? leads = null,
+        bool viberOnlyForProvidedLeads = false)
     {
         // get campaign
         Campaign campaign = await _campaignRepository.GetByIdAsync(campaignId)
@@ -92,6 +94,19 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
 
         // campaign must have a selected channel (Viber or SMS)
         ValidateCampaignChannels(campaign);
+
+        if (viberOnlyForProvidedLeads)
+        {
+            if (!campaign.IsViber)
+            {
+                throw new Exception($"Campaign [{campaign.Id.Value}] - viber-only retry requires Viber channel.");
+            }
+
+            if (leads is null || leads.Count == 0)
+            {
+                throw new Exception($"Campaign [{campaign.Id.Value}] - viber-only retry requires a non-empty lead list.");
+            }
+        }
 
         // get leads
         leads ??= await _campaignLeadRepository.GetAllLeadsByCampaignIdAsync(campaignId);
@@ -113,11 +128,12 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 _httpClientFactory,
                 _viberSettings,
                 _campaignLeadRepository,
-                _stringTemplatingService);
+                _stringTemplatingService,
+                _unitOfWork);
         }
 
         // SMS channel
-        if (campaign.IsSms)
+        if (campaign.IsSms && !viberOnlyForProvidedLeads)
         {
             await SmsSendingService.SendSmsToLeads(
                 campaign,
@@ -138,7 +154,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
         List<ApiMessage> allowed = await FilterApiMessagesNotBlockedAsync(companyId, apiMessages);
         if (allowed.Count == 0)
         {
-            Console.WriteLine($"{DateTime.Now} - SendApiMessages: all {apiMessages.Count} messages skipped (blacklist / unsubscribe).");
+            // Console.WriteLine($"{DateTime.Now} - SendApiMessages: all {apiMessages.Count} messages skipped (blacklist / unsubscribe).");
             return;
         }
 

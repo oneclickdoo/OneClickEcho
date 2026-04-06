@@ -71,28 +71,39 @@ namespace OneClickEcho.App.Controllers
 
         [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
         [HttpGet("{companyId}/ExportLeads")]
-        public async Task<IActionResult> ExportCompanyLeads(Guid companyId, CancellationToken cancellationToken)
+        public async Task<IActionResult> ExportCompanyLeads(
+            Guid companyId,
+            [FromQuery] bool blacklistedOnly = false,
+            CancellationToken cancellationToken = default)
         {
-            ExportCompanyLeadsQuery query = new(companyId);
+            ExportCompanyLeadsQuery query = new(companyId, null, blacklistedOnly);
 
             Result<ExportCompanyLeadsResponse> response = await Mediator.Send(query, cancellationToken);
 
+            string filename = blacklistedOnly ? $"leads-blacklisted-{companyId}.csv" : $"leads-{companyId}.csv";
+
             return response.IsSuccess ?
-                File(response.Value.FileBytes, "text/csv", $"leads-{companyId}.csv")
+                File(response.Value.FileBytes, "text/csv", filename)
                 :
                 NotFound(response.Error);
         }
         
         [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
         [HttpGet("{companyId}/ExportLeadsByCollection/{collectionId}")]
-        public async Task<IActionResult> ExportCompanyLeadsByCollection(Guid companyId, Guid collectionId, CancellationToken cancellationToken)
+        public async Task<IActionResult> ExportCompanyLeadsByCollection(
+            Guid companyId,
+            Guid collectionId,
+            [FromQuery] bool blacklistedOnly = false,
+            CancellationToken cancellationToken = default)
         {
-            ExportCompanyLeadsQuery query = new(companyId, collectionId);
+            ExportCompanyLeadsQuery query = new(companyId, collectionId, blacklistedOnly);
 
             Result<ExportCompanyLeadsResponse> response = await Mediator.Send(query, cancellationToken);
 
+            string filename = blacklistedOnly ? $"leads-blacklisted-{companyId}.csv" : $"leads-{companyId}.csv";
+
             return response.IsSuccess ?
-                File(response.Value.FileBytes, "text/csv", $"leads-{companyId}.csv")
+                File(response.Value.FileBytes, "text/csv", filename)
                 :
                 NotFound(response.Error);
         }

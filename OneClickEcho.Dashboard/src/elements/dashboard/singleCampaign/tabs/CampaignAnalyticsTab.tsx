@@ -39,7 +39,14 @@ interface ICampaignAnalyticsTab {
 
 interface IFunnelChartData {
     total: number;
+    /** Status 1 — primljeno od provajdera. */
+    received: number;
+    /** Status 2 — na čekanju. */
+    pending: number;
+    /** Status 3 — isporučeno na uređaj. */
     delivered: number;
+    notSent: number;
+    undelivered: number;
     seen: number;
     clicked: number;
 }
@@ -52,6 +59,7 @@ const campaignStatCardClass =
 export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
     const t = useTranslations("SingleCampaign.Tabs.CampaignAnalytics");
     const tKpi = useTranslations("Kpi");
+    const tPie = useTranslations("SingleCampaign.Tabs.CampaignAnalytics.pie");
     const tCommon = useTranslations("Common");
 
     const routeParams = useParams<{ locale?: string }>();
@@ -119,7 +127,9 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
     const { data: fetchedAnalytics } = useQuery({
         queryKey: ["campaign-analytics", props.campaignId, props.status],
         queryFn: () => getCampaignAnalytics(props.campaignId, authFetch),
-        enabled: props.status !== CampaignStatus.Draft
+        enabled: props.status !== CampaignStatus.Draft,
+        refetchInterval:
+            props.status === CampaignStatus.Queued || props.status === CampaignStatus.InProgress ? 15_000 : false
     });
 
     //const getViberData = useCallback(
@@ -222,7 +232,9 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
             // NEW: NotSent
             pushKpi("notSent", analytics.notSent, "bg-zinc-500 dark:bg-zinc-400");
 
-            pushKpi("systemReceived", analytics.received, "bg-sky-600 dark:bg-sky-500");
+            if (analytics.received > 0) {
+                pushKpi("systemReceived", analytics.received, "bg-sky-600 dark:bg-sky-500");
+            }
             pushKpi("pending", analytics.pending, "bg-blue-600 dark:bg-blue-500");
             pushKpi("delivered", analytics.delivered, "bg-green-600 dark:bg-green-500");
             pushKpi("seen", analytics.seen, "bg-emerald-600 dark:bg-emerald-500");
@@ -233,30 +245,34 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
 
             setViberStatuses(viberData);
 
-            // NEW: funnel total should be SENT (exclude notSent)
             setFunnelChartData({
-                total: analytics.sent,
-                delivered: analytics.funnelDelivered,
-                seen: analytics.funnelSeen,
+                total: analytics.total,
+                received: analytics.received,
+                pending: analytics.pending,
+                delivered: analytics.delivered,
+                notSent: analytics.notSent,
+                undelivered: analytics.undelivered,
+                seen: analytics.seen,
                 clicked: analytics.clicked
             });
 
-            const deliveredSeenClicked = analytics.delivered + analytics.seen + analytics.clicked;
-
-            // Always include slices so undelivered / not sent stay visible in the legend (even at 0).
+            // Pie: one slice per mutually exclusive Viber status (short legend labels).
             const pie: PieDatum[] = [
-                { name: tKpi("notSent"), value: analytics.notSent },
-                { name: tKpi("systemReceived"), value: analytics.received },
-                { name: tKpi("pending"), value: analytics.pending },
-                { name: tKpi("delivered"), value: deliveredSeenClicked },
-                { name: tKpi("undelivered"), value: analytics.undelivered },
-                { name: tKpi("unsubscribed"), value: analytics.unsubscribed },
-                { name: tKpi("expired"), value: analytics.expired }
+                { name: tPie("notSent"), value: analytics.notSent },
+                ...(analytics.received > 0 ? [{ name: tPie("systemReceived"), value: analytics.received }] : []),
+                { name: tPie("pending"), value: analytics.pending },
+                { name: tPie("delivered"), value: analytics.delivered },
+                { name: tPie("seen"), value: analytics.seen },
+                { name: tPie("clicked"), value: analytics.clicked },
+                { name: tPie("undelivered"), value: analytics.undelivered },
+                { name: tPie("unsubscribed"), value: analytics.unsubscribed },
+                { name: tPie("expired"), value: analytics.expired }
             ];
 
-            setViberPieChartData(pie);
+            const pieNonZero = pie.filter((p) => p.value > 0);
+            setViberPieChartData(pieNonZero.length > 0 ? pieNonZero : [{ name: tPie("notSent"), value: 0 }]);
         },
-        [tKpi]
+        [tKpi, tPie]
     );
 
     const getSmsData = useCallback(
@@ -334,7 +350,7 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
         if (fetchedAnalytics.sms) getSmsData(fetchedAnalytics.sms);
     }, [fetchedAnalytics, getSmsData, getViberData]);
 
-    const viberStatusActions: Array<{ key: KpiKey; value: CampaignLeadViberStatusCollection }> = [
+    const viberStatusActionsAll: Array<{ key: KpiKey; value: CampaignLeadViberStatusCollection }> = [
         { key: "notSent", value: CampaignLeadViberStatusCollection.NotSent },
         { key: "systemReceived", value: 1 },
         { key: "pending", value: 2 },
@@ -344,6 +360,13 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
         { key: "expired", value: 6 },
         { key: "clicked", value: 7 }
     ];
+
+    const viberStatusActions = useMemo(() => {
+        const received = campaignAnalytics?.viber?.received ?? 0;
+        return viberStatusActionsAll.filter(
+            (s) => s.value !== CampaignLeadViberStatusCollection.Received || received > 0
+        );
+    }, [campaignAnalytics?.viber?.received]);
 
     const smsStatusActions: Array<{ key: KpiKey; value: CampaignLeadSMSStatus }> = [
         { key: "notSent", value: CampaignLeadSMSStatus.None },
@@ -355,7 +378,7 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
     ];
 
     const isNotLaunched =
-        !props.status || [CampaignStatus.Draft, CampaignStatus.Queued, CampaignStatus.InProgress].includes(props.status);
+        !props.status || [CampaignStatus.Draft, CampaignStatus.Queued].includes(props.status);
 
     return (
         <section className="mt-2" aria-labelledby="current-billing-cycle">
@@ -381,9 +404,16 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
                                             {numberFmt.format(campaignAnalytics.viber.total)}
                                         </p>
                                         <div className="mt-1 flex-1 space-y-0.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                                            {campaignAnalytics.viber.received > 0 ? (
+                                                <div>
+                                                    {t("cards.messagesSent.received", {
+                                                        count: numberFmt.format(campaignAnalytics.viber.received)
+                                                    })}
+                                                </div>
+                                            ) : null}
                                             <div>
-                                                {t("cards.messagesSent.deliveredToUser", {
-                                                    count: numberFmt.format(campaignAnalytics.viber.funnelDelivered)
+                                                {t("cards.messagesSent.deliveredDevice", {
+                                                    count: numberFmt.format(campaignAnalytics.viber.delivered)
                                                 })}
                                             </div>
                                             <div>
@@ -392,7 +422,7 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
                                                 })}
                                             </div>
                                             <div>
-                                                {t("cards.messagesSent.notSentToViber", {
+                                                {t("cards.messagesSent.notSent", {
                                                     count: numberFmt.format(campaignAnalytics.viber.notSent)
                                                 })}
                                             </div>
@@ -416,64 +446,82 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
                             </div>
 
                             <div className="mt-10 flex flex-col gap-y-10 md:flex-row md:items-stretch">
-                                <div className="flex min-h-[28rem] w-full flex-col items-center justify-center gap-1 text-white md:w-1/2">
-                                    <div
-                                        className="flex h-20 w-[95%] items-center justify-center bg-sky-600 dark:bg-sky-500"
-                                        style={{ clipPath: "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)" }}
-                                    >
-                                        <p className="text-center">
-                                            {t("funnel.total")}
-                                            <br /> {funnelChartData?.total ?? 0}
-                                            <br />(100%)
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        className="flex h-20 w-[65%] items-center justify-center bg-green-600 dark:bg-green-500"
-                                        style={{ clipPath: "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)" }}
-                                    >
-                                        <p className="text-center">
-                                            {tKpi("delivered")}
-                                            <br /> {funnelChartData?.delivered ?? 0}
-                                            <br />(
-                                            {Math.round(
-                                                ((funnelChartData?.delivered ?? 0) / Math.max(funnelChartData?.total ?? 0, 1)) *
-                                                    10000
-                                            ) / 100}
-                                            %)
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        className="flex h-20 w-[45%] items-center justify-center bg-emerald-600 dark:bg-emerald-500"
-                                        style={{ clipPath: "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)" }}
-                                    >
-                                        <p className="text-center">
-                                            {tKpi("seen")}
-                                            <br /> {funnelChartData?.seen ?? 0}
-                                            <br />(
-                                            {Math.round(
-                                                ((funnelChartData?.seen ?? 0) / Math.max(funnelChartData?.total ?? 0, 1)) * 10000
-                                            ) / 100}
-                                            %)
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        className="flex h-20 w-[30%] items-center justify-center bg-orange-600 dark:bg-orange-500"
-                                        style={{ clipPath: "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)" }}
-                                    >
-                                        <p className="text-center">
-                                            {tKpi("clicked")}
-                                            <br /> {funnelChartData?.clicked ?? 0}
-                                            <br />(
-                                            {Math.round(
-                                                ((funnelChartData?.clicked ?? 0) / Math.max(funnelChartData?.total ?? 0, 1)) *
-                                                    10000
-                                            ) / 100}
-                                            %)
-                                        </p>
-                                    </div>
+                                <div className="flex min-h-[38rem] w-full flex-col items-center justify-center gap-2 text-white md:w-1/2">
+                                    {(() => {
+                                        const base = Math.max(funnelChartData?.total ?? 0, 1);
+                                        const pct = (n: number) =>
+                                            Math.round((n / base) * 10000) / 100;
+                                        const barClip = "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)";
+                                        const showReceived = (funnelChartData?.received ?? 0) > 0;
+                                        const showPending = (funnelChartData?.pending ?? 0) > 0;
+                                        const rows: Array<{
+                                            label: string;
+                                            value: number;
+                                            className: string;
+                                        }> = [
+                                            {
+                                                label: t("funnel.totalMessages"),
+                                                value: funnelChartData?.total ?? 0,
+                                                className: "bg-sky-600 dark:bg-sky-500"
+                                            },
+                                            ...(showReceived
+                                                ? [
+                                                      {
+                                                          label: t("funnel.receivedMessages"),
+                                                          value: funnelChartData?.received ?? 0,
+                                                          className: "bg-cyan-600 dark:bg-cyan-500"
+                                                      }
+                                                  ]
+                                                : []),
+                                            ...(showPending
+                                                ? [
+                                                      {
+                                                          label: t("funnel.pendingMessages"),
+                                                          value: funnelChartData?.pending ?? 0,
+                                                          className: "bg-blue-600 dark:bg-blue-500"
+                                                      }
+                                                  ]
+                                                : []),
+                                            {
+                                                label: t("funnel.deliveredDeviceMessages"),
+                                                value: funnelChartData?.delivered ?? 0,
+                                                className: "bg-green-600 dark:bg-green-500"
+                                            },
+                                            {
+                                                label: t("funnel.notSentMessages"),
+                                                value: funnelChartData?.notSent ?? 0,
+                                                className: "bg-zinc-500 dark:bg-zinc-400"
+                                            },
+                                            {
+                                                label: t("funnel.undeliveredMessages"),
+                                                value: funnelChartData?.undelivered ?? 0,
+                                                className: "bg-red-600 dark:bg-red-500"
+                                            },
+                                            {
+                                                label: t("funnel.seenMessages"),
+                                                value: funnelChartData?.seen ?? 0,
+                                                className: "bg-emerald-600 dark:bg-emerald-500"
+                                            },
+                                            {
+                                                label: t("funnel.clickedMessages"),
+                                                value: funnelChartData?.clicked ?? 0,
+                                                className: "bg-orange-600 dark:bg-orange-500"
+                                            }
+                                        ];
+                                        return rows.map((row) => (
+                                            <div
+                                                key={row.label}
+                                                className={`flex h-20 w-[95%] max-w-xl shrink-0 items-center justify-center ${row.className}`}
+                                                style={{ clipPath: barClip }}
+                                            >
+                                                <p className="max-w-[90%] px-2 text-center text-xs leading-tight sm:text-sm">
+                                                    {row.label}
+                                                    <br /> {row.value}
+                                                    <br />({pct(row.value)}%)
+                                                </p>
+                                            </div>
+                                        ));
+                                    })()}
                                 </div>
 
                                 <div className="flex min-h-[28rem] w-full items-center md:w-1/2">

@@ -53,6 +53,17 @@ public class SmsSendingService
         // send SMS to all leads one-by-one
         foreach (Lead lead in leads)
         {
+            CampaignLead campaignLead = await campaignLeadRepository
+                    .GetByCampaignAndLeadId(campaign.Id, lead.Id)
+                    ?? throw new Exception($"CampaignLead for Lead [{lead.Id}] is not found.");
+
+            if (campaignLead.SMSStatus != CampaignLeadSMSStatus.None)
+            {
+                // Console.WriteLine(
+                //     $"{DateTime.UtcNow:O} - Skip SMS campaign {campaign.Id.Value} lead {lead.Id.Value}: SMSStatus={campaignLead.SMSStatus} (not None; avoids duplicate send).");
+                continue;
+            }
+
             // message personalization
             string message = stringTemplatingService.SubstituteLeadInfo(campaign.SmsMessage!, lead);
 
@@ -69,11 +80,6 @@ public class SmsSendingService
             // handle response
             if (response is not null)
             {
-                // get campaign lead
-                CampaignLead? campaignLead = await campaignLeadRepository
-                    .GetByCampaignAndLeadId(campaign.Id, lead.Id)
-                    ?? throw new Exception($"CampaignLead for Lead [{lead.Id}] is not found.");
-
                 // @TODO: handle more cases
                 switch (response.Status)
                 {

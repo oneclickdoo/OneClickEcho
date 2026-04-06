@@ -117,6 +117,8 @@ function normalizeViberAnalytics(raw: Partial<CampaignViberAnalytics>): Campaign
     const sent = raw.sent !== undefined && raw.sent !== null ? raw.sent : Math.max(0, total - notSent);
     const funnelDelivered = raw.funnelDelivered ?? delivered + seen + clicked;
     const funnelSeen = raw.funnelSeen ?? seen + clicked;
+    const inViberPipeline =
+        raw.inViberPipeline ?? Math.max(0, received + pending + delivered + seen + clicked + expired);
 
     return {
         notSent,
@@ -131,7 +133,8 @@ function normalizeViberAnalytics(raw: Partial<CampaignViberAnalytics>): Campaign
         total,
         sent,
         funnelDelivered,
-        funnelSeen
+        funnelSeen,
+        inViberPipeline
     };
 }
 
@@ -175,6 +178,8 @@ export type CampaignViberAnalytics = {
     sent: number;
     funnelDelivered: number;
     funnelSeen: number;
+    /** Handed to Viber, not Undelivered: received+pending+delivered+seen+clicked+expired */
+    inViberPipeline: number;
 };
 
 export type CampaignSmsAnalytics = {
@@ -353,8 +358,15 @@ export const deleteCampaignLeadCollection = async (campaignId: string, leadColle
     return response;
 };
 
-export const exportCompanyLeads = async (companyId: string, authFetch: IFetch): Promise<Blob> => {
+export const exportCompanyLeads = async (
+    companyId: string,
+    authFetch: IFetch,
+    options?: { blacklistedOnly?: boolean }
+): Promise<Blob> => {
     const url = new URL(`/api/Company/${companyId}/ExportLeads`, window.location.origin);
+    if (options?.blacklistedOnly) {
+        url.searchParams.set("blacklistedOnly", "true");
+    }
 
     const response = await authFetch(url.toString());
     if (!response.ok) throw new Error("Network response was not ok");
@@ -365,9 +377,13 @@ export const exportCompanyLeads = async (companyId: string, authFetch: IFetch): 
 export const exportCompanyLeadsByCollection = async (
     companyId: string,
     collectionId: string,
-    authFetch: IFetch
+    authFetch: IFetch,
+    options?: { blacklistedOnly?: boolean }
 ): Promise<Blob> => {
     const url = new URL(`/api/Company/${companyId}/ExportLeadsByCollection/${collectionId}`, window.location.origin);
+    if (options?.blacklistedOnly) {
+        url.searchParams.set("blacklistedOnly", "true");
+    }
 
     const response = await authFetch(url.toString());
     if (!response.ok) throw new Error("Network response was not ok");

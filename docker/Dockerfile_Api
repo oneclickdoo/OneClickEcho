@@ -32,9 +32,7 @@ RUN dotnet publish "OneClickEcho.Api.csproj" -c Release -o /app/publish --no-res
 # Create final Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
-# Set launch option profile (environment variables) that will be used
-ENV ASPNETCORE_ENVIRONMENT=Development
-ENV ASPNETCORE_URLS=http://localhost:3901/
+ENV ASPNETCORE_URLS=http://+:3901/
 
 # Set Working Directory
 WORKDIR /app
@@ -42,8 +40,16 @@ WORKDIR /app
 # Copy the published application from the 'Publish' stage to the Runtime stage
 COPY --from=publish /app/publish .
 
+# Serilog file sink (see appsettings.Docker.json); ensure writable when running as non-root app user
+USER root
+RUN mkdir -p /app/logs && chown -R app:app /app/logs
+USER app
+
 # Path to the folder to be mounted on the host machine
 VOLUME app/UploadedFiles
+
+# Docker / compose should set ASPNETCORE_ENVIRONMENT=Docker for quieter logs + file sink
+ENV ASPNETCORE_ENVIRONMENT=Docker
 
 # Specify the entry point for the container, which is the command to run the application
 ENTRYPOINT [ "dotnet", "OneClickEcho.Api.dll" ]

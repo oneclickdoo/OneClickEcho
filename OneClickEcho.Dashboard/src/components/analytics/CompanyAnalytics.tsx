@@ -114,6 +114,20 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
         getAnalytics(fromIso, toIso);
     }, [selectedDate, getAnalytics]);
 
+    /** Polling: Viber statusi se menjaju u pozadini (delivery job) — osveži Overview analitiku. */
+    useEffect(() => {
+        if (!selectedDate?.from) return;
+
+        const fromIso = selectedDate.from.toISOString();
+        const toIso = selectedDate.to ? addDays(selectedDate.to, 1).toISOString() : addDays(selectedDate.from, 1).toISOString();
+
+        const id = window.setInterval(() => {
+            void getAnalytics(fromIso, toIso);
+        }, 15_000);
+
+        return () => window.clearInterval(id);
+    }, [selectedDate, getAnalytics]);
+
     const chartData1 = useMemo(() => {
         const viberLeads = safeNonNegativeInt(analytics?.analyticsResults?.viberTotalLeads);
         const viberNotSent = safeNonNegativeInt(analytics?.analyticsResults?.viberNotSent);
@@ -140,20 +154,30 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
     }, [analytics, t]);
 
     const chartData2 = useMemo(() => {
-        const delivered = safeNonNegativeInt(analytics?.analyticsResults?.viberDelivered);
+        const received = safeNonNegativeInt(analytics?.analyticsResults?.viberReceived);
+        const deliveredOnDevice = safeNonNegativeInt(analytics?.analyticsResults?.viberDeliveredOnly);
         const clicked = safeNonNegativeInt(analytics?.analyticsResults?.viberClicked);
         const seen = safeNonNegativeInt(analytics?.analyticsResults?.viberSeen);
 
-        return [
+        const segments = [
+            ...(received > 0
+                ? [
+                      {
+                          name: t("charts.viberReceived"),
+                          amount: received,
+                          color: "#06B6D4"
+                      }
+                  ]
+                : []),
             {
-                name: t("charts.viberDelivered"),
-                amount: Math.max(delivered - clicked - seen, 0),
+                name: t("charts.viberDeliveredOnDevice"),
+                amount: deliveredOnDevice,
                 color: "#4F46E5"
             },
             {
                 name: t("charts.viberUndelivered"),
                 amount: safeNonNegativeInt(analytics?.analyticsResults?.viberUndelivered),
-                color: "#3A82F6"
+                color: "#EF4444"
             },
             {
                 name: t("charts.viberExpired"),
@@ -171,6 +195,8 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
                 color: "#F59E0A"
             }
         ];
+
+        return segments;
     }, [analytics, t]);
 
     const chartData3 = useMemo(() => {
@@ -200,6 +226,8 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
     const totalSmsSent = safeNonNegativeInt(analytics?.analyticsResults?.smsTotalSent);
 
     const viberDelivered = safeNonNegativeInt(analytics?.analyticsResults?.viberDelivered);
+    const viberReceived = safeNonNegativeInt(analytics?.analyticsResults?.viberReceived);
+    const viberDeliveredOnly = safeNonNegativeInt(analytics?.analyticsResults?.viberDeliveredOnly);
     const viberUndelivered = safeNonNegativeInt(analytics?.analyticsResults?.viberUndelivered);
     const viberClicked = safeNonNegativeInt(analytics?.analyticsResults?.viberClicked);
     const smsDelivered = safeNonNegativeInt(analytics?.analyticsResults?.smsDelivered);
@@ -266,6 +294,14 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
                                 <div className="flex flex-1 flex-col font-semibold text-2xl text-gray-800 dark:text-gray-100">
                                     {numberFmt.format(viberTotalLeads)}
                                     <div className="mt-1 flex-1 space-y-0.5 text-xs leading-relaxed text-gray-500">
+                                        {viberReceived > 0 ? (
+                                            <div>
+                                                {t("labels.viberReceivedCount", { count: numberFmt.format(viberReceived) })}
+                                            </div>
+                                        ) : null}
+                                        <div>
+                                            {t("labels.viberDeliveredOnDeviceCount", { count: numberFmt.format(viberDeliveredOnly) })}
+                                        </div>
                                         <div>{t("labels.viberDeliveredCount", { count: numberFmt.format(viberDelivered) })}</div>
                                         <div>{t("labels.viberUndeliveredCount", { count: numberFmt.format(viberUndelivered) })}</div>
                                         <div>{t("labels.viberNotSentCount", { count: numberFmt.format(viberNotSent) })}</div>

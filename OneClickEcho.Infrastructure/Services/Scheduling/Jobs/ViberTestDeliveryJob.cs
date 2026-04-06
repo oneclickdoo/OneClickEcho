@@ -9,10 +9,10 @@ public class ViberTestDeliveryJob(IMessageDeliveryService messageDeliveryService
 
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine(DateTime.Now + " - Running ViberTestDeliveryJob job...");
+        // Console.WriteLine(DateTime.Now + " - Running ViberTestDeliveryJob job...");
 
         await _messageDeliveryService.GetViberTestDeliveryForLast48Hours();
         
-        Console.WriteLine(DateTime.Now + " - ViberTestDeliveryJob job completed successfully.");
+        // Console.WriteLine(DateTime.Now + " - ViberTestDeliveryJob job completed successfully.");
     }
 }

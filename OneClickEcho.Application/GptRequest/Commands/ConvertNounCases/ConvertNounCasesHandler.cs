@@ -1,4 +1,4 @@
-﻿using OneClickEcho.Application.Common.Messaging;
+using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Application.Common.Services.GptService;
 using OneClickEcho.Domain.Common.Shared;
 using OneClickEcho.Domain.GptRequestAggregate.Enums;
@@ -26,6 +26,11 @@ public class ConvertNounCasesHandler(IGptService gptService, INounCaseRepository
             RequestMessage = request.Name,
             RequestType = GptRequestType.ConvertNounCases,
         }, cancellationToken);
+
+        if (response.IsFailure)
+        {
+            return Result.Failure<ConvertNounCasesResponse>(response.Error);
+        }
 
         return new ConvertNounCasesResponse(response.Value.ResponseMessage);
     }

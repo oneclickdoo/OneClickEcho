@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OneClickEcho.App.Abstractions;
@@ -20,6 +20,11 @@ namespace OneClickEcho.App.Controllers
             Result<GenerateNewCampaignMessageResponse> response = await Mediator
                 .Send(generateNewCampaignMessageCommand, cancellationToken);
 
+            if (response.IsFailure)
+            {
+                return BadRequest(response.Error);
+            }
+
             return Ok(new
             {
                 GptRequestId = response.Value.Id,
@@ -34,6 +39,11 @@ namespace OneClickEcho.App.Controllers
         {
             Result<EnhanceCampaignMessageResponse> response = await Mediator
                 .Send(enhanceCampaignMessageCommand, cancellationToken);
+
+            if (response.IsFailure)
+            {
+                return BadRequest(response.Error);
+            }
 
             return Ok(new
             {

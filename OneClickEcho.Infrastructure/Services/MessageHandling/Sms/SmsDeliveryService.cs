@@ -71,7 +71,7 @@ public class SmsDeliveryService
                 .GetDelivery(request)
                 ?? throw new Exception($"Failed to get delivery response for campaign [{campaign.Id.Value}].");
 
-            Console.WriteLine($"SMS delivery response: {response}");
+            // Console.WriteLine($"SMS delivery response: {response}");
 
             campaignLead.SMSStatus = (CampaignLeadSMSStatus)response.StatusVal;
 
@@ -116,7 +116,7 @@ public class SmsDeliveryService
                 .GetDelivery(request)
                 ?? throw new Exception($"Failed to get delivery response for SMS API message [{apiMessage.SMSReferenceId}].");
 
-            Console.WriteLine($"SMS delivery response: {response}");
+            // Console.WriteLine($"SMS delivery response: {response}");
 
             apiMessage.SMSStatus = (CampaignLeadSMSStatus)response.StatusVal;
         }
@@ -157,7 +157,7 @@ public class SmsDeliveryService
                                                        .GetDelivery(request)
                                                    ?? throw new Exception($"Failed to get test delivery response for message [{testMessage.SmsReferenceId}].");
 
-            Console.WriteLine($"SMS delivery response: {response}");
+            // Console.WriteLine($"SMS delivery response: {response}");
 
             if ((CampaignLeadSMSStatus)response.StatusVal == CampaignLeadSMSStatus.Delivered)
             {

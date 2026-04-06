@@ -15,13 +15,13 @@ public class EnqueueApiMessagesJob(
 
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine($"{DateTime.Now} - Running EnqueueApiMessagesJob...");
+        // Console.WriteLine($"{DateTime.Now} - Running EnqueueApiMessagesJob...");
         
         Result<EnqueueApiMessagesResponse> response = await _mediator.Send(new EnqueueApiMessagesCommand());
 
         if (!response.Value.ApiMessages.Any())
         {
-            Console.WriteLine($"{DateTime.Now} - EnqueueApiMessagesJob found no unsent API messages.");
+            // Console.WriteLine($"{DateTime.Now} - EnqueueApiMessagesJob found no unsent API messages.");
             return;
         }
 
@@ -54,9 +54,9 @@ public class EnqueueApiMessagesJob(
             IScheduler scheduler = await _schedulerFactory.GetScheduler();
             await scheduler.ScheduleJob(job, trigger);
 
-            Console.WriteLine($"{DateTime.Now} - Scheduled SendApiMessagesJob for sender [{group.Key.CompanyId}] and message type [{group.Key.MessageType}] with {group.Count()} messages");
+            // Console.WriteLine($"{DateTime.Now} - Scheduled SendApiMessagesJob for sender [{group.Key.CompanyId}] and message type [{group.Key.MessageType}] with {group.Count()} messages");
         }
 
-        Console.WriteLine($"{DateTime.Now} - EnqueueApiMessagesJob completed successfully. Scheduled {messageGroups.Count} sending jobs.");
+        // Console.WriteLine($"{DateTime.Now} - EnqueueApiMessagesJob completed successfully. Scheduled {messageGroups.Count} sending jobs.");
     }
 }

@@ -57,4 +57,10 @@ public class AnalyticsResults
 
     /// <summary>Viber status None (0) only — not handed to Comtrade / outbound gateway yet.</summary>
     public int ViberNotSent { get; set; } = 0;
+
+    /// <summary>Viber status Received (1) — primljeno od provajdera, još nije isporučeno na uređaj.</summary>
+    public int ViberReceived { get; set; } = 0;
+
+    /// <summary>Viber status Delivered (3) only — isporučeno na uređaj (bez Seen/Clicked u istom broju).</summary>
+    public int ViberDeliveredOnly { get; set; } = 0;
 }

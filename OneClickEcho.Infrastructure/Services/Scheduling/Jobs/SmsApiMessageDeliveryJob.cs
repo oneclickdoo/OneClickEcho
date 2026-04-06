@@ -14,7 +14,7 @@ public class SmsApiMessageDeliveryJob(IMessageDeliveryService messageDeliverySer
 
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine($"{DateTime.Now} - Running SmsApiMessageDeliveryJob...");
+        // Console.WriteLine($"{DateTime.Now} - Running SmsApiMessageDeliveryJob...");
         
         // Get CompanyId
         Guid companyIdGuid = context.JobDetail.JobDataMap.GetGuid("CompanyId");
@@ -32,6 +32,6 @@ public class SmsApiMessageDeliveryJob(IMessageDeliveryService messageDeliverySer
             await _messageDeliveryService.GetSmsDeliveryForApiMessages(companyId, companyGroup.ToList());
         }
 
-        Console.WriteLine($"{DateTime.Now} - SmsApiMessageDeliveryJob completed successfully.");
+        // Console.WriteLine($"{DateTime.Now} - SmsApiMessageDeliveryJob completed successfully.");
     }
 } 

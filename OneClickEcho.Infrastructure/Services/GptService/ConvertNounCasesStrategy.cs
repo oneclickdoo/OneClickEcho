@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using OneClickEcho.Application.Common.Services.GptService;
 using OneClickEcho.Domain.Common.Shared;
 using OneClickEcho.Domain.GptRequestAggregate;
@@ -7,6 +7,7 @@ using OneClickEcho.Domain.NounCaseAggregate;
 using OneClickEcho.Domain.NounCaseAggregate.Repositories;
 using OneClickEcho.Infrastructure.Settings;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
@@ -23,30 +24,39 @@ public class ConvertNounCasesStrategy(IHttpClientFactory httpClientFactory, IOpt
     {
         HttpClient httpClient = _httpClientFactory.CreateClient("OpenAiHttpClient");
 
-        HttpResponseMessage response = await httpClient.PostAsync("/v1/chat/completions",
-            new StringContent(JsonSerializer.Serialize(new
-            {
-                model = _openAiSettings.Value.Model,
-                messages = new object[]
-            {
-                new
+        HttpResponseMessage response;
+        try
+        {
+            response = await httpClient.PostAsync("/v1/chat/completions",
+                new StringContent(JsonSerializer.Serialize(new
                 {
-                    role = "system",
-                    content = "Pretvori sledeće ime u vokativ, vodeći računa o pravilima srpskog jezika i specifičnim " +
-                    "slučajevima (npr. 'Predrag' postaje 'Predraže'). Nemoj menjati ime ako nije tipično za balkanski " +
-                    "prostor ili ako je jasno da nije deo slovenske grupe imena. Ako nisi siguran, vrati ime nepromenjeno. " +
-                    "Vrati samo ime, ništa više. Takođe, treba da se koriste oblici koji se najviše koriste (npr. " +
-                    "vokativ imena Branka je Branka, ne Branko...) i ne menjaj strane oblike u srpsku verziju (npr. " +
-                    "Anastasiia ostavi Anastasiia, ne pretvaraj u Anastasija)"
-                },
-                new
-                {
-                    role = "user",
-                    content = $"Ime: {request.RequestMessage}"
-                }
-            }
-            }), Encoding.UTF8, "application/json"),
-            cancellationToken);
+                    model = _openAiSettings.Value.Model,
+                    messages = new object[]
+                    {
+                        new
+                        {
+                            role = "system",
+                            content = "Pretvori sledeće ime u vokativ, vodeći računa o pravilima srpskog jezika i specifičnim " +
+                                      "slučajevima (npr. 'Predrag' postaje 'Predraže'). Nemoj menjati ime ako nije tipično za balkanski " +
+                                      "prostor ili ako je jasno da nije deo slovenske grupe imena. Ako nisi siguran, vrati ime nepromenjeno. " +
+                                      "Vrati samo ime, ništa više. Takođe, treba da se koriste oblici koji se najviše koriste (npr. " +
+                                      "vokativ imena Branka je Branka, ne Branko...) i ne menjaj strane oblike u srpsku verziju (npr. " +
+                                      "Anastasiia ostavi Anastasiia, ne pretvaraj u Anastasija)"
+                        },
+                        new
+                        {
+                            role = "user",
+                            content = $"Ime: {request.RequestMessage}"
+                        }
+                    }
+                }), Encoding.UTF8, "application/json"),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is IOException
+            || (ex is TaskCanceledException t && !t.CancellationToken.IsCancellationRequested))
+        {
+            return OpenAiConnectionErrors.AsFailure(ex, httpClient.BaseAddress);
+        }
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
@@ -56,7 +66,16 @@ public class ConvertNounCasesStrategy(IHttpClientFactory httpClientFactory, IOpt
             ));
         }
 
-        string responseStream = await response.Content.ReadAsStringAsync(cancellationToken);
+        string responseStream;
+        try
+        {
+            responseStream = await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is IOException
+            || (ex is TaskCanceledException t && !t.CancellationToken.IsCancellationRequested))
+        {
+            return OpenAiConnectionErrors.AsFailure(ex, httpClient.BaseAddress);
+        }
 
         JsonSerializerOptions options = new()
         {

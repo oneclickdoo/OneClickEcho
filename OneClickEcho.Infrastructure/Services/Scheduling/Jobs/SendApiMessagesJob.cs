@@ -23,7 +23,7 @@ public class SendApiMessagesJob(
         CompanyId companyId = CompanyId.Create(companyIdGuid);
         ApiMessageType messageType = (ApiMessageType)context.JobDetail.JobDataMap.GetInt("MessageType");
 
-        Console.WriteLine($"{DateTime.Now} - Running SendApiMessagesJob for Company ID [{companyId}] and message type [{messageType}]");
+        // Console.WriteLine($"{DateTime.Now} - Running SendApiMessagesJob for Company ID [{companyId}] and message type [{messageType}]");
 
         // Get unsent messages for this sender and type
         List<ApiMessage> messages = await _apiMessageRepository.GetUnsentApiMessages(DateTime.Now.AddHours(-1));
@@ -31,12 +31,12 @@ public class SendApiMessagesJob(
 
         if (groupMessages.Count == 0)
         {
-            Console.WriteLine($"{DateTime.Now} - No messages found for sender [{companyId}] and message type [{messageType}]");
+            // Console.WriteLine($"{DateTime.Now} - No messages found for sender [{companyId}] and message type [{messageType}]");
             return;
         }
         
         await _messageSendingService.SendApiMessages(companyId, groupMessages, messageType);
 
-        Console.WriteLine($"{DateTime.Now} - SendApiMessagesJob completed successfully for sender [{companyId}] and message type [{messageType}]. Sent {groupMessages.Count} messages.");
+        // Console.WriteLine($"{DateTime.Now} - SendApiMessagesJob completed successfully for sender [{companyId}] and message type [{messageType}]. Sent {groupMessages.Count} messages.");
     }
 }

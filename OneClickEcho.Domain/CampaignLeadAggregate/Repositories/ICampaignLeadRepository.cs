@@ -35,6 +35,10 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
 
     Task<List<Lead>> GetAllLeadsByCampaignIdAsync(CampaignId campaignId, CancellationToken cancellationToken = default);
 
+    /// <summary>Leads whose campaign_lead row still has ViberStatus None (not yet accepted by gateway for this campaign).</summary>
+    Task<List<Lead>> GetLeadsByCampaignIdWithViberStatusNoneAsync(CampaignId campaignId,
+        CancellationToken cancellationToken = default);
+
     public Task<IPagedList<Lead>> GetPagedLeadsByCampaignIdAsync(CampaignId campaignId, IPagedQuery query,
         CancellationToken cancellationToken = default);
 

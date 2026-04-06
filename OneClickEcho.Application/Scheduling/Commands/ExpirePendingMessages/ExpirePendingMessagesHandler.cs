@@ -1,4 +1,5 @@
-﻿using OneClickEcho.Application.Common.Messaging;
+using OneClickEcho.Application.Common.Messaging;
+using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Domain.CampaignAggregate.Repositories;
 using OneClickEcho.Domain.CampaignLeadAggregate;
 using OneClickEcho.Domain.CampaignLeadAggregate.Enums;
@@ -29,6 +30,7 @@ public class ExpirePendingMessagesHandler(ICampaignRepository campaignRepository
             foreach (CampaignLead pendingCampaignLead in pendingCampaignLeads)
             {
                 pendingCampaignLead.ViberStatus = CampaignLeadViberStatus.Expired;
+                pendingCampaignLead.ViberStatusDescription = CampaignLeadViberStatusDescriptions.ForExpired();
             }
             
             totalCampaignLeadsCount += pendingCampaignLeads.Count;

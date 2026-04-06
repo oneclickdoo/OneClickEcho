@@ -136,23 +136,16 @@ namespace OneClickEcho.Application.Campaign.Commands.LaunchCampaign
             {
                 // add campaign to queue
                 campaign.Status = CampaignStatus.Queued;
-                campaign.SendingDatetime = DateTime.Now;
+                // UTC instant for timestamptz; DateTime.Now on UTC servers skewed +~2h in Belgrade UI.
+                campaign.SendingDatetime = DateTime.UtcNow;
             }
             else
             {
-                // campaign must have sending datetime
-                if (campaign.SendingDatetime == null)
-                {
-                    return Result.Failure<LaunchCampaignResponse>(new Error(
-                        "Campaign.BadRequest",
-                        "The Campaign does not have sending datetime."
-                    ));
-                }
+                DateTime sendingUtc = campaign.SendingDatetime.ToUniversalTime();
+                DateTime nowUtc = DateTime.UtcNow;
 
-                DateTime currentDateTime = DateTime.Now;
-
-                // campaign must start in the future
-                if (currentDateTime > campaign.SendingDatetime)
+                // campaign must start in the future (compare in UTC)
+                if (nowUtc > sendingUtc)
                 {
                     return Result.Failure<LaunchCampaignResponse>(new Error(
                         "Campaign.BadRequest",

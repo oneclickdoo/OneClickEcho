@@ -20,8 +20,8 @@ public sealed class TestMessage : AggregateRoot<TestMessageId>
         IsViber = isViber;
     }
 
-    public CompanyId CompanyId { get; set; }
-    public string PhoneNumber { get; set; }
+    public CompanyId CompanyId { get; set; } = null!;
+    public string PhoneNumber { get; set; } = null!;
     public long ViberId { get; set; }
     public string SmsReferenceId { get; set; } = string.Empty;
     public bool IsViber { get; set; } = false;

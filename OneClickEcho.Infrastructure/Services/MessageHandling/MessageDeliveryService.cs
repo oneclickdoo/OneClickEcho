@@ -64,7 +64,7 @@ public class MessageDeliveryService(ICampaignRepository campaignRepository,
         
         if (!apiMessages.Any())
         {
-            Console.WriteLine($"{DateTime.Now} - No API messages pending delivery update.");
+            // Console.WriteLine($"{DateTime.Now} - No API messages pending delivery update.");
             return;
         }
         
@@ -77,7 +77,7 @@ public class MessageDeliveryService(ICampaignRepository campaignRepository,
         {
             if (!messageGroup.Any())
             {
-                Console.WriteLine($"{DateTime.Now} - No API messages pending delivery update company ID [{messageGroup.Key.CompanyId}] and message type [{messageGroup.Key.MessageType}]");
+                // Console.WriteLine($"{DateTime.Now} - No API messages pending delivery update company ID [{messageGroup.Key.CompanyId}] and message type [{messageGroup.Key.MessageType}]");
                 return;
             }
 

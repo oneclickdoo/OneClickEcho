@@ -7,6 +7,7 @@ using OneClickEcho.Application.Common.Services.ViberService.Request.Enum;
 using OneClickEcho.Application.Common.Services.ViberService.Response;
 using OneClickEcho.Application.Common.Services.ViberService.Response.Common;
 using OneClickEcho.Application.Common.Services.ViberService.Response.Enum;
+using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Domain.ApiMessageAggregate;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CampaignLeadAggregate;
@@ -207,7 +208,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 {
                     foreach (SendViberMessageResponse viberMessage in response.ViberMessageResponses)
                     {
-                        Console.WriteLine($"Message id: {viberMessage.MessageId}, status: {viberMessage.Status}");
+                        // Console.WriteLine($"Message id: {viberMessage.MessageId}, status: {viberMessage.Status}");
                     }
                 }
             }
@@ -219,7 +220,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             IHttpClientFactory httpClientFactory,
             IOptions<ViberSettings> viberSettings,
             ICampaignLeadRepository campaignLeadRepository,
-            IStringTemplatingService stringTemplatingService)
+            IStringTemplatingService stringTemplatingService,
+            IUnitOfWork unitOfWork)
         {
             // Setup HTTP request
             HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
@@ -270,14 +272,48 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             for (int i = 0; i < dividedLeads.Count; i++)
             {
                 List<ViberMessage> viberMessages = [];
+                Dictionary<long, CampaignLead> campaignLeadsByViberMessageId = [];
 
-                // Aggregate viber messages for every test phone number
+                List<Lead> batchLeads = [];
                 foreach (Lead lead in dividedLeads[i])
+                {
+                    CampaignLead? refreshed = await campaignLeadRepository.GetByCampaignAndLeadId(campaign.Id, lead.Id);
+                    if (refreshed is null)
+                    {
+                        throw new Exception($"CampaignLead for Lead [{lead.Id}] is not found.");
+                    }
+
+                    if (refreshed.ViberStatus != CampaignLeadViberStatus.None)
+                    {
+                        // Console.WriteLine(
+                        //     $"{DateTime.UtcNow:O} - Skip Viber send campaign {campaign.Id.Value} lead {lead.Id.Value}: ViberStatus={refreshed.ViberStatus} (not None; avoids duplicate send).");
+                        continue;
+                    }
+
+                    batchLeads.Add(lead);
+                }
+
+                if (batchLeads.Count == 0)
+                {
+                    continue;
+                }
+
+                // Aggregate viber messages for every lead in this batch (still None in DB)
+                foreach (Lead lead in batchLeads)
                 {
                     // Get campaign lead
                     CampaignLead campaignLead = await campaignLeadRepository
                         .GetByCampaignAndLeadId(campaign.Id, lead.Id)
                         ?? throw new Exception($"CampaignLead for Lead [{lead.Id}] is not found.");
+
+                    if (campaignLead.ViberStatus != CampaignLeadViberStatus.None)
+                    {
+                        // Console.WriteLine(
+                        //     $"{DateTime.UtcNow:O} - Skip Viber send campaign {campaign.Id.Value} lead {lead.Id.Value}: race — status now {campaignLead.ViberStatus}.");
+                        continue;
+                    }
+
+                    campaignLeadsByViberMessageId[campaignLead.ViberMessageId] = campaignLead;
 
                     // Message personalization
                     string message = stringTemplatingService.SubstituteLeadInfo(campaign.ViberMessage!, lead);
@@ -396,6 +432,11 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     viberMessages.Add(viberMessage);
                 }
 
+                if (viberMessages.Count == 0)
+                {
+                    continue;
+                }
+
                 // Send Viber messages to all test phone numbers in bulk
                 SendViberMessageDto request = new()
                 {
@@ -403,15 +444,62 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     ViberMessages = viberMessages
                 };
 
-                SendViberMessageResponseDto? response = await viberService.Send(request);
+                SendViberMessageResponseDto response = await viberService.Send(request)
+                    ?? throw new InvalidOperationException("Viber Send returned no response after HTTP success.");
 
-                if (response is not null)
+                if (viberMessages.Count > 0 && response.ViberMessageResponses.Count == 0)
                 {
-                    foreach (SendViberMessageResponse viberMessage in response.ViberMessageResponses)
+                    throw new InvalidOperationException(
+                        "Viber API returned HTTP success but zero per-message statuses (empty ViberMessageResponses). " +
+                        "Nothing was applied to leads; campaign must not be marked complete.");
+                }
+
+                Dictionary<long, SendViberMessageResponse> responseByMessageId = [];
+                foreach (SendViberMessageResponse vm in response.ViberMessageResponses)
+                {
+                    if (!responseByMessageId.TryAdd(vm.MessageId, vm))
                     {
-                        Console.WriteLine($"Message id: {viberMessage.MessageId}, status: {viberMessage.Status}");
+                        throw new InvalidOperationException(
+                            $"Viber API returned duplicate MessageId {vm.MessageId} in one batch response.");
                     }
                 }
+
+                if (responseByMessageId.Count != viberMessages.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"Viber API returned {responseByMessageId.Count} distinct message id(s) but {viberMessages.Count} message(s) were sent.");
+                }
+
+                foreach (long expectedId in campaignLeadsByViberMessageId.Keys)
+                {
+                    if (!responseByMessageId.ContainsKey(expectedId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Viber API did not return a status for outbound MessageId {expectedId}.");
+                    }
+                }
+
+                foreach (long messageId in campaignLeadsByViberMessageId.Keys)
+                {
+                    SendViberMessageResponse viberMessage = responseByMessageId[messageId];
+                    CampaignLead campaignLead = campaignLeadsByViberMessageId[messageId];
+
+                    // Console.WriteLine($"Message id: {viberMessage.MessageId}, status: {viberMessage.Status}");
+
+                    if (viberMessage.Status == ViberMessageResponseStatus.MSG_SUCCESS)
+                    {
+                        campaignLead.ViberStatus = CampaignLeadViberStatus.Received;
+                        campaignLead.ViberStatusDescription = CampaignLeadViberStatusDescriptions.ForBulkSendSuccess();
+                    }
+                    else
+                    {
+                        campaignLead.ViberStatus = CampaignLeadViberStatus.Undelivered;
+                        campaignLead.ViberStatusDescription =
+                            CampaignLeadViberStatusDescriptions.ForBulkSendFailure(viberMessage.Status);
+                    }
+                }
+
+                await unitOfWork.SaveChangesAsync();
             }
         }
 
@@ -545,7 +633,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 {
                     foreach (SendViberMessageResponse viberMessage in response.ViberMessageResponses)
                     {
-                        Console.WriteLine($"Message id: {viberMessage.MessageId}, status: {viberMessage.Status}");
+                        // Console.WriteLine($"Message id: {viberMessage.MessageId}, status: {viberMessage.Status}");
                         
                         var sentApiMessage = apiMessages.FirstOrDefault(x => x.ViberMessageId == viberMessage.MessageId);
 
@@ -554,8 +642,15 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             if (viberMessage.Status != ViberMessageResponseStatus.MSG_SUCCESS)
                             {
                                 sentApiMessage.ViberStatus = CampaignLeadViberStatus.Undelivered;
+                                sentApiMessage.ViberStatusDescription =
+                                    CampaignLeadViberStatusDescriptions.ForBulkSendFailure(viberMessage.Status);
                             }
-                            
+                            else
+                            {
+                                sentApiMessage.ViberStatusDescription =
+                                    CampaignLeadViberStatusDescriptions.ForBulkSendSuccess();
+                            }
+
                             sentApiMessage.IsSent = true;
                         }
                     }

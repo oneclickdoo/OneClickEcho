@@ -1,4 +1,4 @@
-﻿using OneClickEcho.Application.Common.Services.SmsService;
+using OneClickEcho.Application.Common.Services.SmsService;
 using OneClickEcho.Application.Common.Services.SmsService.Request;
 using OneClickEcho.Application.Common.Services.SmsService.Response;
 using System.Text;

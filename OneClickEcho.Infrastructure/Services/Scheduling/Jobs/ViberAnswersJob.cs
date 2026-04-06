@@ -9,10 +9,10 @@ public class ViberAnswersJob(IMessageDeliveryService messageDeliveryService) : I
 
     public async Task Execute(IJobExecutionContext context)
     {
-        Console.WriteLine(DateTime.Now + " - Running ViberAnswersJob job...");
+        // Console.WriteLine(DateTime.Now + " - Running ViberAnswersJob job...");
 
         await _messageDeliveryService.GetViberAnswersForLast49Hours();
         
-        Console.WriteLine(DateTime.Now + " - ViberAnswersJob job completed successfully.");
+        // Console.WriteLine(DateTime.Now + " - ViberAnswersJob job completed successfully.");
     }
 }
