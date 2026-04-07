@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { getConnectTokenUrl } from "@/lib/serverApiBase";
+
 export async function POST(request: Request) {
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/connect/token`;
+    const url = getConnectTokenUrl();
     
     const formData = await request.formData();
     const params = new URLSearchParams();

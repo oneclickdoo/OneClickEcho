@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
+import { getApiInternalBase, getConnectTokenUrl } from "@/lib/serverApiBase";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -14,7 +15,7 @@ export async function middleware(request: NextRequest) {
 
         if (!accessToken) {
             if (refreshToken) {
-                const responseBackend = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/connect/token`, {
+                const responseBackend = await fetch(getConnectTokenUrl(), {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/x-www-form-urlencoded"
@@ -31,7 +32,7 @@ export async function middleware(request: NextRequest) {
                     requestHeaders.set("Authorization", `Bearer ${data.access_token}`);
 
                     const response = NextResponse.rewrite(
-                        `${process.env.NEXT_PUBLIC_API_URL}${request.nextUrl.pathname}${request.nextUrl.search}`,
+                        `${getApiInternalBase()}${request.nextUrl.pathname}${request.nextUrl.search}`,
                         {
                             request: { headers: requestHeaders }
                         }
@@ -59,7 +60,7 @@ export async function middleware(request: NextRequest) {
         }
 
         return NextResponse.rewrite(
-            `${process.env.NEXT_PUBLIC_API_URL}${request.nextUrl.pathname}${request.nextUrl.search}`,
+            `${getApiInternalBase()}${request.nextUrl.pathname}${request.nextUrl.search}`,
             {
                 request: { headers: requestHeaders }
             }

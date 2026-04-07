@@ -54,7 +54,10 @@ services:
       dockerfile: docker/Dockerfile_Dashboard
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3901}
+        API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3901}
     image: oneclickecho-dashboard:local
+    environment:
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3901}
     ports:
       - "3800:3800"
     profiles: ["full"]

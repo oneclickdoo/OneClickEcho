@@ -2,8 +2,11 @@
 # Using an official Node.js runtime as a base image
 FROM node:18-alpine AS build
 
-# Set build argument
+# Public URL for browser (images, etc.). Internal URL for server-side fetch/rewrite inside Docker network.
 ARG NEXT_PUBLIC_API_URL=http://localhost:5000
+ARG API_INTERNAL_URL=http://api:3901
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 
 # Set the working directory in the container
 WORKDIR /app
@@ -18,7 +21,7 @@ COPY OneClickEcho.Dashboard/ ./
 # Create or modify the .env.production file
 RUN echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" > .env.production
 
-# Build the app
+# Build the app (middleware inlines API_INTERNAL_URL when set)
 RUN npm run build
 
 # Stage 2: Create a lightweight image for production 
