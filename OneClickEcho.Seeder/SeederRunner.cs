@@ -78,6 +78,11 @@ public class SeederRunner
             string? resetItocsPassword = Environment.GetEnvironmentVariable("RESET_ITOCS_PASSWORD");
             if (!string.IsNullOrWhiteSpace(resetItocsPassword))
             {
+                // Visible at startup; use: docker compose logs api --since 2m | grep RESET
+                logger.LogInformation(
+                    "RESET_ITOCS_PASSWORD is set (password length {Length}); running one-time reset for itocs@oneclick.rs.",
+                    resetItocsPassword.Length);
+
                 UserManager<ApplicationUser> identityUserManager =
                     services.GetRequiredService<UserManager<ApplicationUser>>();
 
@@ -124,6 +129,8 @@ public class SeederRunner
                         }
 
                         await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+                        logger.LogInformation(
+                            "ITOCS_PASSWORD_RESET_OK: itocs@oneclick.rs password was saved. Remove RESET_ITOCS_PASSWORD and restart API.");
                         logger.LogWarning(
                             "Password for itocs@oneclick.rs was reset. Remove RESET_ITOCS_PASSWORD from the environment immediately.");
                     }
