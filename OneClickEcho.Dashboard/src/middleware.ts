@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 
@@ -66,7 +66,12 @@ export async function middleware(request: NextRequest) {
         );
     }
 
-    // 2) Sve ostalo (UI) ide kroz next-intl: / -> /en, /sr, itd.
+    // 2) Login/logout route handlers: do not run next-intl (locale redirects can break POST or cookies).
+    if (request.nextUrl.pathname.includes("/auth/")) {
+        return NextResponse.next();
+    }
+
+    // 3) Sve ostalo (UI) ide kroz next-intl: / -> /en, /sr, itd.
     return intlMiddleware(request);
 }
 
