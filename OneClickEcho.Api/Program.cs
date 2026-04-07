@@ -23,14 +23,18 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
     builder.Services.AddCors(options =>
     {
         options.AddPolicy(name: "AllowNext",
-            policy => policy.WithOrigins("http://localhost:3000", "https://app.localhost8080.xyz")
+            policy => policy.WithOrigins(
+                                         "http://localhost:3000",
+                                         "https://app.localhost8080.xyz",
+                                         "https://viber.oneclick.rs",
+                                         "http://viber.oneclick.rs")
                                          .AllowAnyMethod()
                                          .AllowCredentials()
                                          .AllowAnyHeader());
     });
 
     builder.Services.AddInfrastructureService(builder.Configuration);
-    builder.Services.AddPersistenceService(builder.Configuration);
+    builder.Services.AddPersistenceService(builder.Configuration, builder.Environment);
     builder.Services.AddApplicationService();
 
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

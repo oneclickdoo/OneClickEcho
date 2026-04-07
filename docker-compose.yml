@@ -21,6 +21,24 @@ services:
         max-file: "5"
     profiles: ["full"]
 
+  postgres:
+    image: postgres:16
+    container_name: oneclick_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oneclickecho_admin
+      POSTGRES_PASSWORD: sf
+      POSTGRES_DB: oneclickecho
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oneclickecho_admin -d oneclickecho"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   log-rotator:
     build:
       context: .
@@ -56,3 +74,4 @@ services:
 
 volumes:
   api-logs:
+  pgdata:

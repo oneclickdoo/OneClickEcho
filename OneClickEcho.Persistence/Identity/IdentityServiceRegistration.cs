@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OneClickEcho.Domain.ApplicationUserAggregate;
 
 namespace OneClickEcho.Persistence.Identity;
 
 public static class IdentityServiceRegistration
 {
-    public static IServiceCollection AddIdentityService(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddIdentityService(this IServiceCollection services, IConfiguration configuration,
+        IHostEnvironment hostEnvironment)
     {
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
             .AddRoles<IdentityRole<Guid>>()
@@ -41,9 +44,23 @@ public static class IdentityServiceRegistration
                 // Accept anonymous clients (i.e clients that don't send a client_id).
                 options.AcceptAnonymousClients();
 
-                // Register the signing and encryption credentials.
-                options.AddDevelopmentEncryptionCertificate()
-                    .AddDevelopmentSigningCertificate();
+                // Development certificates use the local user store and fail in Linux Docker — never use them in a container.
+                // Note: ephemeral keys reset on restart (refresh tokens from previous runs become invalid).
+                bool inContainer = string.Equals(
+                    Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+                    "true",
+                    StringComparison.OrdinalIgnoreCase);
+
+                if (hostEnvironment.IsDevelopment() && !inContainer)
+                {
+                    options.AddDevelopmentEncryptionCertificate()
+                        .AddDevelopmentSigningCertificate();
+                }
+                else
+                {
+                    options.AddEphemeralEncryptionKey()
+                        .AddEphemeralSigningKey();
+                }
 
                 // Register the ASP.NET Core host and configure the ASP.NET Core-specific options.
                 options.UseAspNetCore()

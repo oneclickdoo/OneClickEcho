@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -34,8 +34,9 @@ namespace OneClickEcho.App.Controllers
 
             if (request.IsPasswordGrantType())
             {
+                // Use Identity's user lookup (normalized email) so the same row/hash is used as after password reset.
 #pragma warning disable CS8604 // Possible null reference argument.
-                ApplicationUser? user = await _userRepository.GetByEmailAsync(request.Username);
+                ApplicationUser? user = await _userManager.FindByEmailAsync(request.Username);
 #pragma warning restore CS8604 // Possible null reference argument.
 
                 if (user == null)
@@ -68,13 +69,14 @@ namespace OneClickEcho.App.Controllers
                     return Forbid(properties, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
                 }
 
+                ApplicationUser? userWithCompanies = await _userRepository.GetByIdAsync(user.Id)
+                    ?? user;
+
                 // Create the claims-based identity that will be used by OpenIddict to generate tokens.
                 ClaimsIdentity identity = new(
                     authenticationType: TokenValidationParameters.DefaultAuthenticationType,
                     nameType: Claims.Name,
                     roleType: Claims.Role);
-
-                IList<string> x = await _userManager.GetRolesAsync(user);
 
                 // Add the claims that will be persisted in the tokens.
                 identity.SetClaim(Claims.Subject, await _userManager.GetUserIdAsync(user))
@@ -82,7 +84,7 @@ namespace OneClickEcho.App.Controllers
                         .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
                         .SetClaim(Claims.PreferredUsername, await _userManager.GetUserNameAsync(user))
                         .SetClaims(Claims.Role, [.. await _userManager.GetRolesAsync(user)])
-                        .SetClaim("CompanyIds", JsonConvert.SerializeObject(user.CompanyIds.Select(id => id.CompanyId.Value.ToString())), JsonClaimValueTypes.Json);
+                        .SetClaim("CompanyIds", JsonConvert.SerializeObject(userWithCompanies.CompanyIds.Select(id => id.CompanyId.Value.ToString())), JsonClaimValueTypes.Json);
 
                 identity.SetScopes(new[]
                 {

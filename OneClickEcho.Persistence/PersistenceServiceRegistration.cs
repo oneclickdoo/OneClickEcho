@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OneClickEcho.Persistence.Identity;
 using System.Reflection;
 
@@ -9,7 +10,7 @@ namespace OneClickEcho.Persistence;
 public static class PersistenceServiceRegistration
 {
     public static IServiceCollection AddPersistenceService(this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration, IHostEnvironment hostEnvironment)
     {
         services.AddDbContext<ApplicationDbContext>(options =>
         {
@@ -24,7 +25,7 @@ public static class PersistenceServiceRegistration
                 .AsImplementedInterfaces()
                 .WithScopedLifetime());
 
-        services.AddIdentityService(configuration);
+        services.AddIdentityService(configuration, hostEnvironment);
 
         return services;
     }

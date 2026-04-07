@@ -45,8 +45,8 @@ USER root
 RUN mkdir -p /app/logs && chown -R app:app /app/logs
 USER app
 
-# Path to the folder to be mounted on the host machine
-VOLUME app/UploadedFiles
+# Path to the folder to be mounted on the host machine (must be absolute for Docker)
+VOLUME ["/app/UploadedFiles"]
 
 # Docker / compose should set ASPNETCORE_ENVIRONMENT=Docker for quieter logs + file sink
 ENV ASPNETCORE_ENVIRONMENT=Docker

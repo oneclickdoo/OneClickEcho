@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OneClickEcho.Domain.ApplicationUserAggregate;
 using OneClickEcho.Domain.ApplicationUserAggregate.Repositories;
@@ -7,9 +8,11 @@ using OneClickEcho.Persistence.Common;
 
 namespace OneClickEcho.Persistence.Repositories;
 
-public class ApplicationUserRepository(ApplicationDbContext dbContext) : IApplicationUserRepository
+public class ApplicationUserRepository(ApplicationDbContext dbContext, ILookupNormalizer lookupNormalizer)
+    : IApplicationUserRepository
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
+    private readonly ILookupNormalizer _lookupNormalizer = lookupNormalizer;
 
     public async Task<ApplicationUser?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -20,9 +23,20 @@ public class ApplicationUserRepository(ApplicationDbContext dbContext) : IApplic
 
     public async Task<ApplicationUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        string trimmed = email.Trim();
+        string normalized = _lookupNormalizer.NormalizeEmail(trimmed) ?? trimmed.ToUpperInvariant();
+
         return await _dbContext.Set<ApplicationUser>()
             .Include(e => e.CompanyIds)
-            .FirstOrDefaultAsync(g => g.Email == email, cancellationToken);
+            .FirstOrDefaultAsync(
+                g => g.NormalizedEmail == normalized
+                    || (g.Email != null && g.Email.ToLower() == trimmed.ToLower()),
+                cancellationToken);
     }
 
     public async Task<List<ApplicationUser>> Search(Guid companyId, string email, CancellationToken cancellationToken = default)

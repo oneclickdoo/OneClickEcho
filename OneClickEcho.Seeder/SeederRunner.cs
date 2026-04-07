@@ -1,7 +1,9 @@
+using System.Linq;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OneClickEcho.Domain.ApplicationUserAggregate;
 using OneClickEcho.Domain.ApplicationUserAggregate.Repositories;
 using OneClickEcho.Domain.Common.Identity;
 using OneClickEcho.Domain.Common.Repositories;
@@ -61,7 +63,7 @@ public class SeederRunner
 
             IUserManager userManager = services.GetRequiredService<IUserManager>();
 
-            Domain.ApplicationUserAggregate.ApplicationUser? user = await userRepository.GetByEmailAsync("itocs@oneclick.rs");
+            ApplicationUser? user = await userRepository.GetByEmailAsync("itocs@oneclick.rs");
 
             company = await companyRepository.GetByNameAsync("OneClick Echo");
 
@@ -71,6 +73,62 @@ public class SeederRunner
             }
 
             await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+
+            // One-time ops: set RESET_ITOCS_PASSWORD on the API container, restart once, then remove it.
+            string? resetItocsPassword = Environment.GetEnvironmentVariable("RESET_ITOCS_PASSWORD");
+            if (!string.IsNullOrWhiteSpace(resetItocsPassword))
+            {
+                UserManager<ApplicationUser> identityUserManager =
+                    services.GetRequiredService<UserManager<ApplicationUser>>();
+
+                ApplicationUser? itocsUser = await identityUserManager.FindByEmailAsync("itocs@oneclick.rs");
+
+                if (itocsUser is null)
+                {
+                    logger.LogWarning("RESET_ITOCS_PASSWORD is set but no user itocs@oneclick.rs exists.");
+                }
+                else
+                {
+                    string resetToken = await identityUserManager.GeneratePasswordResetTokenAsync(itocsUser);
+                    IdentityResult pwResult =
+                        await identityUserManager.ResetPasswordAsync(itocsUser, resetToken, resetItocsPassword);
+
+                    if (!pwResult.Succeeded)
+                    {
+                        logger.LogWarning(
+                            "RESET_ITOCS_PASSWORD: ResetPasswordAsync failed, trying RemovePassword + AddPassword. Errors: {Errors}",
+                            string.Join("; ", pwResult.Errors.Select(e => $"{e.Code}: {e.Description}")));
+
+                        IdentityResult removeResult = await identityUserManager.RemovePasswordAsync(itocsUser);
+                        pwResult = removeResult.Succeeded
+                            ? await identityUserManager.AddPasswordAsync(itocsUser, resetItocsPassword)
+                            : removeResult;
+
+                        if (!pwResult.Succeeded)
+                        {
+                            logger.LogError("RESET_ITOCS_PASSWORD failed: {Errors}",
+                                string.Join("; ", pwResult.Errors.Select(e => $"{e.Code}: {e.Description}")));
+                        }
+                    }
+
+                    if (pwResult.Succeeded)
+                    {
+                        await identityUserManager.SetLockoutEndDateAsync(itocsUser, null);
+                        await identityUserManager.ResetAccessFailedCountAsync(itocsUser);
+                        itocsUser.EmailConfirmed = true;
+                        IdentityResult updateResult = await identityUserManager.UpdateAsync(itocsUser);
+                        if (!updateResult.Succeeded)
+                        {
+                            logger.LogError("RESET_ITOCS_PASSWORD: UpdateAsync after reset failed: {Errors}",
+                                string.Join("; ", updateResult.Errors.Select(e => $"{e.Code}: {e.Description}")));
+                        }
+
+                        await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+                        logger.LogWarning(
+                            "Password for itocs@oneclick.rs was reset. Remove RESET_ITOCS_PASSWORD from the environment immediately.");
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
