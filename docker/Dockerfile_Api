@@ -40,10 +40,12 @@ WORKDIR /app
 # Copy the published application from the 'Publish' stage to the Runtime stage
 COPY --from=publish /app/publish .
 
-# Serilog file sink (see appsettings.Docker.json); ensure writable when running as non-root app user
+# Serilog + uploads: writable for user app after optional volume mount (volume is often root-owned).
 USER root
-RUN mkdir -p /app/logs && chown -R app:app /app/logs
-USER app
+COPY docker/entrypoint-api.sh /entrypoint-api.sh
+RUN chmod +x /entrypoint-api.sh \
+    && mkdir -p /app/logs /app/UploadedFiles \
+    && chown -R app:app /app/logs /app/UploadedFiles
 
 # Path to the folder to be mounted on the host machine (must be absolute for Docker)
 VOLUME ["/app/UploadedFiles"]
@@ -51,5 +53,4 @@ VOLUME ["/app/UploadedFiles"]
 # Docker / compose should set ASPNETCORE_ENVIRONMENT=Docker for quieter logs + file sink
 ENV ASPNETCORE_ENVIRONMENT=Docker
 
-# Specify the entry point for the container, which is the command to run the application
-ENTRYPOINT [ "dotnet", "OneClickEcho.Api.dll" ]
+ENTRYPOINT ["/entrypoint-api.sh"]

@@ -7,18 +7,17 @@ public class UploadAndAssignLeadsToCollectionValidator : AbstractValidator<Uploa
 {
     public UploadAndAssignLeadsToCollectionValidator()
     {
+        // Cascade: do not evaluate .Length / file name when File is null (avoids 500 from validator).
         RuleFor(x => x.File)
+            .Cascade(CascadeMode.Stop)
             .NotNull()
             .WithMessage("File is required.")
-            .Must(file => file.Length > 0)
+            .Must(file => file!.Length > 0)
             .WithMessage("File cannot be empty.")
-            .Must(file => CheckFileType(file))
-            .WithMessage("Only CSV files are allowed.");
-
-        // You can add more rules if needed, such as size checks
-        RuleFor(x => x.File.Length)
-            .LessThanOrEqualTo(5 * 1024 * 1024)
-            .WithMessage("File size must be less than 5 MB."); // Arbitrary size limit
+            .Must(file => CheckFileType(file!))
+            .WithMessage("Only CSV files are allowed.")
+            .Must(file => file!.Length <= 5 * 1024 * 1024)
+            .WithMessage("File size must be less than 5 MB.");
     }
 
     private static bool CheckFileType(IFormFile file)

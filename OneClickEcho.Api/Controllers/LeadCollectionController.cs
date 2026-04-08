@@ -127,10 +127,15 @@ namespace OneClickEcho.App.Controllers
         [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
         [HttpPost("UploadAndAssignLeads")]
         public async Task<IActionResult> AssignLeads(
-            IFormFile file,
+            [FromForm] IFormFile file,
             [FromForm(Name = "LeadCollectionId")] Guid leadCollectionId,
             CancellationToken cancellationToken)
         {
+            if (file is null || file.Length == 0)
+            {
+                return BadRequest("No file was uploaded (multipart field name must be \"file\").");
+            }
+
             Result<UploadAndAssignLeadsToCollectionResponse> response = await Mediator.Send(
                 new UploadAndAssignLeadsToCollectionCommand(file, leadCollectionId), cancellationToken);
 

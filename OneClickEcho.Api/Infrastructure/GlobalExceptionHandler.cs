@@ -30,7 +30,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         {
             problemDetails = new ProblemDetails
             {
-                Title = "public Server Error",
+                Title = "Internal Server Error",
                 Status = StatusCodes.Status500InternalServerError,
                 Detail = "An unexpected error occurred.",
                 Instance = context.Request.Path

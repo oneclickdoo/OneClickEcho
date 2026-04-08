@@ -130,7 +130,7 @@ export const uploadAndAssignCollectionLeads = async (file: File, collectionId: s
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("leadCollectionId", collectionId);
+    formData.append("LeadCollectionId", collectionId);
 
     const response = await authFetch(url.toString(), {
         method: "POST",
@@ -139,7 +139,17 @@ export const uploadAndAssignCollectionLeads = async (file: File, collectionId: s
     });
 
     if (!response.ok) {
-        throw new Error("Network response was not ok");
+        let detail = "";
+        try {
+            detail = (await response.clone().text()).slice(0, 500);
+        } catch {
+            /* ignore */
+        }
+        throw new Error(
+            detail
+                ? `Collection CSV upload failed (HTTP ${response.status}): ${detail}`
+                : `Collection CSV upload failed (HTTP ${response.status})`
+        );
     }
 
     return await response.json();
