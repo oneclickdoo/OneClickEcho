@@ -210,10 +210,12 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
     const login = async (credentialsData: { email: string; password: string }) => {
         const body = new URLSearchParams();
 
-        body.append("username", credentialsData.email);
+        const email = credentialsData.email.trim();
+        body.append("username", email);
         body.append("password", credentialsData.password);
         body.append("grant_type", "password");
-        body.append("scope", "offline_access");
+        // Intersect with server grants (AuthorizationController); openid/profile/email improve token claims. Roles are still copied into the access token by GetDestinations.
+        body.append("scope", "openid email profile offline_access");
 
         return runWithSlowOverlay(async () => {
             try {

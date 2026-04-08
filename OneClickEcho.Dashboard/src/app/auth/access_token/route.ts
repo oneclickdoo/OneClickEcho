@@ -1,24 +1,23 @@
 import { NextResponse } from "next/server";
 
+import { useSecureSessionCookies } from "@/lib/cookieSecure";
 import { getConnectTokenUrl } from "@/lib/serverApiBase";
 
 export async function POST(request: Request) {
     const url = getConnectTokenUrl();
 
-    const formData = await request.formData();
-    const params = new URLSearchParams();
-
-    formData.forEach((value, key) => {
-        params.append(key, value.toString());
-    });
+    // Forward the raw body so encoding is not altered by FormData round-trips (some proxies/clients are picky).
+    const rawBody = await request.text();
+    const contentType =
+        request.headers.get("content-type")?.split(";")[0]?.trim() || "application/x-www-form-urlencoded";
 
     try {
         const responseBackend = await fetch(url, {
             method: "POST",
             headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
+                "Content-Type": contentType
             },
-            body: params
+            body: rawBody
         });
 
         if (responseBackend.ok) {
@@ -26,16 +25,20 @@ export async function POST(request: Request) {
 
             const response = NextResponse.json({}, { status: 200 });
 
+            const secure = useSecureSessionCookies();
+
             response.cookies.set("access_token", data.access_token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
+                secure,
+                sameSite: "lax",
                 path: "/",
                 maxAge: 60 * 60 - 10
             });
 
             response.cookies.set("refresh_token", data.refresh_token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
+                secure,
+                sameSite: "lax",
                 path: "/",
                 maxAge: 60 * 60 * 24 * 14 - 10
             });

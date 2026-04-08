@@ -29,15 +29,27 @@ namespace OneClickEcho.App.Controllers
 
             if (request is null)
             {
-                return BadRequest("");
+                return BadRequest(new
+                {
+                    error = Errors.InvalidRequest,
+                    error_description = "The token request could not be parsed by the authorization server."
+                });
             }
 
             if (request.IsPasswordGrantType())
             {
+                string username = (request.Username ?? string.Empty).Trim();
+                if (username.Length == 0)
+                {
+                    return BadRequest(new
+                    {
+                        error = Errors.InvalidRequest,
+                        error_description = "The username field is required."
+                    });
+                }
+
                 // Use Identity's user lookup (normalized email) so the same row/hash is used as after password reset.
-#pragma warning disable CS8604 // Possible null reference argument.
-                ApplicationUser? user = await _userManager.FindByEmailAsync(request.Username);
-#pragma warning restore CS8604 // Possible null reference argument.
+                ApplicationUser? user = await _userManager.FindByEmailAsync(username);
 
                 if (user == null)
                 {

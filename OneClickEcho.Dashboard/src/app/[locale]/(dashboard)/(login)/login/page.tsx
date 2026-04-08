@@ -48,11 +48,21 @@ export default function Login() {
                 const tToast = useTranslations("Toasts");
                 const tErr = useTranslations("Errors");
 
+                let description = tErr("unknown");
+                try {
+                    const errJson = (await response.json()) as { error?: string };
+                    if (errJson.error && typeof errJson.error === "string") {
+                        description = errJson.error;
+                    }
+                } catch {
+                    /* ignore */
+                }
+
                 toast({
                     title: tToast("errorTitle"),
-                    description: tErr("unknown"), 
+                    description,
                     variant: "error",
-                    duration: 2000
+                    duration: 6000
                 });
             }
         } catch (error) {

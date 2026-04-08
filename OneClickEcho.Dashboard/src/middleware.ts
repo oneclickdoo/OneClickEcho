@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
+import { useSecureSessionCookies } from "@/lib/cookieSecure";
 import { getApiInternalBase, getConnectTokenUrl } from "@/lib/serverApiBase";
 
 const intlMiddleware = createMiddleware(routing);
@@ -63,16 +64,20 @@ export async function middleware(request: NextRequest) {
                               }
                           );
 
+                    const secure = useSecureSessionCookies();
+
                     response.cookies.set("access_token", data.access_token, {
                         httpOnly: true,
-                        secure: process.env.NODE_ENV === "production",
+                        secure,
+                        sameSite: "lax",
                         path: "/",
                         maxAge: 60 * 60 - 10
                     });
 
                     response.cookies.set("refresh_token", data.refresh_token, {
                         httpOnly: true,
-                        secure: process.env.NODE_ENV === "production",
+                        secure,
+                        sameSite: "lax",
                         path: "/",
                         maxAge: 60 * 60 * 24 * 14 - 10
                     });
