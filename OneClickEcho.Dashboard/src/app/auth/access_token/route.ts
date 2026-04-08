@@ -43,15 +43,18 @@ export async function POST(request: Request) {
             return response;
         }
 
-        const data: { error_description?: string } = await responseBackend.json();
-        return NextResponse.json(
-            { error: data.error_description ?? "Authentication failed." },
-            { status: 400 }
-        );
-    } catch {
-        return NextResponse.json(
-            { error: "Authentication request failed." },
-            { status: 500 }
-        );
+        let errorMessage = "Authentication failed";
+        try {
+            const errBody = (await responseBackend.json()) as { error_description?: string; error?: string };
+            errorMessage =
+                errBody.error_description ?? errBody.error ?? responseBackend.statusText ?? errorMessage;
+        } catch {
+            // non-JSON error body
+        }
+        return NextResponse.json({ error: errorMessage }, { status: responseBackend.status || 400 });
+    } catch (error) {
+        console.error("[auth/access_token]", error);
+        const message = error instanceof Error ? error.message : "Authentication request failed.";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

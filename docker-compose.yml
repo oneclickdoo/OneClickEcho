@@ -64,6 +64,7 @@ services:
         API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3901}
     image: oneclickecho-dashboard:local
     environment:
+      NODE_ENV: production
       API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3901}
     ports:
       - "3800:3800"

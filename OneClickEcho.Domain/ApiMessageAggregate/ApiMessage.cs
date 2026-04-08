@@ -20,7 +20,10 @@ public class ApiMessage : AggregateRoot<ApiMessageId>
         string? viberButtonUrlTitle,
         string? smsMessage,
         string? smsSender,
-        int? viberValidity
+        int? viberValidity,
+        string? viberVideoThumbnail = null,
+        int? viberFileSize = null,
+        int? viberVideoDuration = null
     ) : base(ApiMessageId.CreateUnique())
     {
         CompanyId = companyId;
@@ -35,6 +38,9 @@ public class ApiMessage : AggregateRoot<ApiMessageId>
         SmsMessage = smsMessage;
         SmsSender = smsSender;
         ViberValidity = viberValidity;
+        ViberVideoThumbnail = viberVideoThumbnail;
+        ViberFileSize = viberFileSize;
+        ViberVideoDuration = viberVideoDuration;
     }
     
     public CompanyId CompanyId { get; set; } = default!;
@@ -71,7 +77,14 @@ public class ApiMessage : AggregateRoot<ApiMessageId>
     public string? SmsMessage { get; set; }
     public string? SmsSender { get; set; }
     public int? ViberValidity { get; set; }
-    
+
+    /// <summary>Stored file name under public uploads, or absolute HTTPS URL. Viber/Comtrade must fetch thumbnail over the public internet.</summary>
+    public string? ViberVideoThumbnail { get; set; }
+
+    public int? ViberFileSize { get; set; }
+
+    public int? ViberVideoDuration { get; set; }
+
     // Used for EFCore
     public ApiMessage() : base(ApiMessageId.CreateUnique()) { }
 }

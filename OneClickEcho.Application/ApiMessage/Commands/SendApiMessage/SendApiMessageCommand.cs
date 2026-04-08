@@ -14,7 +14,7 @@ public sealed record SendApiMessageCommand(
     string PhoneNumber,
     string Message,
     
-    // Viber
+    // Viber — media URL must be reachable by Comtrade/Viber over the public internet (HTTPS), or a file name served under your configured public uploads base URL.
     string? ViberMedia,
     string? ViberButtonUrl,
     string? ViberButtonUrlTitle,
@@ -25,5 +25,10 @@ public sealed record SendApiMessageCommand(
     
     // Sms
     string? SmsSender,
-    string? SmsMessage
+    string? SmsMessage,
+
+    /// <summary>Optional. Upload file name or public HTTPS URL; Comtrade fetches the thumbnail over the internet.</summary>
+    string? ViberVideoThumbnail,
+    int? ViberFileSize,
+    int? ViberVideoDuration
     ) : ICommand<SendApiMessageResponse>;

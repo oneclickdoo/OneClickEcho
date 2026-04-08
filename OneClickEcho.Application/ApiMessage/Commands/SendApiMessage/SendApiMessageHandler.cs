@@ -34,7 +34,10 @@ public class SendApiMessageHandler(IApiMessageRepository apiMessageRepository, I
             request.ViberButtonUrlTitle,
             request.SmsMessage,
             request.SmsSender,
-            request.ViberValidity
+            request.ViberValidity,
+            viberVideoThumbnail: request.ViberVideoThumbnail,
+            viberFileSize: request.ViberFileSize,
+            viberVideoDuration: request.ViberVideoDuration
         );
 
         apiMessageRepository.Add(apiMessage);

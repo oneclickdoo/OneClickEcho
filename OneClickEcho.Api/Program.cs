@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.FileProviders;
 using OneClickEcho.App.Infrastructure;
@@ -54,6 +55,13 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
     {
         options.Limits.MaxRequestBodySize = int.MaxValue;
     });
+
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
 }
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -65,6 +73,8 @@ WebApplication app = builder.Build();
         app.UseSwagger();
         app.UseSwaggerUI();
     }
+
+    app.UseForwardedHeaders();
 
     // Use the CORS policy
     app.UseCors("AllowNext");

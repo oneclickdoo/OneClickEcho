@@ -276,6 +276,18 @@ namespace OneClickEcho.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("viber_validity");
 
+                    b.Property<int?>("ViberFileSize")
+                        .HasColumnType("integer")
+                        .HasColumnName("viber_file_size");
+
+                    b.Property<string>("ViberVideoThumbnail")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_video_thumbnail");
+
+                    b.Property<int?>("ViberVideoDuration")
+                        .HasColumnType("integer")
+                        .HasColumnName("viber_video_duration");
+
                     b.HasKey("Id")
                         .HasName("pk_api_messages");
 

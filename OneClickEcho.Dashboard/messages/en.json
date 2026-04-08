@@ -552,7 +552,7 @@
           },
           "mediaUpload": {
             "dropzoneImage": "Drag & drop your image, or click to select it. Recommended image dimensions are 500×500.",
-            "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, recommended up to 1280×720 (720p), max about 100 MB per file (your server/nginx limit must allow it — use e.g. client_max_body_size 200M if uploads fail with 413).",
+            "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, recommended up to 1280×720 (720p), max about 100 MB per file.",
             "videoMeta": "File size: {fileSize} · Duration: {duration}",
             "durationPending": "Detecting…",
             "videoUnsupported": "Your browser does not support video playback."

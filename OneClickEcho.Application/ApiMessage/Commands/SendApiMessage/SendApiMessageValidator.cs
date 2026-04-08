@@ -50,5 +50,20 @@ public sealed class SendApiMessageValidator : AbstractValidator<SendApiMessageCo
                 .MaximumLength(30)
                 .WithMessage("ViberButtonUrlTitle must not exceed 30 characters");
         });
+
+        RuleFor(x => x.ViberVideoThumbnail)
+            .MaximumLength(2048)
+            .When(x => !string.IsNullOrWhiteSpace(x.ViberVideoThumbnail))
+            .WithMessage("ViberVideoThumbnail must not exceed 2048 characters.");
+
+        RuleFor(x => x.ViberFileSize)
+            .GreaterThan(0)
+            .When(x => x.ViberFileSize.HasValue)
+            .WithMessage("ViberFileSize must be positive when set.");
+
+        RuleFor(x => x.ViberVideoDuration)
+            .GreaterThan(0)
+            .When(x => x.ViberVideoDuration.HasValue)
+            .WithMessage("ViberVideoDuration must be positive when set.");
     }
 }

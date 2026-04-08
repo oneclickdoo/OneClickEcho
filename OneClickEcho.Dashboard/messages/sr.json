@@ -552,7 +552,7 @@
           },
           "mediaUpload": {
             "dropzoneImage": "Prevucite i pustite sliku ili kliknite da je izaberete. Preporučene dimenzije slike su 500×500.",
-            "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Slike: preporučeno 500×500 (JPG/PNG). Video: MP4, preporučeno do 1280×720 (720p), najviše oko 100 MB po fajlu (Nginx/server mora dozvoliti veći upload — npr. client_max_body_size 200M ako dobijate grešku 413).",
+            "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Slike: preporučeno 500×500 (JPG/PNG). Video: MP4, preporučeno do 1280×720 (720p), najviše oko 100 MB po fajlu.",
             "videoMeta": "Veličina fajla: {fileSize} · Trajanje: {duration}",
             "durationPending": "Otkrivanje…",
             "videoUnsupported": "Vaš pregledač ne podržava reprodukciju videa."
