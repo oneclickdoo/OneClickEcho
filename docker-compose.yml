@@ -15,6 +15,8 @@ services:
       # OpenIddict 5+: RSA PKCS#8 DER as one-line base64 (required in Docker). Symmetric keys are encryption-only.
       # Generate: openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A
       OpenIddict__RsaPrivateKeyPkcs8: ${OPENIDDICT_RSA_PRIVATE_KEY_PKCS8:-}
+      # Public issuer must match browser origin or validation returns ID2088 (invalid issuer). No trailing slash required.
+      OpenIddict__Issuer: ${OPENIDDICT_ISSUER:-}
       # Same base64 32+ byte secret on every replica (optional if omitted, encryption key is derived from RSA PKCS#8).
       OpenIddict__SigningKey: ${OPENIDDICT_SIGNING_KEY:-}
       OpenIddict__EncryptionKey: ${OPENIDDICT_ENCRYPTION_KEY:-}

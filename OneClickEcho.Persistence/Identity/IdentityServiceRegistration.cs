@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -35,6 +36,14 @@ public static class IdentityServiceRegistration
             .AddServer(options =>
             {
                 options.UseAspNetCore().DisableTransportSecurityRequirement();
+
+                // When /connect/token is called as http://api:3901/... (Docker), OpenIddict defaults issuer to that URL.
+                // Validation then rejects tokens with ID2088 if expected issuer differs. Set a stable public issuer
+                // (same host users use in the browser). UseLocalServer() copies this into validation options.
+                if (TryGetConfiguredIssuer(configuration, out Uri? configuredIssuer))
+                {
+                    options.SetIssuer(configuredIssuer);
+                }
 
                 // Enable the token endpoint.
                 options.SetTokenEndpointUris("connect/token");
@@ -231,4 +240,27 @@ public static class IdentityServiceRegistration
 
     private static string NormalizeBase64Config(string value) =>
         value.Trim().Trim('"', '\'').Replace("\r", "").Replace("\n", "");
+
+    /// <summary>Optional. Public base URL of the auth server as seen by clients (e.g. <c>https://viber.oneclick.rs</c>).
+    /// Env: <c>OpenIddict__Issuer</c>.</summary>
+    private static bool TryGetConfiguredIssuer(IConfiguration configuration, [NotNullWhen(true)] out Uri? issuerUri)
+    {
+        issuerUri = null;
+        string? raw = configuration["OpenIddict:Issuer"]?.Trim();
+        if (string.IsNullOrEmpty(raw))
+        {
+            return false;
+        }
+
+        raw = raw.TrimEnd('/');
+        if (!Uri.TryCreate(raw + "/", UriKind.Absolute, out Uri? parsed) ||
+            (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException(
+                "OpenIddict:Issuer must be an absolute http(s) URL (e.g. https://viber.oneclick.rs).");
+        }
+
+        issuerUri = parsed;
+        return true;
+    }
 }
