@@ -77,6 +77,9 @@ public static class IdentityServiceRegistration
                 // Import the configuration from the local OpenIddict server instance.
                 options.UseLocalServer();
 
+                // Required to resolve reference access tokens against the database on each API request.
+                options.EnableTokenEntryValidation();
+
                 // Register the ASP.NET Core host.
                 options.UseAspNetCore();
             });
