@@ -734,8 +734,9 @@ export const uploadCampaignViberMedia = async (
     const formData = new FormData();
     formData.append("file", file);
 
+    // POST: multipart upload is more reliably proxied than PUT (Nginx / some CDNs strip PUT bodies).
     const response = await authFetch(url.toString(), {
-        method: "PUT",
+        method: "POST",
         body: formData,
         credentials: "include"
     });

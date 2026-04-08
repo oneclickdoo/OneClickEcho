@@ -130,6 +130,7 @@ public class CampaignController(IMediator mediator) : ApiController(mediator)
     }
 
     [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
+    [HttpPost("{campaignId}/Upload")]
     [HttpPut("{campaignId}/Upload")]
     public async Task<IActionResult> UploadCampaignViberImage(
         [FromRoute] Guid campaignId,

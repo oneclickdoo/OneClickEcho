@@ -45,14 +45,23 @@ async function proxyMultipartToApi(req: NextRequest, slug: string[] | undefined)
 
     const body = await req.arrayBuffer();
 
-    const upstream = await fetch(url, {
-        method: req.method,
-        headers: {
-            Authorization: auth,
-            "Content-Type": contentType
-        },
-        body
-    });
+    let upstream: Response;
+    try {
+        upstream = await fetch(url, {
+            method: req.method,
+            headers: {
+                Authorization: auth,
+                "Content-Type": contentType
+            },
+            body
+        });
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : "Upstream fetch failed";
+        return NextResponse.json(
+            { error: "Proxy could not reach API", detail: msg, target: url },
+            { status: 502 }
+        );
+    }
 
     const outBody = await upstream.arrayBuffer();
     const res = new NextResponse(outBody, { status: upstream.status });

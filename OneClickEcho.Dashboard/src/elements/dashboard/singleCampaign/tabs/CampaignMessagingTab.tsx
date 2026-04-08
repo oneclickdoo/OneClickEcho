@@ -215,6 +215,13 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
             });
         } catch (e) {
             console.error(e);
+            const message = e instanceof Error ? e.message : String(e);
+            toast({
+                variant: "destructive",
+                title: tCommon("error"),
+                description: message,
+                duration: 8000
+            });
         }
     };
 
@@ -248,28 +255,39 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
         const runUseEffect = async () => {
             if (!formData?.campaignId || formData.status !== CampaignStatus.Draft) return;
 
-            await updateCampaign(formData, authFetch);
+            try {
+                await updateCampaign(formData, authFetch);
 
-            if (media && media instanceof File) {
-                const data = await uploadCampaignViberMedia(formData.campaignId, false, media, authFetch, duration);
-                if (data.path) {
-                    handleChange("viberMedia", data.path as any);
-                    handleChange("viberFileSize", media.size as any);
-                    const isVideoFile = media.type.startsWith("video/");
-                    if (isVideoFile && duration != null) {
-                        handleChange("viberVideoDuration", duration as any);
-                    } else if (!isVideoFile) {
-                        handleChange("viberVideoDuration", null as any);
+                if (media && media instanceof File) {
+                    const data = await uploadCampaignViberMedia(formData.campaignId, false, media, authFetch, duration);
+                    if (data.path) {
+                        handleChange("viberMedia", data.path as any);
+                        handleChange("viberFileSize", media.size as any);
+                        const isVideoFile = media.type.startsWith("video/");
+                        if (isVideoFile && duration != null) {
+                            handleChange("viberVideoDuration", duration as any);
+                        } else if (!isVideoFile) {
+                            handleChange("viberVideoDuration", null as any);
+                        }
                     }
                 }
-            }
 
-            if (thumbnail && thumbnail instanceof File) {
-                const data = await uploadCampaignViberMedia(formData.campaignId, true, thumbnail, authFetch);
-                if (data.path) handleChange("viberVideoThumbnail", data.path as any);
-            }
+                if (thumbnail && thumbnail instanceof File) {
+                    const data = await uploadCampaignViberMedia(formData.campaignId, true, thumbnail, authFetch);
+                    if (data.path) handleChange("viberVideoThumbnail", data.path as any);
+                }
 
-            await updateCampaign(formData, authFetch);
+                await updateCampaign(formData, authFetch);
+            } catch (e) {
+                console.error(e);
+                const message = e instanceof Error ? e.message : String(e);
+                toast({
+                    variant: "destructive",
+                    title: tCommon("error"),
+                    description: message,
+                    duration: 8000
+                });
+            }
         };
 
         void runUseEffect();
