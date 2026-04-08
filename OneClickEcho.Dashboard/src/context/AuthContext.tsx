@@ -88,35 +88,52 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
 
     const authFetch = useMemo(() => wrapFetch(authFetchImpl), [wrapFetch, authFetchImpl]);
 
+    /** Session probe: 401 without cookies is normal (e.g. login page). Do not use authFetchImpl here — it would logout + throw and spam the console. */
     const getUser: () => Promise<IUser | null> = async () => {
         setLoading(true);
 
         try {
-            const response = await authFetchImpl("/api/User/CurrentUser", {
+            const response = await fetch("/api/User/CurrentUser", {
                 method: "GET",
+                credentials: "include",
                 headers: {
                     Accept: "application/json",
                     "Content-Type": "application/json"
                 }
             });
 
-            if (response.ok) {
-                const data: IUser = await response.json();
-
-                setDashboardManager(getDashboardManager(data));
-                setUser(data);
+            if (response.status === 401 || response.status === 403) {
+                try {
+                    await fetch("/auth/logout", { method: "POST", credentials: "include" });
+                } catch {
+                    /* ignore */
+                }
+                setUser(null);
+                setDashboardManager(null);
                 setLoading(false);
-
-                return data;
+                return null;
             }
-        } catch (e) {
-            console.error("GetUser fetch failed.");
-        }
 
-        setUser(null);
-        setDashboardManager(null);
-        setLoading(false);
-        return null;
+            if (!response.ok) {
+                setUser(null);
+                setDashboardManager(null);
+                setLoading(false);
+                return null;
+            }
+
+            const data: IUser = await response.json();
+
+            setDashboardManager(getDashboardManager(data));
+            setUser(data);
+            setLoading(false);
+
+            return data;
+        } catch {
+            setUser(null);
+            setDashboardManager(null);
+            setLoading(false);
+            return null;
+        }
     };
 
     const setCurrentCompany = async (company: ICompany) => {
@@ -223,13 +240,7 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
     };
 
     useEffect(() => {
-        (async () => {
-            const userData = await getUser();
-
-            if (!userData) {
-                await logout();
-            }
-        })();
+        void getUser();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
