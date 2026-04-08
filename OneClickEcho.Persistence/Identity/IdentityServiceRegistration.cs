@@ -44,6 +44,10 @@ public static class IdentityServiceRegistration
                 // Accept anonymous clients (i.e clients that don't send a client_id).
                 options.AcceptAnonymousClients();
 
+                // Short opaque tokens for browsers (httpOnly cookies ~4KB limit). Default encrypted JWTs exceed that.
+                options.UseReferenceAccessTokens()
+                    .UseReferenceRefreshTokens();
+
                 // Development certificates use the local user store and fail in Linux Docker — never use them in a container.
                 // Note: ephemeral keys reset on restart (refresh tokens from previous runs become invalid).
                 bool inContainer = string.Equals(
