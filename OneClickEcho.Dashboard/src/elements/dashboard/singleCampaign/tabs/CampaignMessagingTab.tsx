@@ -217,7 +217,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
             console.error(e);
             const message = e instanceof Error ? e.message : String(e);
             toast({
-                variant: "destructive",
+                variant: "error",
                 title: tCommon("error"),
                 description: message,
                 duration: 8000
@@ -282,7 +282,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                 console.error(e);
                 const message = e instanceof Error ? e.message : String(e);
                 toast({
-                    variant: "destructive",
+                    variant: "error",
                     title: tCommon("error"),
                     description: message,
                     duration: 8000
