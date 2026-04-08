@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -76,10 +77,21 @@ public static class IdentityServiceRegistration
                     options.AddDevelopmentEncryptionCertificate()
                         .AddDevelopmentSigningCertificate();
                 }
-                else if (TryGetPersistedSymmetricKeys(configuration, out byte[]? signingKey, out byte[]? encryptionKey))
+                else if (TryGetPersistedRsaSigningKey(configuration, out RSAParameters rsaParameters, out string rsaKeyId,
+                             out byte[] rsaPkcs8Der))
                 {
-                    options.AddSigningKey(new SymmetricSecurityKey(signingKey));
+                    // OpenIddict 5+ requires an asymmetric signing key; symmetric keys are not accepted for signing.
+                    options.AddSigningKey(new RsaSecurityKey(rsaParameters) { KeyId = rsaKeyId });
+                    byte[] encryptionKey = ResolveSymmetricEncryptionKey(configuration, rsaPkcs8Der);
                     options.AddEncryptionKey(new SymmetricSecurityKey(encryptionKey));
+                }
+                else if (OpenIddictSymmetricSecretsConfiguredWithoutRsa(configuration))
+                {
+                    throw new InvalidOperationException(
+                        "OpenIddict 5+ requires an RSA private key for token signing. Set OpenIddict:RsaPrivateKeyPkcs8 " +
+                        "(PKCS#8 private key, DER, base64). Keep OpenIddict:SigningKey and/or OpenIddict:EncryptionKey " +
+                        "for symmetric encryption across replicas, or omit them to derive encryption from the RSA key. " +
+                        "Generate: openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A");
                 }
                 else
                 {
@@ -109,65 +121,114 @@ public static class IdentityServiceRegistration
     }
 
     /// <summary>
-    /// Base64 keys (>= 32 bytes decoded). Set <c>OpenIddict:SigningKey</c> and optionally <c>OpenIddict:EncryptionKey</c>
-    /// (env <c>OpenIddict__SigningKey</c>). Generate: <c>openssl rand -base64 32</c>.
+    /// RSA signing: <c>OpenIddict:RsaPrivateKeyPkcs8</c> (env <c>OpenIddict__RsaPrivateKeyPkcs8</c>) — PKCS#8 DER, base64.
+    /// Optional <c>OpenIddict:RsaKeyId</c> for key id header (default <c>rsa-1</c>).
+    /// Symmetric encryption: <c>OpenIddict:EncryptionKey</c>, else legacy <c>OpenIddict:SigningKey</c>, else SHA256(RSA PKCS#8)[0..32].
     /// </summary>
-    private static bool TryGetPersistedSymmetricKeys(
+    private static bool TryGetPersistedRsaSigningKey(
         IConfiguration configuration,
-        out byte[]? signingKey,
-        out byte[]? encryptionKey)
+        out RSAParameters rsaParameters,
+        out string keyId,
+        out byte[] pkcs8Der)
     {
-        signingKey = null;
-        encryptionKey = null;
+        rsaParameters = default;
+        keyId = "rsa-1";
+        pkcs8Der = Array.Empty<byte>();
 
-        string? signingB64 = configuration["OpenIddict:SigningKey"];
-        if (string.IsNullOrWhiteSpace(signingB64))
+        string? pkcs8B64 = configuration["OpenIddict:RsaPrivateKeyPkcs8"];
+        if (string.IsNullOrWhiteSpace(pkcs8B64))
         {
             return false;
         }
 
-        // .env / copy-paste often adds newlines or accidental quotes — normalize before base64 decode.
-        signingB64 = signingB64.Trim().Trim('"', '\'').Replace("\r", "").Replace("\n", "");
+        pkcs8B64 = NormalizeBase64Config(pkcs8B64);
 
         try
         {
-            signingKey = Convert.FromBase64String(signingB64);
+            pkcs8Der = Convert.FromBase64String(pkcs8B64);
         }
         catch (FormatException)
         {
-            throw new InvalidOperationException("OpenIddict:SigningKey must be valid base64.");
+            throw new InvalidOperationException("OpenIddict:RsaPrivateKeyPkcs8 must be valid base64 (PKCS#8 DER).");
         }
-
-        if (signingKey.Length < 32)
-        {
-            throw new InvalidOperationException(
-                "OpenIddict:SigningKey must decode to at least 32 bytes (use: openssl rand -base64 32).");
-        }
-
-        string? encryptionB64 = configuration["OpenIddict:EncryptionKey"];
-        if (string.IsNullOrWhiteSpace(encryptionB64))
-        {
-            encryptionKey = signingKey;
-            return true;
-        }
-
-        encryptionB64 = encryptionB64.Trim().Trim('"', '\'').Replace("\r", "").Replace("\n", "");
 
         try
         {
-            encryptionKey = Convert.FromBase64String(encryptionB64);
+            using RSA rsa = RSA.Create();
+            rsa.ImportPkcs8PrivateKey(pkcs8Der, out _);
+            rsaParameters = rsa.ExportParameters(true);
         }
-        catch (FormatException)
-        {
-            throw new InvalidOperationException("OpenIddict:EncryptionKey must be valid base64.");
-        }
-
-        if (encryptionKey.Length < 32)
+        catch (CryptographicException ex)
         {
             throw new InvalidOperationException(
-                "OpenIddict:EncryptionKey must decode to at least 32 bytes (use: openssl rand -base64 32).");
+                "OpenIddict:RsaPrivateKeyPkcs8 must be a valid PKCS#8 private key (DER).", ex);
+        }
+
+        string? kid = configuration["OpenIddict:RsaKeyId"];
+        if (!string.IsNullOrWhiteSpace(kid))
+        {
+            keyId = kid.Trim();
         }
 
         return true;
     }
+
+    private static bool OpenIddictSymmetricSecretsConfiguredWithoutRsa(IConfiguration configuration)
+    {
+        if (!string.IsNullOrWhiteSpace(configuration["OpenIddict:RsaPrivateKeyPkcs8"]))
+        {
+            return false;
+        }
+
+        return !string.IsNullOrWhiteSpace(configuration["OpenIddict:SigningKey"])
+               || !string.IsNullOrWhiteSpace(configuration["OpenIddict:EncryptionKey"]);
+    }
+
+    private static byte[] ResolveSymmetricEncryptionKey(IConfiguration configuration, ReadOnlySpan<byte> rsaPkcs8Der)
+    {
+        if (TryDecodeSymmetricKey(configuration["OpenIddict:EncryptionKey"], out byte[]? enc))
+        {
+            return enc;
+        }
+
+        if (TryDecodeSymmetricKey(configuration["OpenIddict:SigningKey"], out byte[]? legacy))
+        {
+            return legacy;
+        }
+
+        byte[] derived = new byte[32];
+        SHA256.HashData(rsaPkcs8Der, derived);
+        return derived;
+    }
+
+    private static bool TryDecodeSymmetricKey(string? base64, out byte[] key)
+    {
+        key = Array.Empty<byte>();
+        if (string.IsNullOrWhiteSpace(base64))
+        {
+            return false;
+        }
+
+        base64 = NormalizeBase64Config(base64);
+
+        try
+        {
+            key = Convert.FromBase64String(base64);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("OpenIddict symmetric key must be valid base64.");
+        }
+
+        if (key.Length < 32)
+        {
+            throw new InvalidOperationException(
+                "OpenIddict symmetric key must decode to at least 32 bytes (use: openssl rand -base64 32).");
+        }
+
+        return true;
+    }
+
+    private static string NormalizeBase64Config(string value) =>
+        value.Trim().Trim('"', '\'').Replace("\r", "").Replace("\n", "");
 }
