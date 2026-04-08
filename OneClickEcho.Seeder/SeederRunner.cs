@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OpenIddict.Abstractions;
 using OneClickEcho.Domain.ApplicationUserAggregate;
 using OneClickEcho.Domain.ApplicationUserAggregate.Repositories;
 using OneClickEcho.Domain.Common.Identity;
@@ -35,6 +36,30 @@ public class SeederRunner
 
             // @TODO: This code is disgusting.
             logger.LogInformation("Seeding database started.");
+
+            // OpenIddict + EF Core: scope validation uses OpenIddictScopes rows. RegisterScopes() in code does not insert them.
+            IOpenIddictScopeManager openIddictScopeManager = services.GetRequiredService<IOpenIddictScopeManager>();
+            foreach (string scopeName in new[]
+                     {
+                         OpenIddictConstants.Scopes.OpenId,
+                         OpenIddictConstants.Scopes.Email,
+                         OpenIddictConstants.Scopes.Profile,
+                         OpenIddictConstants.Scopes.Roles,
+                         OpenIddictConstants.Scopes.OfflineAccess
+                     })
+            {
+                if (await openIddictScopeManager.FindByNameAsync(scopeName) is null)
+                {
+                    OpenIddictScopeDescriptor descriptor = new()
+                    {
+                        Name = scopeName,
+                        DisplayName = scopeName
+                    };
+
+                    await openIddictScopeManager.CreateAsync(descriptor);
+                    logger.LogInformation("Registered OpenIddict scope: {Scope}", scopeName);
+                }
+            }
 
             RoleManager<IdentityRole<Guid>> roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 

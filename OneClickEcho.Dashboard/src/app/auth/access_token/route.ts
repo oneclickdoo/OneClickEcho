@@ -46,14 +46,19 @@ export async function POST(request: Request) {
             return response;
         }
 
+        const errorText = await responseBackend.text();
         let errorMessage = "Authentication failed";
-        try {
-            const errBody = (await responseBackend.json()) as { error_description?: string; error?: string };
-            errorMessage =
-                errBody.error_description ?? errBody.error ?? responseBackend.statusText ?? errorMessage;
-        } catch {
-            // non-JSON error body
+        if (errorText) {
+            try {
+                const errBody = JSON.parse(errorText) as { error_description?: string; error?: string };
+                errorMessage =
+                    errBody.error_description ?? errBody.error ?? responseBackend.statusText ?? errorMessage;
+            } catch {
+                errorMessage = errorText.length > 500 ? `${errorText.slice(0, 500)}…` : errorText;
+            }
         }
+
+        console.error("[auth/access_token] backend error", responseBackend.status, errorMessage);
         return NextResponse.json({ error: errorMessage }, { status: responseBackend.status || 400 });
     } catch (error) {
         console.error("[auth/access_token]", error);
