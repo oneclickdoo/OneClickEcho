@@ -22,9 +22,14 @@ namespace OneClickEcho.App.Controllers
         
         [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
         [HttpPost("UploadLeads")]
-        public async Task<IActionResult> UploadLeads(IFormFile file, [FromForm] Guid companyId, [FromForm] Guid? campaignId,
+        public async Task<IActionResult> UploadLeads([FromForm] IFormFile file, [FromForm] Guid companyId, [FromForm] Guid? campaignId,
             CancellationToken cancellationToken)
         {
+            if (file is null || file.Length == 0)
+            {
+                return BadRequest("No file was uploaded (multipart field name must be \"file\").");
+            }
+
             UploadLeadsCommand command = new(file, companyId, campaignId);
 
             Result<UploadLeadsResponse> response = await Mediator.Send(command, cancellationToken);

@@ -6,6 +6,25 @@ import { getApiInternalBase, getConnectTokenUrl } from "@/lib/serverApiBase";
 const intlMiddleware = createMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
+    const pathname = request.nextUrl.pathname;
+
+    // 0a) Mediji nisu pod /en ili /sr — ukloni locale prefiks ako neko otvori /en/uploads/...
+    const withLocaleUploads = pathname.match(/^\/(en|sr)(\/uploads(?:\/|$))/);
+    if (withLocaleUploads) {
+        const withoutLocale = pathname.replace(/^\/(en|sr)/, "") || "/";
+        return NextResponse.redirect(
+            new URL(withoutLocale + request.nextUrl.search, request.url)
+        );
+    }
+
+    // 0b) Javni fajlovi kampanje (API /UploadedFiles → URL /uploads/...). Viber i pregledač moraju GET bez auth.
+    // Matcher isključuje "*.*" pa .png/.mp4 inače ne bi uopšte ušli u middleware.
+    if (pathname.startsWith("/uploads")) {
+        return NextResponse.rewrite(
+            `${getApiInternalBase()}${pathname}${request.nextUrl.search}`
+        );
+    }
+
     // 1) API middleware (tvoj postojeći)
     if (request.nextUrl.pathname.startsWith("/api")) {
         const requestHeaders = new Headers(request.headers);
@@ -87,5 +106,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/((?!_next|.*\\..*).*)"]
+    matcher: [
+        "/((?!_next|.*\\..*).*)",
+        "/uploads",
+        "/uploads/:path*"
+    ]
 };

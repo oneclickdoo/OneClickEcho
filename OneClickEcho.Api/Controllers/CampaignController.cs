@@ -134,14 +134,19 @@ public class CampaignController(IMediator mediator) : ApiController(mediator)
     public async Task<IActionResult> UploadCampaignViberImage(
         [FromRoute] Guid campaignId,
         [FromQuery] bool isThumbnail,
-        [FromQuery] int duration,
-        IFormFile file,
+        [FromQuery] int? duration,
+        [FromForm] IFormFile file,
         CancellationToken cancellationToken)
     {
         IActionResult? denied = await RequireCampaignAccessAsync(campaignId, cancellationToken);
         if (denied != null)
         {
             return denied;
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest("No file was uploaded (multipart field name must be \"file\").");
         }
 
         UploadCampaignViberMediaCommand command = new(campaignId, file, duration, isThumbnail);

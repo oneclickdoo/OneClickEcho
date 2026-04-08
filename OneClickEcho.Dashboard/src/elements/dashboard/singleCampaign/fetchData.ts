@@ -469,7 +469,19 @@ export const uploadLeads = async (file: File, companyId: string | null, campaign
         credentials: "include"
     });
 
-    if (!response.ok) throw new Error("Network response was not ok");
+    if (!response.ok) {
+        let detail = "";
+        try {
+            detail = (await response.clone().text()).slice(0, 500);
+        } catch {
+            /* ignore */
+        }
+        throw new Error(
+            detail
+                ? `Upload failed (HTTP ${response.status}): ${detail}`
+                : `Upload failed (HTTP ${response.status})`
+        );
+    }
 
     return await response.json();
 };
@@ -728,7 +740,19 @@ export const uploadCampaignViberMedia = async (
         credentials: "include"
     });
 
-    if (!response.ok) throw new Error("Network response was not ok");
+    if (!response.ok) {
+        let detail = "";
+        try {
+            detail = (await response.clone().text()).slice(0, 500);
+        } catch {
+            /* ignore */
+        }
+        throw new Error(
+            detail
+                ? `Media upload failed (HTTP ${response.status}): ${detail}`
+                : `Media upload failed (HTTP ${response.status})`
+        );
+    }
 
     return await response.json();
 };

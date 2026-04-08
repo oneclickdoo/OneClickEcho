@@ -11,14 +11,26 @@ function buildUpstreamPath(slug: string[] | undefined): string {
     return `/api/${slug.join("/")}`;
 }
 
+function bearerFromRequest(req: NextRequest): string | null {
+    const header = req.headers.get("authorization");
+    if (header?.startsWith("Bearer ")) {
+        return header;
+    }
+    const cookieToken = req.cookies.get("access_token")?.value;
+    if (cookieToken) {
+        return `Bearer ${cookieToken}`;
+    }
+    return null;
+}
+
 async function proxyMultipartToApi(req: NextRequest, slug: string[] | undefined) {
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("multipart/form-data")) {
         return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });
     }
 
-    const auth = req.headers.get("authorization");
-    if (!auth?.startsWith("Bearer ")) {
+    const auth = bearerFromRequest(req);
+    if (!auth) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
