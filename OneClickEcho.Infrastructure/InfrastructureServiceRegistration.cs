@@ -49,6 +49,7 @@ public static class InfrastructureServiceRegistration
         configuration.GetSection("Viber").Bind(viberSettings);
 
         services.Configure<ViberSettings>(configuration.GetSection("Viber"));
+        services.Configure<PublicUploadsSettings>(configuration.GetSection(PublicUploadsSettings.SectionName));
 
         bool viberConfigured =
             !string.IsNullOrWhiteSpace(viberSettings.Username) && !string.IsNullOrWhiteSpace(viberSettings.Password);

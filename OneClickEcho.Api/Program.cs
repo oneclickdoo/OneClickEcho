@@ -69,6 +69,14 @@ WebApplication app = builder.Build();
     // Use the CORS policy
     app.UseCors("AllowNext");
 
+    // Public media for Viber (must be reachable without auth; register before endpoint routing)
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(
+            Path.Combine(builder.Environment.ContentRootPath, "UploadedFiles")),
+        RequestPath = "/uploads"
+    });
+
     // @TODO: Remove if not needed
     app.UseRouting();
 
@@ -82,13 +90,6 @@ WebApplication app = builder.Build();
     app.UseCertificateForwarding();
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
-
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new PhysicalFileProvider(
-            Path.Combine(builder.Environment.ContentRootPath, "UploadedFiles")),
-        RequestPath = "/uploads"
-    });
 }
 
 await SeederRunner.Execute(app.Services);

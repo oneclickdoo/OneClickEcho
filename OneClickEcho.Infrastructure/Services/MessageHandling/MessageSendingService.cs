@@ -28,7 +28,8 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     ILeadRepository leadRepository, ICampaignLeadRepository campaignLeadRepository,
     ICompanyRepository companyRepository, IApiMessageRepository apiMessageRepository, IStringTemplatingService stringTemplatingService,
     IHttpClientFactory httpClientFactory, IUnitOfWork unitOfWork,
-    IOptions<ViberSettings> viberSettings, ISchedulerFactory schedulerFactory) : IMessageSendingService
+    IOptions<ViberSettings> viberSettings, IOptions<PublicUploadsSettings> publicUploadsSettings,
+    ISchedulerFactory schedulerFactory) : IMessageSendingService
 {
     private readonly ICampaignRepository _campaignRepository = campaignRepository;
     private readonly ILeadRepository _leadRepository = leadRepository;
@@ -39,7 +40,13 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IOptions<ViberSettings> _viberSettings = viberSettings;
+    private readonly IOptions<PublicUploadsSettings> _publicUploadsSettings = publicUploadsSettings;
     private readonly ISchedulerFactory _schedulerFactory = schedulerFactory;
+
+    private string ViberMediaPublicBaseUrl =>
+        string.IsNullOrWhiteSpace(_publicUploadsSettings.Value.BaseUrl)
+            ? "https://api.echo.oneclick.rs/uploads"
+            : _publicUploadsSettings.Value.BaseUrl.Trim().TrimEnd('/');
 
     /// <summary>Schedules SMS delivery polling jobs if they are not already registered (avoids duplicate Quartz jobs on retries).</summary>
     private async Task EnsureSmsDeliveryJobsScheduledAsync(Campaign campaign)
@@ -159,6 +166,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 leads,
                 _httpClientFactory,
                 _viberSettings,
+                ViberMediaPublicBaseUrl,
                 _campaignLeadRepository,
                 _stringTemplatingService,
                 _unitOfWork);
@@ -196,6 +204,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 allowed,
                 _httpClientFactory,
                 _viberSettings,
+                ViberMediaPublicBaseUrl,
                 _unitOfWork);
         }
         else if (messageType == ApiMessageType.Sms)
@@ -248,7 +257,8 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 campaign,
                 testMessage,
                 _httpClientFactory,
-                _viberSettings);
+                _viberSettings,
+                ViberMediaPublicBaseUrl);
         }
 
         // SMS channel

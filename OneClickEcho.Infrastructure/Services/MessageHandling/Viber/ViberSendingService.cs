@@ -23,13 +23,23 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
     public class ViberSendingService
     {
         private static readonly int MAX_RECORDS_PER_REQUEST = 200;
-        private static readonly string UploadsUrl = "https://api.echo.oneclick.rs/uploads";
+
+        /// <summary>Absolute URL for a stored upload file name (Viber must fetch this over the public internet).</summary>
+        private static string PublicFileUrl(string uploadsBase, string fileName) =>
+            $"{uploadsBase.TrimEnd('/')}/{fileName}";
+
+        private static string? PublicFileUrlOrNull(string uploadsBase, string? fileName) =>
+            string.IsNullOrEmpty(fileName) ? null : PublicFileUrl(uploadsBase, fileName);
+
+        private static string ResolveApiMediaUrl(string uploadsBase, string media) =>
+            media.Contains("://", StringComparison.Ordinal) ? media : PublicFileUrl(uploadsBase, media);
 
         public static async Task SendViberMessagesToTestPhoneNumbers(
             Campaign campaign,
             TestMessage testMessage,
             IHttpClientFactory httpClientFactory,
-            IOptions<ViberSettings> viberSettings)
+            IOptions<ViberSettings> viberSettings,
+            string mediaPublicBaseUrl)
         {
             // Setup HTTP request
             HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
@@ -53,6 +63,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             string? videoUrl = null;
             string? videoThumbnailUrl = null;
 
+            string uploadsBase = mediaPublicBaseUrl.Trim().TrimEnd('/');
+
             if (campaign.ViberMedia is not null)
             {
                 // get campaign media type
@@ -60,12 +72,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 if (mediaType == CampaignMediaType.Image)
                 {
-                    imageUrl = $"{UploadsUrl}/{campaign.ViberMedia}";
+                    imageUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
                 }
                 else
                 {
-                    videoUrl = $"{UploadsUrl}/{campaign.ViberMedia}";
-                    videoThumbnailUrl = $"{UploadsUrl}/{campaign.ViberVideoThumbnail}";
+                    videoUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
+                    videoThumbnailUrl = PublicFileUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
                     duration = campaign.ViberVideoDuration;
                     fileSize = campaign.ViberFileSize;
                 }
@@ -238,6 +250,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             List<Lead> leads,
             IHttpClientFactory httpClientFactory,
             IOptions<ViberSettings> viberSettings,
+            string mediaPublicBaseUrl,
             ICampaignLeadRepository campaignLeadRepository,
             IStringTemplatingService stringTemplatingService,
             IUnitOfWork unitOfWork)
@@ -260,6 +273,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             string? videoUrl = null;
             string? videoThumbnailUrl = null;
 
+            string uploadsBase = mediaPublicBaseUrl.Trim().TrimEnd('/');
+
             if (campaign.ViberMedia is not null)
             {
                 // get campaign media type
@@ -267,12 +282,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 if (mediaType == CampaignMediaType.Image)
                 {
-                    imageUrl = $"{UploadsUrl}/{campaign.ViberMedia}";
+                    imageUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
                 }
                 else
                 {
-                    videoUrl = $"{UploadsUrl}/{campaign.ViberMedia}";
-                    videoThumbnailUrl = $"{UploadsUrl}/{campaign.ViberVideoThumbnail}";
+                    videoUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
+                    videoThumbnailUrl = PublicFileUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
                     duration = campaign.ViberVideoDuration;
                     fileSize = campaign.ViberFileSize;
                 }
@@ -546,6 +561,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             List<ApiMessage> apiMessages,
             IHttpClientFactory httpClientFactory,
             IOptions<ViberSettings> viberSettings,
+            string mediaPublicBaseUrl,
             IUnitOfWork unitOfWork)
         {
             HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
@@ -557,6 +573,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 UserName = viberSettings.Value.Username,
                 Password = viberSettings.Value.Password
             };
+
+            string uploadsBase = mediaPublicBaseUrl.Trim().TrimEnd('/');
             
             List<List<ApiMessage>> dividedApiMessages = [];
 
@@ -592,13 +610,11 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                         if (mediaType == CampaignMediaType.Image)
                         {
-                            imageUrl = apiMessage.ViberMedia;
+                            imageUrl = ResolveApiMediaUrl(uploadsBase, apiMessage.ViberMedia);
                         }
                         else
                         {
-                            videoUrl = apiMessage.ViberMedia.Contains("://", StringComparison.Ordinal)
-                                ? apiMessage.ViberMedia
-                                : $"{UploadsUrl}/{apiMessage.ViberMedia}";
+                            videoUrl = ResolveApiMediaUrl(uploadsBase, apiMessage.ViberMedia);
                         }
                     }
 

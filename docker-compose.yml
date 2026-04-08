@@ -2,7 +2,7 @@
 #   docker compose build api dashboard
 #
 # API file logs: Serilog writes under /app/logs when ASPNETCORE_ENVIRONMENT=Docker (see Dockerfile_Api).
-# log-rotator gzips *.log older than 49h and deletes *.gz older than 45 days (same volume).
+# log-rotator gzips *.log older than 49h and deletes *.gz older than 40 days (same volume).
 # Docker json-file driver below caps stdout/stderr size per container (separate from /app/logs).
 services:
   api:
@@ -12,8 +12,11 @@ services:
     image: oneclickecho-api:local
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+      # Viber fetches campaign media from this public HTTPS URL (e.g. https://your-domain/uploads). Empty = legacy default in app.
+      PublicUploads__BaseUrl: ${PUBLIC_UPLOADS_BASE_URL:-}
     volumes:
       - api-logs:/app/logs
+      - api-uploads:/app/UploadedFiles
     logging:
       driver: json-file
       options:
@@ -46,6 +49,10 @@ services:
     image: oneclickecho-log-rotator:local
     volumes:
       - api-logs:/app/logs
+    environment:
+      LOG_DIR: /app/logs
+      LOG_GZIP_MMIN: "2940"
+      LOG_DELETE_GZ_DAYS: "40"
     restart: unless-stopped
     profiles: ["full"]
   dashboard:
@@ -77,4 +84,5 @@ services:
 
 volumes:
   api-logs:
+  api-uploads:
   pgdata:

@@ -9,6 +9,10 @@ export async function middleware(request: NextRequest) {
     // 1) API middleware (tvoj postojeći)
     if (request.nextUrl.pathname.startsWith("/api")) {
         const requestHeaders = new Headers(request.headers);
+        const contentType = request.headers.get("content-type") || "";
+        const isMultipart = contentType.includes("multipart/form-data");
+        const isFileUpload =
+            (request.method === "POST" || request.method === "PUT") && isMultipart;
 
         const accessToken = request.cookies.get("access_token");
         const refreshToken = request.cookies.get("refresh_token");
@@ -31,12 +35,14 @@ export async function middleware(request: NextRequest) {
 
                     requestHeaders.set("Authorization", `Bearer ${data.access_token}`);
 
-                    const response = NextResponse.rewrite(
-                        `${getApiInternalBase()}${request.nextUrl.pathname}${request.nextUrl.search}`,
-                        {
-                            request: { headers: requestHeaders }
-                        }
-                    );
+                    const response = isFileUpload
+                        ? NextResponse.next({ request: { headers: requestHeaders } })
+                        : NextResponse.rewrite(
+                              `${getApiInternalBase()}${request.nextUrl.pathname}${request.nextUrl.search}`,
+                              {
+                                  request: { headers: requestHeaders }
+                              }
+                          );
 
                     response.cookies.set("access_token", data.access_token, {
                         httpOnly: true,
@@ -57,6 +63,10 @@ export async function middleware(request: NextRequest) {
             }
         } else {
             requestHeaders.set("Authorization", `Bearer ${accessToken.value}`);
+        }
+
+        if (isFileUpload) {
+            return NextResponse.next({ request: { headers: requestHeaders } });
         }
 
         return NextResponse.rewrite(
