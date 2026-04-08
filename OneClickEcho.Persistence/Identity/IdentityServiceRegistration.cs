@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using OneClickEcho.Domain.ApplicationUserAggregate;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -63,7 +64,8 @@ public static class IdentityServiceRegistration
                     .UseReferenceRefreshTokens();
 
                 // Development certificates use the local user store and fail in Linux Docker — never use them in a container.
-                // Note: ephemeral keys reset on restart (refresh tokens from previous runs become invalid).
+                // Ephemeral keys: new key material per process → load-balanced APIs or restarts invalidate access/refresh tokens
+                // and reference-token crypto may not match between instances (401 on /api/User/CurrentUser right after login).
                 bool inContainer = string.Equals(
                     Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
                     "true",
@@ -73,6 +75,11 @@ public static class IdentityServiceRegistration
                 {
                     options.AddDevelopmentEncryptionCertificate()
                         .AddDevelopmentSigningCertificate();
+                }
+                else if (TryGetPersistedSymmetricKeys(configuration, out byte[]? signingKey, out byte[]? encryptionKey))
+                {
+                    options.AddSigningKey(new SymmetricSecurityKey(signingKey));
+                    options.AddEncryptionKey(new SymmetricSecurityKey(encryptionKey));
                 }
                 else
                 {
@@ -99,5 +106,63 @@ public static class IdentityServiceRegistration
             });
 
         return services;
+    }
+
+    /// <summary>
+    /// Base64 keys (>= 32 bytes decoded). Set <c>OpenIddict:SigningKey</c> and optionally <c>OpenIddict:EncryptionKey</c>
+    /// (env <c>OpenIddict__SigningKey</c>). Generate: <c>openssl rand -base64 32</c>.
+    /// </summary>
+    private static bool TryGetPersistedSymmetricKeys(
+        IConfiguration configuration,
+        out byte[]? signingKey,
+        out byte[]? encryptionKey)
+    {
+        signingKey = null;
+        encryptionKey = null;
+
+        string? signingB64 = configuration["OpenIddict:SigningKey"];
+        if (string.IsNullOrWhiteSpace(signingB64))
+        {
+            return false;
+        }
+
+        try
+        {
+            signingKey = Convert.FromBase64String(signingB64.Trim());
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("OpenIddict:SigningKey must be valid base64.");
+        }
+
+        if (signingKey.Length < 32)
+        {
+            throw new InvalidOperationException(
+                "OpenIddict:SigningKey must decode to at least 32 bytes (use: openssl rand -base64 32).");
+        }
+
+        string? encryptionB64 = configuration["OpenIddict:EncryptionKey"];
+        if (string.IsNullOrWhiteSpace(encryptionB64))
+        {
+            encryptionKey = signingKey;
+            return true;
+        }
+
+        try
+        {
+            encryptionKey = Convert.FromBase64String(encryptionB64.Trim());
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("OpenIddict:EncryptionKey must be valid base64.");
+        }
+
+        if (encryptionKey.Length < 32)
+        {
+            throw new InvalidOperationException(
+                "OpenIddict:EncryptionKey must decode to at least 32 bytes (use: openssl rand -base64 32).");
+        }
+
+        return true;
     }
 }

@@ -34,11 +34,11 @@ export async function middleware(request: NextRequest) {
         const isFileUpload =
             (request.method === "POST" || request.method === "PUT") && isMultipart;
 
-        const accessToken = request.cookies.get("access_token");
-        const refreshToken = request.cookies.get("refresh_token");
+        const accessTokenRaw = request.cookies.get("access_token")?.value?.trim();
+        const refreshTokenRaw = request.cookies.get("refresh_token")?.value?.trim();
 
-        if (!accessToken) {
-            if (refreshToken) {
+        if (!accessTokenRaw) {
+            if (refreshTokenRaw) {
                 const responseBackend = await fetch(getConnectTokenUrl(), {
                     method: "POST",
                     headers: {
@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
                     },
                     body: new URLSearchParams({
                         grant_type: "refresh_token",
-                        refresh_token: refreshToken.value
+                        refresh_token: refreshTokenRaw
                     })
                 });
 
@@ -86,7 +86,7 @@ export async function middleware(request: NextRequest) {
                 }
             }
         } else {
-            requestHeaders.set("Authorization", `Bearer ${accessToken.value}`);
+            requestHeaders.set("Authorization", `Bearer ${accessTokenRaw}`);
         }
 
         if (isFileUpload) {

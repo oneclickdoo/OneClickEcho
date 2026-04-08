@@ -12,6 +12,9 @@ services:
     image: oneclickecho-api:local
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
+      # Same base64 key on every API replica (openssl rand -base64 32). Without it, ephemeral keys break auth behind load balancers.
+      OpenIddict__SigningKey: ${OPENIDDICT_SIGNING_KEY:-}
+      OpenIddict__EncryptionKey: ${OPENIDDICT_ENCRYPTION_KEY:-}
       # Viber fetches campaign media from this public HTTPS URL (e.g. https://your-domain/uploads). Empty = legacy default in app.
       PublicUploads__BaseUrl: ${PUBLIC_UPLOADS_BASE_URL:-}
     volumes:
