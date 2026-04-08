@@ -226,8 +226,9 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
         body.append("username", email);
         body.append("password", credentialsData.password);
         body.append("grant_type", "password");
-        // Must be a subset of scopes registered in OpenIddict (IdentityServiceRegistration.RegisterScopes).
-        body.append("scope", "openid email profile roles offline_access");
+        // Do not request "openid" here: with persisted symmetric OpenIddict keys, issuing an OIDC id_token
+        // requires an asymmetric signing credential and would return HTTP 500 from /connect/token.
+        body.append("scope", "email profile roles offline_access");
 
         return runWithSlowOverlay(async () => {
             sessionProbeAbortRef.current?.abort();

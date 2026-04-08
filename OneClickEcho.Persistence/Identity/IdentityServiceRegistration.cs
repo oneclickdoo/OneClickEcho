@@ -126,9 +126,12 @@ public static class IdentityServiceRegistration
             return false;
         }
 
+        // .env / copy-paste often adds newlines or accidental quotes — normalize before base64 decode.
+        signingB64 = signingB64.Trim().Trim('"', '\'').Replace("\r", "").Replace("\n", "");
+
         try
         {
-            signingKey = Convert.FromBase64String(signingB64.Trim());
+            signingKey = Convert.FromBase64String(signingB64);
         }
         catch (FormatException)
         {
@@ -148,9 +151,11 @@ public static class IdentityServiceRegistration
             return true;
         }
 
+        encryptionB64 = encryptionB64.Trim().Trim('"', '\'').Replace("\r", "").Replace("\n", "");
+
         try
         {
-            encryptionKey = Convert.FromBase64String(encryptionB64.Trim());
+            encryptionKey = Convert.FromBase64String(encryptionB64);
         }
         catch (FormatException)
         {
