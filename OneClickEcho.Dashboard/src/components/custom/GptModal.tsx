@@ -1,6 +1,9 @@
+"use client";
+
 import { useState } from "react";
 
 import { RiAiGenerate, RiRobot2Line, RiToolsLine, RiThumbUpLine } from "@remixicon/react";
+import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -22,6 +25,7 @@ interface IGptModalProps {
 }
 
 export const GptModal = (props: IGptModalProps) => {
+    const t = useTranslations("GptModal");
     const [requestMessage, setRequestMessage] = useState<string>("");
     const [responseMessage, setResponseMessage] = useState<string>("");
     const [isGenerateLoading, setIsGenerateLoading] = useState<boolean>(false);
@@ -31,6 +35,8 @@ export const GptModal = (props: IGptModalProps) => {
     const { authFetch } = useAuth();
 
     const { toast } = useToast();
+
+    const channelLabel = props.type;
 
     const getGenerateResponse = async () => {
         setIsGenerateLoading(true);
@@ -42,14 +48,14 @@ export const GptModal = (props: IGptModalProps) => {
 
             toast({
                 variant: "success",
-                title: "Success",
-                description: `The ${props.type} message has been generated.`,
+                title: t("successTitle"),
+                description: t("generatedToast", { channel: channelLabel }),
                 duration: 2000
             });
         } catch (e: any) {
             toast({
                 variant: "error",
-                title: "Error",
+                title: t("errorTitle"),
                 description: e.message,
                 duration: 2000
             });
@@ -68,14 +74,14 @@ export const GptModal = (props: IGptModalProps) => {
 
             toast({
                 variant: "success",
-                title: "Success",
-                description: `The ${props.type} message has been enhanced.`,
+                title: t("successTitle"),
+                description: t("enhancedToast", { channel: channelLabel }),
                 duration: 2000
             });
         } catch (e: any) {
             toast({
                 variant: "error",
-                title: "Error",
+                title: t("errorTitle"),
                 description: e.message,
                 duration: 2000
             });
@@ -102,19 +108,19 @@ export const GptModal = (props: IGptModalProps) => {
                     className="flex gap-x-2 mb-2 border-transparent bg-indigo-600 text-white outline-indigo-500 hover:bg-indigo-500 disabled:bg-indigo-100 disabled:text-gray-400 dark:bg-indigo-500 dark:text-gray-900 dark:outline-indigo-500 dark:hover:bg-indigo-600 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400"
                     onClick={() => setOpen(true)}
                 >
-                    <span>AI</span>
+                    <span>{t("trigger")}</span>
                     <RiRobot2Line />
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg" aria-describedby="gpt dialog">
                 <DialogHeader>
-                    <DialogTitle>You need help from AI?</DialogTitle>
-                    <p className="mt-1 text-sm text-gray-400">Generate or enhance a {props.type} meesage using ChatGPT AI tool.</p>
+                    <DialogTitle>{t("title")}</DialogTitle>
+                    <p className="mt-1 text-sm text-gray-400">{t("subtitle", { channel: channelLabel })}</p>
                     <div className="mt-3">
-                        <Label>Request</Label>
+                        <Label>{t("request")}</Label>
                         <Textarea
                             value={requestMessage}
-                            placeholder="Request message"
+                            placeholder={t("requestPlaceholder")}
                             maxLength={1000}
                             className="h-[100px] mb-6 resize-none"
                             onChange={(e) => setRequestMessage(e.target.value)}
@@ -126,7 +132,7 @@ export const GptModal = (props: IGptModalProps) => {
                                 className="flex gap-x-1 w-full sm:w-fit border-transparent bg-green-600 text-white outline-green-500 hover:bg-green-500 disabled:bg-green-100 disabled:text-gray-400 dark:bg-green-500 dark:text-gray-900 dark:outline-green-500 dark:hover:bg-green-600 disabled:dark:bg-green-800 disabled:dark:text-green-400"
                                 onClick={getGenerateResponse}
                             >
-                                <span>Generate</span>
+                                <span>{t("generate")}</span>
                                 <RiAiGenerate />
                             </Button>
                             <Button
@@ -135,15 +141,15 @@ export const GptModal = (props: IGptModalProps) => {
                                 className="flex gap-x-1 w-full sm:w-fit border-transparent bg-teal-600 text-white outline-teal-500 hover:bg-teal-500 disabled:bg-teal-100 disabled:text-gray-400 dark:bg-teal-500 dark:text-gray-900 dark:outline-teal-500 dark:hover:bg-teal-600 disabled:dark:bg-teal-800 disabled:dark:text-teal-400"
                                 onClick={getEnhanceResponse}
                             >
-                                <span>Enhance</span>
+                                <span>{t("enhance")}</span>
                                 <RiToolsLine />
                             </Button>
                         </div>
-                        <Label>Response</Label>
+                        <Label>{t("response")}</Label>
                         <Textarea
                             disabled={!responseMessage}
                             value={responseMessage}
-                            placeholder="ChatGPT response"
+                            placeholder={t("responsePlaceholder")}
                             maxLength={1000}
                             className="h-[150px] resize-none"
                         />
@@ -151,7 +157,7 @@ export const GptModal = (props: IGptModalProps) => {
                 </DialogHeader>
                 <DialogFooter className="mt-6 flex justify-end sm:justify-end flex-col gap-2">
                     <Button variant="secondary" className="w-full mt-2 sm:mt-0 sm:w-fit" onClick={() => setOpen(false)}>
-                        Go back
+                        {t("goBack")}
                     </Button>
                     <Button
                         disabled={!responseMessage}
@@ -161,7 +167,7 @@ export const GptModal = (props: IGptModalProps) => {
                             setOpen(false);
                         }}
                     >
-                        <span>Accept</span>
+                        <span>{t("accept")}</span>
                         <RiThumbUpLine />
                     </Button>
                 </DialogFooter>

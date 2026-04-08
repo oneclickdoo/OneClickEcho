@@ -26,6 +26,7 @@ import { type CampaignDto, updateCampaign, uploadCampaignViberMedia } from "@/el
 
 import { getCampaignSendingTypeOptions } from "@/lib/selects";
 import { useToast } from "@/lib/useToast";
+import { publicUploadFileUrl } from "@/lib/publicMediaUrl";
 import { filterPassedTime, getMediaType, isOutOfWorkingHours } from "@/lib/utils";
 import { migrateLegacyViberHtmlToMarkdown, viberMarkdownToPreviewHtml } from "@/lib/viberTextFormat";
 
@@ -591,7 +592,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                                             }}
                                                         >
                                                             <img
-                                                                src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/${image}`}
+                                                                src={publicUploadFileUrl(image)}
                                                                 alt={typeof media === "string" ? media : t("viber.actions.imageAlt")}
                                                                 width={100}
                                                                 height={100}

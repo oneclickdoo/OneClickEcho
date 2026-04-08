@@ -13,6 +13,23 @@
     "and": "i",
     "privacy": "politiku privatnosti"
   },
+  "GptModal": {
+    "trigger": "AI",
+    "title": "Želite pomoć veštačke inteligencije?",
+    "subtitle": "Generišite ili poboljšajte {channel} poruku pomoću ChatGPT-a.",
+    "request": "Zahtev",
+    "requestPlaceholder": "Opišite šta želite (ton, ponuda, dužina…)",
+    "generate": "Generiši",
+    "enhance": "Poboljšaj",
+    "response": "Odgovor",
+    "responsePlaceholder": "Odgovor AI će se pojaviti ovde",
+    "goBack": "Nazad",
+    "accept": "Prihvati",
+    "successTitle": "Uspeh",
+    "errorTitle": "Greška",
+    "generatedToast": "{channel} poruka je generisana.",
+    "enhancedToast": "{channel} poruka je poboljšana."
+  },
   "Sidebar": {
     "admin": "Administrator",
     "coreNavigation": "Osnovna navigacija",
@@ -535,7 +552,7 @@
           },
           "mediaUpload": {
             "dropzoneImage": "Prevucite i pustite sliku ili kliknite da je izaberete. Preporučene dimenzije slike su 500×500.",
-            "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Za slike su preporučene dimenzije 500×500. Za video koristite MP4.",
+            "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Slike: preporučeno 500×500 (JPG/PNG). Video: MP4, preporučeno do 1280×720 (720p), najviše oko 100 MB po fajlu (Nginx/server mora dozvoliti veći upload — npr. client_max_body_size 200M ako dobijate grešku 413).",
             "videoMeta": "Veličina fajla: {fileSize} · Trajanje: {duration}",
             "durationPending": "Otkrivanje…",
             "videoUnsupported": "Vaš pregledač ne podržava reprodukciju videa."
@@ -602,7 +619,7 @@
           "successDescription": "Leadovi su uspešno izvezeni.",
           "errorDescription": "Izvoz leadova nije uspeo. Pokušajte ponovo."
         },
-        "notLaunchedYet": "Analitika će biti dostupna kada kampanja bude pokrenuta.",
+        "notLaunchedYet": "Analitika će biti dostupna kada kampanja bude pokrenuta. Ako je pokrenuta sačekajte nekoliko minuta da se analitika ažurira.",
         "cards": {
           "contacts": {
             "title": "Kontakti",

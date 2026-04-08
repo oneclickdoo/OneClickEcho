@@ -136,7 +136,16 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
 
             await updateCampaign(campaign, authFetch);
             await launchCampaign(params.campaignId, authFetch);
-            await refetch();
+
+            const { data: freshCampaign } = await refetch();
+            if (freshCampaign) {
+                setCampaign({
+                    ...freshCampaign,
+                    viberMessage: migrateLegacyViberHtmlToMarkdown(freshCampaign.viberMessage)
+                });
+            }
+
+            setCurrentTab(ANALYTICS_TAB);
 
             toast({
                 title: t("toasts.successTitle"),

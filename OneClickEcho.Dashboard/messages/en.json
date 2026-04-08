@@ -13,6 +13,23 @@
     "and": "and",
     "privacy": "privacy policy"
   },
+  "GptModal": {
+    "trigger": "AI",
+    "title": "Need help from AI?",
+    "subtitle": "Generate or enhance a {channel} message with ChatGPT.",
+    "request": "Request",
+    "requestPlaceholder": "Describe what you want (tone, offer, length…)",
+    "generate": "Generate",
+    "enhance": "Enhance",
+    "response": "Response",
+    "responsePlaceholder": "AI response appears here",
+    "goBack": "Go back",
+    "accept": "Accept",
+    "successTitle": "Success",
+    "errorTitle": "Error",
+    "generatedToast": "The {channel} message has been generated.",
+    "enhancedToast": "The {channel} message has been enhanced."
+  },
   "Sidebar": {
     "admin": "Admin",
     "coreNavigation": "Core navigation",
@@ -535,7 +552,7 @@
           },
           "mediaUpload": {
             "dropzoneImage": "Drag & drop your image, or click to select it. Recommended image dimensions are 500×500.",
-            "dropzoneMedia": "Drag & drop your media, or click to select it. Recommended image dimensions are 500×500 for images. For video, use MP4.",
+            "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, recommended up to 1280×720 (720p), max about 100 MB per file (your server/nginx limit must allow it — use e.g. client_max_body_size 200M if uploads fail with 413).",
             "videoMeta": "File size: {fileSize} · Duration: {duration}",
             "durationPending": "Detecting…",
             "videoUnsupported": "Your browser does not support video playback."
@@ -602,7 +619,7 @@
           "successDescription": "Leads have been exported successfully.",
           "errorDescription": "Failed to export leads. Please try again."
         },
-        "notLaunchedYet": "Analytics will be available once the campaign is launched.",
+        "notLaunchedYet": "Analytics will be available once the campaign is launched. If the campaign is already running, wait a few minutes for analytics to update.",
         "cards": {
           "contacts": {
             "title": "Contacts",

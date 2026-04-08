@@ -7,7 +7,7 @@ namespace OneClickEcho.Application.Campaign.Commands.UploadCampaignViberMedia
     {
         public UploadCampaignViberMediaValidator()
         {
-            const long maxBytes = 100L * 1024 * 1024; // align with typical nginx client_max_body_size
+            const long maxBytes = 200L * 1024 * 1024; // align with typical nginx client_max_body_size (e.g. 200M)
 
             RuleFor(x => x.CampaignId)
                 .NotEmpty()
@@ -22,7 +22,7 @@ namespace OneClickEcho.Application.Campaign.Commands.UploadCampaignViberMedia
                 .Must(file => CheckFileType(file!))
                 .WithMessage("Only image or video files are allowed.")
                 .Must(file => file!.Length <= maxBytes)
-                .WithMessage("File size must be less than 100 MB.");
+                .WithMessage("File size must be less than 200 MB.");
         }
 
         private static bool CheckFileType(IFormFile file)

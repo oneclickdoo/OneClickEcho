@@ -3,7 +3,8 @@
 #
 # 413 Request Entity Too Large = body over client_max_body_size (default often 1m).
 
-client_max_body_size 100M;
+# 80 MB video needs headroom; 200M is a practical default for campaign uploads.
+client_max_body_size 200M;
 
 # Large CSV / video upload through reverse proxy (optional but helps slow links)
 proxy_connect_timeout 600s;

@@ -8,6 +8,7 @@ import { RiDeleteBinLine } from "@remixicon/react";
 
 import { Card } from "../tremor/Card";
 
+import { publicUploadFileUrl } from "@/lib/publicMediaUrl";
 import { getMediaType } from "@/lib/utils";
 
 import { CampaignMediaType } from "@/lib/enums";
@@ -150,34 +151,24 @@ export const MediaUpload = (props: IMediaUploadProps) => {
                                         src={
                                             props.file instanceof File
                                                 ? props.file.preview
-                                                : `${process.env.NEXT_PUBLIC_API_URL}/uploads/${props.file}`
+                                                : publicUploadFileUrl(props.file)
                                         }
                                         alt={props.file instanceof File ? props.file.name : "Campaign Viber Image"}
                                         width={100}
                                         height={100}
                                         className="block w-auto h-full"
-                                        onLoad={() => {
-                                            if (props.file && props.file instanceof File) {
-                                                URL.revokeObjectURL(props.file.preview);
-                                            }
-                                        }}
                                     />
                                 ) : (
                                     <video
                                         src={
                                             props.file instanceof File
                                                 ? props.file.preview
-                                                : `${process.env.NEXT_PUBLIC_API_URL}/uploads/${props.file}`
+                                                : publicUploadFileUrl(props.file)
                                         }
                                         width={100}
                                         height={100}
                                         controls
                                         className="block w-auto h-full"
-                                        onLoad={() => {
-                                            if (props.file && props.file instanceof File) {
-                                                URL.revokeObjectURL(props.file.preview);
-                                            }
-                                        }}
                                         onLoadedMetadata={(e) => {
                                             const el = e.target as HTMLVideoElement;
                                             const sec = Math.round(el.duration);
