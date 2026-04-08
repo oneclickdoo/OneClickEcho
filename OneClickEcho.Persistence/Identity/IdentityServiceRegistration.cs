@@ -45,7 +45,12 @@ public static class IdentityServiceRegistration
                 // Accept anonymous clients (i.e clients that don't send a client_id).
                 options.AcceptAnonymousClients();
 
-                // Required: token requests are rejected with invalid_scope (400) if a scope is not registered here.
+                // Password flow + no client_id: OpenIddict otherwise requires DB permissions linking a client to
+                // each scope and grant type (would reject every token request after scopes exist in OpenIddictScopes).
+                options.IgnoreScopePermissions();
+                options.IgnoreGrantTypePermissions();
+
+                // Token requests fail if a requested scope is not registered here (names must match the client).
                 options.RegisterScopes(
                     Scopes.OpenId,
                     Scopes.Email,

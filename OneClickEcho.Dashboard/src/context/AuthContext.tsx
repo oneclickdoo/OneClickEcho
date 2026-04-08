@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext, createContext, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useContext, createContext, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -45,6 +45,9 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
     const [dashboardManager, setDashboardManager] = useState<IDashboardManager | null>(null);
     const [loading, setLoading] = useState(true);
 
+    /** Abort stale session probes so a late 401 cannot run /auth/logout after a successful login (wiping fresh cookies). */
+    const sessionProbeAbortRef = useRef<AbortController | null>(null);
+
     const { run: runWithSlowOverlay, wrapFetch, visible: slowNetworkVisible } = useSlowOperationOverlay(3000);
 
     const logout = useCallback(async () => {
@@ -88,14 +91,19 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
 
     const authFetch = useMemo(() => wrapFetch(authFetchImpl), [wrapFetch, authFetchImpl]);
 
-    /** Session probe: 401 without cookies is normal (e.g. login page). Do not use authFetchImpl here — it would logout + throw and spam the console. */
+    /** Session probe: 401 without cookies is normal (e.g. login page). Never call /auth/logout here — a slow 401 after login would delete fresh session cookies. */
     const getUser: () => Promise<IUser | null> = async () => {
+        sessionProbeAbortRef.current?.abort();
+        const ac = new AbortController();
+        sessionProbeAbortRef.current = ac;
+
         setLoading(true);
 
         try {
             const response = await fetch("/api/User/CurrentUser", {
                 method: "GET",
                 credentials: "include",
+                signal: ac.signal,
                 headers: {
                     Accept: "application/json",
                     "Content-Type": "application/json"
@@ -103,11 +111,6 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
             });
 
             if (response.status === 401 || response.status === 403) {
-                try {
-                    await fetch("/auth/logout", { method: "POST", credentials: "include" });
-                } catch {
-                    /* ignore */
-                }
                 setUser(null);
                 setDashboardManager(null);
                 setLoading(false);
@@ -128,11 +131,20 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
             setLoading(false);
 
             return data;
-        } catch {
+        } catch (e) {
+            if (e instanceof DOMException && e.name === "AbortError") {
+                setLoading(false);
+                return null;
+            }
+
             setUser(null);
             setDashboardManager(null);
             setLoading(false);
             return null;
+        } finally {
+            if (sessionProbeAbortRef.current === ac) {
+                sessionProbeAbortRef.current = null;
+            }
         }
     };
 
@@ -218,6 +230,8 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
         body.append("scope", "openid email profile roles offline_access");
 
         return runWithSlowOverlay(async () => {
+            sessionProbeAbortRef.current?.abort();
+
             try {
                 const response = await fetch("/auth/access_token", {
                     method: "POST",
@@ -230,6 +244,10 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
                 });
 
                 if (response.ok) {
+                    // Let the browser commit Set-Cookie before the next probe (avoids rare races).
+                    await new Promise<void>((resolve) => {
+                        queueMicrotask(() => resolve());
+                    });
                     await getUser();
                 }
 
