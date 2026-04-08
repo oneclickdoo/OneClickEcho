@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OneClickEcho.Domain.ApplicationUserAggregate;
+using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace OneClickEcho.Persistence.Identity;
 
@@ -43,6 +44,14 @@ public static class IdentityServiceRegistration
 
                 // Accept anonymous clients (i.e clients that don't send a client_id).
                 options.AcceptAnonymousClients();
+
+                // Required: token requests are rejected with invalid_scope (400) if a scope is not registered here.
+                options.RegisterScopes(
+                    Scopes.OpenId,
+                    Scopes.Email,
+                    Scopes.Profile,
+                    Scopes.Roles,
+                    Scopes.OfflineAccess);
 
                 // Short opaque tokens for browsers (httpOnly cookies ~4KB limit). Default encrypted JWTs exceed that.
                 options.UseReferenceAccessTokens()

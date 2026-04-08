@@ -214,8 +214,8 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
         body.append("username", email);
         body.append("password", credentialsData.password);
         body.append("grant_type", "password");
-        // Intersect with server grants (AuthorizationController); openid/profile/email improve token claims. Roles are still copied into the access token by GetDestinations.
-        body.append("scope", "openid email profile offline_access");
+        // Must be a subset of scopes registered in OpenIddict (IdentityServiceRegistration.RegisterScopes).
+        body.append("scope", "openid email profile roles offline_access");
 
         return runWithSlowOverlay(async () => {
             try {
