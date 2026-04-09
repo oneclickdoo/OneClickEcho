@@ -10,6 +10,11 @@ namespace OneClickEcho.Application.Common.Services.ViberService.Request.Common
         // url pointing to web page
         public string? ButtonUrl { get; set; }
 
+        /// <summary>
+        /// Comtrade type <b>233</b> only: public URL of the video file. Types 230–232 carry the video URL in <see cref="ButtonUrl"/>.
+        /// </summary>
+        public string? MediaUrl { get; set; }
+
         // registered sender
         public string Display { get; set; } = string.Empty;
 

@@ -519,7 +519,7 @@
           }
         },
         "warnings": {
-          "viberWorkingHours": "Viber messages are delivered only during business hours."
+          "viberWorkingHours": "Viber messages are delivered only during business hours, from 09:00 to 17:00."
         },
         "viber": {
           "title": "Viber message",
@@ -540,7 +540,8 @@
             "transactional": "Transactional messages are used for service notifications and may follow different delivery rules.",
             "enableReplies": "Allow recipients to reply to this Viber message.",
             "formattingHint": "Formatting: *bold* and _italic_ (Viber markdown). Put a space after the closing marker before the next word (e.g. *Hi* there). You can insert stickers below.",
-            "videoPromoOnly": "Video selected, no button: you can leave the message empty for promotional video-only (thumbnail required). Add text if you want video + caption."
+            "videoPromoOnly": "Video selected, no button: you can leave the message empty for promotional video-only (thumbnail required). Add text if you want video + caption.",
+            "validityHint": "How long Viber will try to deliver the message (seconds). This is not the maximum video length. Typical value: 86400 (24 hours). Max video duration for types 230–232 is 900 seconds (15 minutes)."
           },
           "formatting": {
             "previewLabel": "Preview (approximate)"
@@ -552,7 +553,7 @@
           },
           "mediaUpload": {
             "dropzoneImage": "Drag & drop your image, or click to select it. Recommended image dimensions are 500×500.",
-            "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, recommended up to 1280×720 (720p), max about 100 MB per file.",
+            "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, up to 1280×720 (720p), max ~100 MB, max length 15 minutes (900 s) per Viber.",
             "videoMeta": "File size: {fileSize} · Duration: {duration}",
             "durationPending": "Detecting…",
             "videoUnsupported": "Your browser does not support video playback."
@@ -571,7 +572,9 @@
           "save": "Save"
         },
         "toasts": {
-          "saved": "Messaging settings saved."
+          "saved": "Messaging settings saved.",
+          "videoWaitDuration": "Wait until the video preview shows duration, then save again.",
+          "videoTooLong": "Video is longer than 15 minutes (900 s). Viber does not accept it for message types 230–232."
         }
       },
       "CampaignSettings": {

@@ -519,7 +519,7 @@
           }
         },
         "warnings": {
-          "viberWorkingHours": "Viber poruke se isporučuju samo u radno vreme."
+          "viberWorkingHours": "Viber poruke se isporučuju samo u radno vreme, od 09:00 do 17:00."
         },
         "viber": {
           "title": "Viber poruka",
@@ -540,7 +540,8 @@
             "transactional": "Transakcione poruke se koriste za servisna obaveštenja i mogu imati drugačija pravila isporuke.",
             "enableReplies": "Omogućava primaocima da odgovore na ovu Viber poruku.",
             "formattingHint": "Formatiranje: *podebljano* i _kurziv_ (Viber markdown). Posle zatvarajućeg znaka mora razmak pre sledeće reči (npr. *Zdravo* tamo). Ispod možete umetnuti stikere.",
-            "videoPromoOnly": "Izabran je video bez dugmeta: poruku možete ostaviti praznu za promotivni video bez teksta (obavezna minijatura). Dodajte tekst ako želite video sa natpisom."
+            "videoPromoOnly": "Izabran je video bez dugmeta: poruku možete ostaviti praznu za promotivni video bez teksta (obavezna minijatura). Dodajte tekst ako želite video sa natpisom.",
+            "validityHint": "Koliko dugo će Viber pokušavati isporuku poruke (sekunde). To nije maksimalno trajanje videa. Uobičajeno: 86400 (24 h). Maks. dužina videa za tipove 230–232 je 900 s (15 min)."
           },
           "formatting": {
             "previewLabel": "Pregled (približan)"
@@ -552,7 +553,7 @@
           },
           "mediaUpload": {
             "dropzoneImage": "Prevucite i pustite sliku ili kliknite da je izaberete. Preporučene dimenzije slike su 500×500.",
-            "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Slike: preporučeno 500×500 (JPG/PNG). Video: MP4, preporučeno do 1280×720 (720p), najviše oko 100 MB po fajlu.",
+            "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Slike: preporučeno 500×500 (JPG/PNG). Video: MP4, do 1280×720 (720p), najviše ~100 MB, najduže 15 min (900 s) po Viberu.",
             "videoMeta": "Veličina fajla: {fileSize} · Trajanje: {duration}",
             "durationPending": "Otkrivanje…",
             "videoUnsupported": "Vaš pregledač ne podržava reprodukciju videa."
@@ -571,7 +572,9 @@
           "save": "Sačuvaj"
         },
         "toasts": {
-          "saved": "Podešavanja poruka su sačuvana."
+          "saved": "Podešavanja poruka su sačuvana.",
+          "videoWaitDuration": "Sačekajte da pregled videa prikaže trajanje, pa ponovo sačuvajte.",
+          "videoTooLong": "Video je duži od 15 minuta (900 s). Viber ne prihvata takav fajl za tipove poruka 230–232."
         }
       },
       "CampaignSettings": {

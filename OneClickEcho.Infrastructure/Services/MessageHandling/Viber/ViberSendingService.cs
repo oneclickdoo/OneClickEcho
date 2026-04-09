@@ -236,16 +236,33 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         case ViberSendMessageType.OneWayVideoTextButton:
                             viberMessage = new()
                             {
-                                // Video
-                                ButtonUrl = videoUrl, // "{UploadsUrl}/f5673afe-0710-4253-897e-0f4eed79b7d3.mp4"
-                                Thumbnail = videoThumbnailUrl, // "{UploadsUrl}/41f86ea7-38b5-4fa2-bdbd-37b82a065e07.jpeg"
+                                // Video (230–232: video URL in ButtonUrl per Comtrade)
+                                ButtonUrl = videoUrl,
+                                Thumbnail = videoThumbnailUrl,
                                 FileSize = fileSize,
                                 Duration = duration,
-                                // Text
                                 MessageText = testViberText!,
-                                // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
-                                // Must have
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = testPhoneNumber,
+                                MessageId = testMessage.ViberId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayVideoTextActionButton:
+                            viberMessage = new()
+                            {
+                                MediaUrl = videoUrl,
+                                ButtonUrl = campaign.ViberButtonUrl,
+                                Thumbnail = videoThumbnailUrl,
+                                FileSize = fileSize,
+                                Duration = duration,
+                                MessageText = testViberText!,
+                                ButtonCaption = campaign.ViberButtonUrlTitle,
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
                                 MSISDN = testPhoneNumber,
@@ -262,7 +279,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                     if (messageType is ViberSendMessageType.OneWayVideo
                         or ViberSendMessageType.OneWayVideoText
-                        or ViberSendMessageType.OneWayVideoTextButton)
+                        or ViberSendMessageType.OneWayVideoTextButton
+                        or ViberSendMessageType.OneWayVideoTextActionButton)
                     {
                         ApplyComtradeVideoFileMetadata(viberMessage, campaign.ViberMedia);
                     }
@@ -503,16 +521,32 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         case ViberSendMessageType.OneWayVideoTextButton:
                             viberMessage = new()
                             {
-                                // Video
-                                ButtonUrl = videoUrl, // "{UploadsUrl}/f5673afe-0710-4253-897e-0f4eed79b7d3.mp4"
-                                Thumbnail = videoThumbnailUrl, // "{UploadsUrl}/41f86ea7-38b5-4fa2-bdbd-37b82a065e07.jpeg"
+                                ButtonUrl = videoUrl,
+                                Thumbnail = videoThumbnailUrl,
                                 FileSize = fileSize,
                                 Duration = duration,
-                                // Text
                                 MessageText = personalizedMarkdown!,
-                                // Button
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
-                                // Must have
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = lead.PhoneNumber,
+                                MessageId = campaignLead.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayVideoTextActionButton:
+                            viberMessage = new()
+                            {
+                                MediaUrl = videoUrl,
+                                ButtonUrl = campaign.ViberButtonUrl,
+                                Thumbnail = videoThumbnailUrl,
+                                FileSize = fileSize,
+                                Duration = duration,
+                                MessageText = personalizedMarkdown!,
+                                ButtonCaption = campaign.ViberButtonUrlTitle,
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
                                 MSISDN = lead.PhoneNumber,
@@ -529,7 +563,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                     if (messageType is ViberSendMessageType.OneWayVideo
                         or ViberSendMessageType.OneWayVideoText
-                        or ViberSendMessageType.OneWayVideoTextButton)
+                        or ViberSendMessageType.OneWayVideoTextButton
+                        or ViberSendMessageType.OneWayVideoTextActionButton)
                     {
                         ApplyComtradeVideoFileMetadata(viberMessage, campaign.ViberMedia);
                     }
@@ -789,13 +824,34 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 Validity = validity
                             };
                             break;
+                        case ViberSendMessageType.OneWayVideoTextActionButton:
+                            viberMessage = new()
+                            {
+                                MediaUrl = videoUrl,
+                                ButtonUrl = apiMessage.ViberButtonUrl,
+                                Thumbnail = videoThumbnailUrl,
+                                FileSize = apiVideoFileSize,
+                                Duration = apiVideoDuration,
+                                MessageText = apiViberText!,
+                                ButtonCaption = apiMessage.ViberButtonUrlTitle,
+                                Display = apiMessage.Sender!,
+                                Label = "promotion",
+                                MSISDN = apiMessage.PhoneNumber,
+                                MessageId = apiMessage.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
                         default:
                             throw new Exception("Unhandled message type");
                     }
 
                     if (messageType is ViberSendMessageType.OneWayVideo
                         or ViberSendMessageType.OneWayVideoText
-                        or ViberSendMessageType.OneWayVideoTextButton)
+                        or ViberSendMessageType.OneWayVideoTextButton
+                        or ViberSendMessageType.OneWayVideoTextActionButton)
                     {
                         ApplyComtradeVideoFileMetadata(viberMessage, apiMessage.ViberMedia);
                     }

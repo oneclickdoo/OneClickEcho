@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Http;
+using OneClickEcho.Application.Common.Viber;
 
 namespace OneClickEcho.Application.Campaign.Commands.UploadCampaignViberMedia
 {
@@ -23,6 +24,29 @@ namespace OneClickEcho.Application.Campaign.Commands.UploadCampaignViberMedia
                 .WithMessage("Only image or video files are allowed.")
                 .Must(file => file!.Length <= maxBytes)
                 .WithMessage("File size must be less than 200 MB.");
+
+            When(x => !x.IsThumbnail && x.File != null && IsMp4Video(x.File), () =>
+            {
+                RuleFor(x => x.Duration)
+                    .NotNull()
+                    .WithMessage(
+                        $"Video duration in seconds is required (Viber allows up to {ViberVideoConstraints.MaxDurationSeconds} s). Wait for preview to finish loading or re-select the file.")
+                    .InclusiveBetween(1, ViberVideoConstraints.MaxDurationSeconds)
+                    .WithMessage(
+                        $"Video duration must be between 1 and {ViberVideoConstraints.MaxDurationSeconds} seconds (Viber limit for message types 230–232).");
+            });
+        }
+
+        private static bool IsMp4Video(IFormFile file)
+        {
+            string ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (ext == ".mp4")
+            {
+                return true;
+            }
+
+            string? ct = file.ContentType?.ToLowerInvariant();
+            return ct is "video/mp4" or "application/mp4";
         }
 
         private static bool CheckFileType(IFormFile file)

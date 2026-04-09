@@ -96,6 +96,8 @@ export const MediaUpload = (props: IMediaUploadProps) => {
                 setMediaType(CampaignMediaType.Video);
             }
 
+            props.setDuration?.(undefined);
+
             props.setFile(
                 Object.assign(file, {
                     preview: URL.createObjectURL(file)
@@ -171,7 +173,11 @@ export const MediaUpload = (props: IMediaUploadProps) => {
                                         className="block w-auto h-full"
                                         onLoadedMetadata={(e) => {
                                             const el = e.target as HTMLVideoElement;
-                                            const sec = Math.round(el.duration);
+                                            const raw = el.duration;
+                                            if (!Number.isFinite(raw) || raw <= 0) {
+                                                return;
+                                            }
+                                            const sec = Math.max(1, Math.round(raw));
                                             setDetectedDurationSec(sec);
                                             props.setDuration?.(sec);
                                         }}

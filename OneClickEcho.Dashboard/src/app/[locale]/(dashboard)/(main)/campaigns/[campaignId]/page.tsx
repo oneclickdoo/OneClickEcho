@@ -56,7 +56,8 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
         isViberReceivable: false,
         isSms: false,
         sendingType: CampaignSendingType.Immediate,
-        viberValidity: 900
+        // Viber "Validity" = delivery retry window (seconds), not max video length. 86400 = 24h (matches API default).
+        viberValidity: 86400
     });
 
     const [currentTab, setCurrentTab] = useState<string>("tab1");

@@ -1,3 +1,4 @@
+using System.IO;
 using OneClickEcho.Application.Common.Helpers;
 using OneClickEcho.Application.Common.Services.ViberService;
 using OneClickEcho.Application.Common.Services.ViberService.Request;
@@ -15,6 +16,46 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
     public class ViberService(HttpClient httpClient) : IViberService
     {
         private readonly HttpClient _httpClient = httpClient;
+
+        /// <summary>
+        /// Types 230–232: video URL is sent as <c>ButtonUrl</c>. Type 233: video in <c>MediaUrl</c> and <c>ButtonUrl</c> is the action target —
+        /// use 233 when the configured button URL is not the same media file as <paramref name="viberMediaReference"/>.
+        /// </summary>
+        public static bool IsExternalVideoActionButtonUrl(string? buttonUrl, string viberMediaReference)
+        {
+            if (string.IsNullOrWhiteSpace(buttonUrl) || string.IsNullOrWhiteSpace(viberMediaReference))
+            {
+                return false;
+            }
+
+            string mediaFile = Path.GetFileName(viberMediaReference.Trim().Split('?', '#')[0]);
+            if (string.IsNullOrEmpty(mediaFile))
+            {
+                return false;
+            }
+
+            string btn = buttonUrl.Trim();
+            try
+            {
+                if (btn.Contains("://", StringComparison.Ordinal))
+                {
+                    var uri = new Uri(btn, UriKind.Absolute);
+                    string urlFile = Path.GetFileName(uri.AbsolutePath.Split('?', '#')[0]);
+                    if (string.Equals(urlFile, mediaFile, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    return true;
+                }
+            }
+            catch (UriFormatException)
+            {
+                return true;
+            }
+
+            return !btn.EndsWith(mediaFile, StringComparison.OrdinalIgnoreCase);
+        }
 
         public async Task<SendViberMessageResponseDto?> Send(SendViberMessageDto request, int retryCountParam = 6)
         {
@@ -257,7 +298,9 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             {
                 if (MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Video)
                 {
-                    return ViberSendMessageType.OneWayVideoTextButton;
+                    return IsExternalVideoActionButtonUrl(campaign.ViberButtonUrl, campaign.ViberMedia)
+                        ? ViberSendMessageType.OneWayVideoTextActionButton
+                        : ViberSendMessageType.OneWayVideoTextButton;
                 }
 
                 if (MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Image)
@@ -300,7 +343,9 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             {
                 if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Video)
                 {
-                    return ViberSendMessageType.OneWayVideoTextButton;
+                    return IsExternalVideoActionButtonUrl(apiMessage.ViberButtonUrl, apiMessage.ViberMedia)
+                        ? ViberSendMessageType.OneWayVideoTextActionButton
+                        : ViberSendMessageType.OneWayVideoTextButton;
                 }
 
                 if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Image)

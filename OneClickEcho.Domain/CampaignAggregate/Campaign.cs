@@ -52,7 +52,7 @@ public sealed class Campaign : AggregateRoot<CampaignId>
         TestPhoneNumber = testPhoneNumber;
         SendingType = sendingType;
         SendingDatetime = sendingDatetime ?? DateTime.UtcNow;
-        ViberValidity = 900;
+        ViberValidity = 86400;
     }
 
     public Campaign(
@@ -98,7 +98,7 @@ public sealed class Campaign : AggregateRoot<CampaignId>
         TestPhoneNumber = testPhoneNumber;
         SendingType = sendingType;
         SendingDatetime = sendingDatetime ?? DateTime.UtcNow;
-        ViberValidity = 900;
+        ViberValidity = 86400;
     }
 
     public CampaignStatus Status { get; set; }

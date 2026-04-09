@@ -180,6 +180,27 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
 
     const handleSubmit = async () => {
         try {
+            if (formData.isViber && media && media instanceof File && media.type.startsWith("video/")) {
+                if (duration == null || !Number.isFinite(duration)) {
+                    toast({
+                        variant: "error",
+                        title: tCommon("error"),
+                        description: t("toasts.videoWaitDuration"),
+                        duration: 6000
+                    });
+                    return;
+                }
+                if (duration > 900) {
+                    toast({
+                        variant: "error",
+                        title: tCommon("error"),
+                        description: t("toasts.videoTooLong"),
+                        duration: 8000
+                    });
+                    return;
+                }
+            }
+
             const viberMessage = migrateLegacyViberHtmlToMarkdown(formData.viberMessage) ?? formData.viberMessage;
             const payload = { ...formData, viberMessage };
             if (viberMessage !== formData.viberMessage) {
@@ -260,6 +281,21 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                 await updateCampaign(formData, authFetch);
 
                 if (media && media instanceof File) {
+                    if (media.type.startsWith("video/")) {
+                        if (duration == null || !Number.isFinite(duration)) {
+                            return;
+                        }
+                        if (duration > 900) {
+                            toast({
+                                variant: "error",
+                                title: tCommon("error"),
+                                description: t("toasts.videoTooLong"),
+                                duration: 8000
+                            });
+                            return;
+                        }
+                    }
+
                     const data = await uploadCampaignViberMedia(formData.campaignId, false, media, authFetch, duration);
                     if (data.path) {
                         handleChange("viberMedia", data.path as any);
@@ -293,7 +329,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
 
         void runUseEffect();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [media, thumbnail]);
+    }, [media, thumbnail, duration]);
 
     const scheduledDateFormat = locale === "sr" ? "dd.MM.yyyy. HH:mm" : "dd/MM/yyyy HH:mm";
     const datepickerLocale = locale === "sr" ? "sr" : "en";
@@ -681,7 +717,11 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                             </div>
 
                             <div className="mb-4">
-                                <Label>{t("viber.fields.validity")}</Label>
+                                <Label>
+                                    <Tooltip side="right" content={t("viber.tooltips.validityHint")}>
+                                        {t("viber.fields.validity")}
+                                    </Tooltip>
+                                </Label>
                                 <Input
                                     type="number"
                                     disabled={!formData.isViber || formData.status !== CampaignStatus.Draft}

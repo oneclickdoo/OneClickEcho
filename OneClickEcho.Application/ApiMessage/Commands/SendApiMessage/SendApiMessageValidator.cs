@@ -1,4 +1,5 @@
 using FluentValidation;
+using OneClickEcho.Application.Common.Viber;
 
 namespace OneClickEcho.Application.ApiMessage.Commands.SendApiMessage;
 
@@ -62,8 +63,9 @@ public sealed class SendApiMessageValidator : AbstractValidator<SendApiMessageCo
             .WithMessage("ViberFileSize must be positive when set.");
 
         RuleFor(x => x.ViberVideoDuration)
-            .GreaterThan(0)
+            .InclusiveBetween(1, ViberVideoConstraints.MaxDurationSeconds)
             .When(x => x.ViberVideoDuration.HasValue)
-            .WithMessage("ViberVideoDuration must be positive when set.");
+            .WithMessage(
+                $"ViberVideoDuration must be between 1 and {ViberVideoConstraints.MaxDurationSeconds} seconds when set (Viber video limit).");
     }
 }

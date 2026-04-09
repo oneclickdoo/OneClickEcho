@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using OneClickEcho.Application.Common.Helpers;
+using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Application.Common.Services;
 using OneClickEcho.Domain.ApiMessageAggregate;
 using OneClickEcho.Domain.ApiMessageAggregate.Enums;
@@ -290,18 +291,25 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 throw new Exception($"Campaign [{campaign.Id.Value}] - Viber sender is not defined.");
             }
 
-            if (IsPromoViberVideoOnly(campaign))
+            if (CampaignHasViberVideo(campaign))
             {
-                if (string.IsNullOrEmpty(campaign.ViberVideoThumbnail))
-                {
-                    throw new Exception(
-                        $"Campaign [{campaign.Id.Value}] - Viber video-only (promotional) requires a thumbnail image.");
-                }
-
                 if (campaign.ViberFileSize is null || campaign.ViberVideoDuration is null)
                 {
                     throw new Exception(
-                        $"Campaign [{campaign.Id.Value}] - Viber video-only requires file size and duration (re-upload the video if missing).");
+                        $"Campaign [{campaign.Id.Value}] - Viber video requires file size and duration (save messaging tab after the preview shows duration, or re-upload the MP4).");
+                }
+
+                int d = campaign.ViberVideoDuration.Value;
+                if (d < 1 || d > ViberVideoConstraints.MaxDurationSeconds)
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber video duration must be 1–{ViberVideoConstraints.MaxDurationSeconds} seconds (provider limit). Current: {d} s.");
+                }
+
+                if (IsPromoViberVideoOnly(campaign) && string.IsNullOrEmpty(campaign.ViberVideoThumbnail))
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber video-only (promotional, message type 230) requires a thumbnail image.");
                 }
             }
             else if (string.IsNullOrWhiteSpace(campaign.ViberMessage))
@@ -324,6 +332,23 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
             {
                 throw new Exception($"Campaign [{campaign.Id.Value}] - SMS message is not defined.");
             }
+        }
+    }
+
+    private static bool CampaignHasViberVideo(Campaign campaign)
+    {
+        if (string.IsNullOrEmpty(campaign.ViberMedia))
+        {
+            return false;
+        }
+
+        try
+        {
+            return MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Video;
+        }
+        catch
+        {
+            return false;
         }
     }
 

@@ -7,6 +7,8 @@
         OneWayTextButton = 109,
         OneWayVideoText = 231,
         OneWayVideoTextButton = 232,
+        /// <summary>Video + text + action button: video in <c>MediaUrl</c>, action link in <c>ButtonUrl</c>.</summary>
+        OneWayVideoTextActionButton = 233,
 
         // You always need text
         OneWayImageOnly = 107,

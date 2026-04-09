@@ -127,6 +127,8 @@ export const filterPassedTime = (time: Date | string | number) => {
 // Campaign validation (self-contained shape, no UI imports)
 // --------------------------------------------------------
 
+const VIBER_MAX_VIDEO_DURATION_SECONDS = 900;
+
 export type CampaignChannelsLike = {
     isViber: boolean;
     isSms: boolean;
@@ -137,6 +139,8 @@ export type CampaignChannelsLike = {
     viberMedia?: unknown;
     viberButtonUrl?: unknown;
     viberVideoThumbnail?: unknown;
+    viberVideoDuration?: unknown;
+    viberFileSize?: unknown;
 
     smsSender?: unknown;
     smsMessage?: unknown;
@@ -163,6 +167,18 @@ function isPromoViberVideoOnly(campaign: CampaignChannelsLike): boolean {
     }
 }
 
+function campaignHasViberVideoMedia(campaign: CampaignChannelsLike): boolean {
+    const media = campaign.viberMedia;
+    if (typeof media !== "string" || !media) {
+        return false;
+    }
+    try {
+        return getMediaType(media) === CampaignMediaType.Video;
+    } catch {
+        return false;
+    }
+}
+
 export const validateCampaignChannels = (
     campaign: CampaignChannelsLike,
     showErrorMessage: (message: string) => void
@@ -178,6 +194,27 @@ export const validateCampaignChannels = (
         if (!campaign.viberSender) {
             showErrorMessage("Campaign's Viber sender is not defined.");
             return false;
+        }
+
+        if (campaignHasViberVideoMedia(campaign)) {
+            const d = campaign.viberVideoDuration;
+            const sz = campaign.viberFileSize;
+            if (typeof d !== "number" || !Number.isFinite(d) || d < 1) {
+                showErrorMessage(
+                    "Viber video requires duration in seconds. Open Messaging, wait for the preview to show length, then Save."
+                );
+                return false;
+            }
+            if (d > VIBER_MAX_VIDEO_DURATION_SECONDS) {
+                showErrorMessage(
+                    `Viber accepts videos up to ${VIBER_MAX_VIDEO_DURATION_SECONDS} seconds (15 min). Shorten the file or pick another.`
+                );
+                return false;
+            }
+            if (typeof sz !== "number" || !Number.isFinite(sz) || sz < 1) {
+                showErrorMessage("Viber video is missing file size metadata. Re-upload the video and save.");
+                return false;
+            }
         }
 
         if (isPromoViberVideoOnly(campaign)) {
