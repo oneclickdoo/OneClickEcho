@@ -72,4 +72,14 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
     void Delete(CampaignLead campaignLead);
 
     Task AddReceivedMessages(List<ReceivedMessage> receivedMessages);
+
+    /// <summary>
+    /// Sets <see cref="CampaignLead.ViberMessageId"/> on each lead to consecutive values starting at global max + 1.
+    /// Uses a short DB transaction and pg_advisory_xact_lock. Call after <see cref="Add"/> while leads are tracked, before <see cref="IUnitOfWork.SaveChangesAsync"/>.
+    /// </summary>
+    Task AssignSequentialGlobalViberMessageIdsAsync(IReadOnlyCollection<CampaignLead> campaignLeads,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Aligns the identity sequence for <c>campaign_leads.viber_message_id</c> with <c>MAX(viber_message_id)</c> after explicit ids were inserted.</summary>
+    Task SyncCampaignLeadViberMessageIdSequenceAsync(CancellationToken cancellationToken = default);
 }

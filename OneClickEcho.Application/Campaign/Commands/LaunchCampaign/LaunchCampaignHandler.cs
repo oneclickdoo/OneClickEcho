@@ -106,6 +106,7 @@ namespace OneClickEcho.Application.Campaign.Commands.LaunchCampaign
 
             List<Domain.LeadAggregate.Lead> internalListOfLeads = leadByNormalizedPhone.Values.ToList();
 
+            List<CampaignLead> newCampaignLeads = new(internalListOfLeads.Count);
             foreach (Domain.LeadAggregate.Lead lead in internalListOfLeads)
             {
                 string canonical = PhoneNumberHelper.Standardize(lead.PhoneNumber);
@@ -115,10 +116,15 @@ namespace OneClickEcho.Application.Campaign.Commands.LaunchCampaign
                 }
 
                 CampaignLead campaignLead = new(lead.Id, campaign.Id);
+                newCampaignLeads.Add(campaignLead);
                 _campaignLeadRepository.Add(campaignLead);
             }
-            
+
+            await _campaignLeadRepository.AssignSequentialGlobalViberMessageIdsAsync(newCampaignLeads, cancellationToken);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _campaignLeadRepository.SyncCampaignLeadViberMessageIdSequenceAsync(cancellationToken);
 
             // campaign must have leads
             List<Domain.LeadAggregate.Lead> leads = _campaignLeadRepository

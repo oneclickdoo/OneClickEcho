@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CampaignAggregate.Enums;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
@@ -239,5 +240,49 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext) : ICampaignL
     public Task AddReceivedMessages(List<ReceivedMessage> receivedMessages)
     {
         return _dbContext.ReceivedMessages.AddRangeAsync(receivedMessages);
+    }
+
+    /// <summary>Serializes global Viber message id assignment with concurrent launches / lead imports.</summary>
+    private const int GlobalViberMessageIdAllocationLockKey = 834291117;
+
+    public async Task AssignSequentialGlobalViberMessageIdsAsync(IReadOnlyCollection<CampaignLead> campaignLeads,
+        CancellationToken cancellationToken = default)
+    {
+        if (campaignLeads.Count == 0)
+        {
+            return;
+        }
+
+        await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        await _dbContext.Database.ExecuteSqlRawAsync(
+            $"SELECT pg_advisory_xact_lock({GlobalViberMessageIdAllocationLockKey})",
+            cancellationToken);
+
+        long maxCl = 0;
+        if (await _dbContext.Set<CampaignLead>().AnyAsync(cancellationToken))
+        {
+            maxCl = await _dbContext.Set<CampaignLead>().MaxAsync(x => x.ViberMessageId, cancellationToken);
+        }
+
+        long next = maxCl + 1;
+        foreach (CampaignLead cl in campaignLeads)
+        {
+            cl.ViberMessageId = next++;
+        }
+
+        await tx.CommitAsync(cancellationToken);
+    }
+
+    public Task SyncCampaignLeadViberMessageIdSequenceAsync(CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Database.ExecuteSqlRawAsync(
+            """
+            SELECT setval(
+                pg_get_serial_sequence('campaign_leads', 'viber_message_id'),
+                GREATEST(COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 0), 0),
+                true);
+            """,
+            cancellationToken);
     }
 }

@@ -76,19 +76,19 @@ namespace OneClickEcho.Application.Campaign.Commands.TestCampaign
             }
 
             Random random = new();
-            
+
             // Test message
             TestMessage testMessage = new TestMessage(
                 TestMessageId.CreateUnique(),
                 campaign.CompanyId,
                 campaign.IsViber,
                 request.PhoneNumber,
-                random.NextInt64(10000000000000, long.MaxValue)
+                random.NextInt64(10_000_000_000_000, long.MaxValue)
             );
-            
+
             _testMessageRepository.Add(testMessage);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            
+
             await _messageSendingService.SendTestMessages(campaign, testMessage);
 
             return new TestCampaignResponse(campaign.Id.Value);
