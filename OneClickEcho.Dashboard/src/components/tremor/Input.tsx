@@ -23,7 +23,7 @@ const inputStyles = tv({
         ],
         // TS fix: readonly tuple -> string
         focusInput.join(" "),
-        "[&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+        "[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
     ],
     variants: {
         hasError: { true: hasErrorInput },

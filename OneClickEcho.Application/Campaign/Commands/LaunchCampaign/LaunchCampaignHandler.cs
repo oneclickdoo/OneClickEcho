@@ -127,8 +127,8 @@ namespace OneClickEcho.Application.Campaign.Commands.LaunchCampaign
             await _campaignLeadRepository.SyncCampaignLeadViberMessageIdSequenceAsync(cancellationToken);
 
             // campaign must have leads
-            List<Domain.LeadAggregate.Lead> leads = _campaignLeadRepository
-                .GetAllLeadsByCampaignIdAsync(campaign.Id, cancellationToken).Result;
+            List<Domain.LeadAggregate.Lead> leads = await _campaignLeadRepository
+                .GetAllLeadsByCampaignIdAsync(campaign.Id, cancellationToken);
 
             if (leads.Count == 0)
             {

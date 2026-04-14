@@ -283,7 +283,9 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IOptions<Cam
         return _dbContext.Database.ExecuteSqlRawAsync(
             """
             SELECT setval(
-                pg_get_serial_sequence('campaign_leads', 'viber_message_id'),
+                COALESCE(
+                    pg_get_serial_sequence('public.campaign_leads', 'viber_message_id'),
+                    'public.campaign_leads_viber_message_id_seq'),
                 GREATEST(COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 0), {0}),
                 true);
             """,
