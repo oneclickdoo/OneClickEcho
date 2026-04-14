@@ -44,6 +44,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     private readonly IOptions<PublicUploadsSettings> _publicUploadsSettings = publicUploadsSettings;
     private readonly ISchedulerFactory _schedulerFactory = schedulerFactory;
 
+    /// <summary>Public base for <c>/uploads/…</c> files. Comtrade fetches video/image from this host; wrong or legacy default → delivery substatus 28 (file not permitted). Set <c>PublicUploads:BaseUrl</c> (e.g. <c>https://viber.oneclick.rs/uploads</c>).</summary>
     private string ViberMediaPublicBaseUrl =>
         string.IsNullOrWhiteSpace(_publicUploadsSettings.Value.BaseUrl)
             ? "https://api.echo.oneclick.rs/uploads"

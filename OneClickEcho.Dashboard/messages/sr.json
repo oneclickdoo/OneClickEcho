@@ -534,22 +534,30 @@
             "validity": "Period važenja (sekunde)",
             "buttonText": "Tekst dugmeta",
             "buttonUrl": "URL dugmeta",
-            "characters": "Karakteri"
+            "characters": "Karakteri",
+            "externalMediaUrl": "URL medije (već na internetu)",
+            "externalMediaUrlPlaceholder": "https://primer.com/video.mp4",
+            "videoDurationSeconds": "Trajanje videa (sekunde)",
+            "videoFileSizeMb": "Veličina videa (MB)"
           },
           "tooltips": {
             "transactional": "Transakcione poruke se koriste za servisna obaveštenja i mogu imati drugačija pravila isporuke.",
             "enableReplies": "Omogućava primaocima da odgovore na ovu Viber poruku.",
             "formattingHint": "Formatiranje: *podebljano* i _kurziv_ (Viber markdown). Posle zatvarajućeg znaka mora razmak pre sledeće reči (npr. *Zdravo* tamo). Ispod možete umetnuti stikere.",
             "videoPromoOnly": "Izabran je video bez dugmeta: poruku možete ostaviti praznu za promotivni video bez teksta (obavezna minijatura). Dodajte tekst ako želite video sa natpisom.",
-            "validityHint": "Koliko dugo će Viber pokušavati isporuku poruke (sekunde). To nije maksimalno trajanje videa. Uobičajeno: 86400 (24 h). Maks. dužina videa za tipove 230–232 je 900 s (15 min)."
+            "validityHint": "Koliko dugo će Viber pokušavati isporuku poruke (sekunde). To nije maksimalno trajanje videa. Uobičajeno: 86400 (24 h). Maks. dužina videa za tipove 230–232 je 900 s (15 min).",
+            "externalMediaUrl": "Nalepite javni HTTPS (ili HTTP) link ka slici ili videu. Ekstenzija mora biti .jpg, .png, .mp4 ili .avi. Za video na tom linku obavezno unesite trajanje i veličinu ispod.",
+            "hostedVideoMeta": "Video sa linka: unesite trajanje (1–900 s) i približnu veličinu u MB. Viber/Comtrade zahtevaju ove podatke uz URL. Pročitajte iz plejera ili svojstava fajla."
           },
           "formatting": {
             "previewLabel": "Pregled (približan)"
           },
           "actions": {
             "selectExistingMedia": "Izaberi postojeću mediju",
-            "selectImageTitle": "Izaberi sliku",
-            "imageAlt": "Izabrana slika"
+            "selectExistingMediaTitle": "Izaberi postojeću mediju",
+            "applyExternalMediaUrl": "Primeni URL",
+            "mediaAlt": "Medija kampanje",
+            "noExistingMedia": "Još nema medija iz završenih kampanja. Otpremite fajl ili nalepite URL."
           },
           "mediaUpload": {
             "dropzoneImage": "Prevucite i pustite sliku ili kliknite da je izaberete. Preporučene dimenzije slike su 500×500.",
@@ -574,7 +582,10 @@
         "toasts": {
           "saved": "Podešavanja poruka su sačuvana.",
           "videoWaitDuration": "Sačekajte da pregled videa prikaže trajanje, pa ponovo sačuvajte.",
-          "videoTooLong": "Video je duži od 15 minuta (900 s). Viber ne prihvata takav fajl za tipove poruka 230–232."
+          "videoTooLong": "Video je duži od 15 minuta (900 s). Viber ne prihvata takav fajl za tipove poruka 230–232.",
+          "videoDurationInvalid": "Trajanje videa mora biti između 1 i 900 sekundi.",
+          "invalidMediaUrl": "URL mora počinjati sa http:// ili https:// i imati podržanu ekstenziju (.jpg, .png, .mp4, .avi).",
+          "externalVideoMetaRequired": "Za video sa linka unesite trajanje (sekunde) i veličinu (MB), pa sačuvajte."
         }
       },
       "CampaignSettings": {

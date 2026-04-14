@@ -265,8 +265,18 @@ const getFileExtension = (path: string) => {
     return clean.slice(idx).toLowerCase();
 };
 
+/** Path or absolute URL; extension is taken from the URL path (before ?/#). */
 export const getMediaType = (mediaPath: string): CampaignMediaType => {
-    const ext = getFileExtension(mediaPath);
+    let path = mediaPath.trim();
+    try {
+        if (path.includes("://")) {
+            path = new URL(path).pathname;
+        }
+    } catch {
+        // relative file name
+    }
+
+    const ext = getFileExtension(path);
 
     if (IMAGE_EXTENSIONS.includes(ext as any)) return CampaignMediaType.Image;
     if (VIDEO_EXTENSIONS.includes(ext as any)) return CampaignMediaType.Video;

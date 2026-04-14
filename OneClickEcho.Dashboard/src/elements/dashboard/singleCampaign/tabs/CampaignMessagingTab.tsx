@@ -59,8 +59,9 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
     const [media, setMedia] = useState<FileExtended | string | null>(null);
     const [thumbnail, setThumbnail] = useState<FileExtended | string | null>(null);
     const [senders, setSenders] = useState<SenderDto[]>([]);
-    const [companyImages, setCompanyImages] = useState<string[]>([]);
+    const [companyMedia, setCompanyMedia] = useState<string[]>([]);
     const [imageModalOpen, setImageModalOpen] = useState(false);
+    const [externalMediaUrlInput, setExternalMediaUrlInput] = useState("");
 
     const viberMessageInputRef = useRef<HTMLTextAreaElement>(null);
     const smsMessageInputRef = useRef<HTMLTextAreaElement>(null);
@@ -78,7 +79,15 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
             if (!response.ok) throw new Error("Network response was not ok");
 
             const data: { images: string[] } = await response.json();
-            setCompanyImages(data.images.filter((img) => getMediaType(img) === CampaignMediaType.Image));
+            const supported = data.images.filter((name) => {
+                try {
+                    getMediaType(name);
+                    return true;
+                } catch {
+                    return false;
+                }
+            });
+            setCompanyMedia(supported);
             return data;
         };
 
@@ -178,6 +187,50 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
         handleChange("viberMessage", nextValue as any);
     };
 
+    const isStringVideoMedia = (m: FileExtended | string | null): boolean => {
+        if (!m || typeof m !== "string") {
+            return false;
+        }
+        try {
+            return getMediaType(m) === CampaignMediaType.Video;
+        } catch {
+            return false;
+        }
+    };
+
+    const applyExternalMediaUrl = (): void => {
+        const raw = externalMediaUrlInput.trim();
+        if (!raw.startsWith("https://") && !raw.startsWith("http://")) {
+            toast({
+                variant: "error",
+                title: tCommon("error"),
+                description: t("toasts.invalidMediaUrl"),
+                duration: 6000
+            });
+            return;
+        }
+        try {
+            const tMedia = getMediaType(raw);
+            setMedia(raw);
+            handleChange("viberMedia" as any, raw as any);
+            if (tMedia === CampaignMediaType.Video) {
+                handleChange("viberVideoDuration" as any, undefined as any);
+                handleChange("viberFileSize" as any, undefined as any);
+            } else {
+                handleChange("viberVideoDuration" as any, null as any);
+                handleChange("viberFileSize" as any, null as any);
+            }
+            setExternalMediaUrlInput("");
+        } catch {
+            toast({
+                variant: "error",
+                title: tCommon("error"),
+                description: t("toasts.invalidMediaUrl"),
+                duration: 6000
+            });
+        }
+    };
+
     const handleSubmit = async () => {
         try {
             if (formData.isViber && media && media instanceof File && media.type.startsWith("video/")) {
@@ -195,6 +248,29 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                         variant: "error",
                         title: tCommon("error"),
                         description: t("toasts.videoTooLong"),
+                        duration: 8000
+                    });
+                    return;
+                }
+            }
+
+            if (formData.isViber && isStringVideoMedia(media)) {
+                const d = formData.viberVideoDuration;
+                const sz = formData.viberFileSize;
+                if (d == null || !Number.isFinite(d) || sz == null || !Number.isFinite(sz) || sz <= 0) {
+                    toast({
+                        variant: "error",
+                        title: tCommon("error"),
+                        description: t("toasts.externalVideoMetaRequired"),
+                        duration: 8000
+                    });
+                    return;
+                }
+                if (d < 1 || d > 900) {
+                    toast({
+                        variant: "error",
+                        title: tCommon("error"),
+                        description: t("toasts.videoDurationInvalid"),
                         duration: 8000
                     });
                     return;
@@ -613,34 +689,55 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
 
                                             <DialogContent className="sm:max-w-lg" aria-describedby="select existing media dialog">
                                                 <DialogHeader>
-                                                    <DialogTitle>{t("viber.actions.selectImageTitle")}</DialogTitle>
+                                                    <DialogTitle>{t("viber.actions.selectExistingMediaTitle")}</DialogTitle>
                                                 </DialogHeader>
 
                                                 <div className="w-full max-h-[50vh] overflow-y-auto grid grid-cols-3 gap-2 pr-2 mt-2">
-                                                    {companyImages.map((image, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className="p-1 border border-gray-300 dark:border-gray-800 rounded-md cursor-pointer"
-                                                            onClick={() => {
-                                                                setMedia(image);
-                                                                handleChange("viberMedia" as any, image as any);
-                                                                setImageModalOpen(false);
-                                                            }}
-                                                        >
-                                                            <img
-                                                                src={publicUploadFileUrl(image)}
-                                                                alt={typeof media === "string" ? media : t("viber.actions.imageAlt")}
-                                                                width={100}
-                                                                height={100}
-                                                                className="w-full max-h-[150px] object-contain"
-                                                                onLoad={() => {
-                                                                    if (media && media instanceof File) {
-                                                                        URL.revokeObjectURL((media as any).preview);
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    ))}
+                                                    {companyMedia.length === 0 ? (
+                                                        <p className="col-span-3 text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                                                            {t("viber.actions.noExistingMedia")}
+                                                        </p>
+                                                    ) : (
+                                                        companyMedia.map((item, index) => {
+                                                            let itemType: CampaignMediaType;
+                                                            try {
+                                                                itemType = getMediaType(item);
+                                                            } catch {
+                                                                return null;
+                                                            }
+                                                            const src = publicUploadFileUrl(item);
+                                                            return (
+                                                                <div
+                                                                    key={`${item}-${index}`}
+                                                                    className="p-1 border border-gray-300 dark:border-gray-800 rounded-md cursor-pointer"
+                                                                    onClick={() => {
+                                                                        setMedia(item);
+                                                                        handleChange("viberMedia" as any, item as any);
+                                                                        setImageModalOpen(false);
+                                                                    }}
+                                                                >
+                                                                    {itemType === CampaignMediaType.Image ? (
+                                                                        <img
+                                                                            src={src}
+                                                                            alt={t("viber.actions.mediaAlt")}
+                                                                            width={100}
+                                                                            height={100}
+                                                                            className="w-full max-h-[150px] object-contain"
+                                                                        />
+                                                                    ) : (
+                                                                        <video
+                                                                            src={src}
+                                                                            muted
+                                                                            playsInline
+                                                                            preload="metadata"
+                                                                            className="w-full max-h-[150px] object-contain bg-black/5 dark:bg-black/30"
+                                                                            title={item}
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
                                                 </div>
 
                                                 <DialogFooter className="mt-6 flex justify-end sm:justify-end flex-col gap-2">
@@ -654,6 +751,31 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                         </Dialog>
                                     </div>
                                 )}
+
+                                {formData.status === CampaignStatus.Draft && !(formData.isTransactional as any) ? (
+                                    <div className="mt-3 space-y-2">
+                                        <Label>{t("viber.fields.externalMediaUrl")}</Label>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t("viber.tooltips.externalMediaUrl")}</p>
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                            <Input
+                                                disabled={!formData.isViber}
+                                                type="url"
+                                                placeholder={t("viber.fields.externalMediaUrlPlaceholder")}
+                                                value={externalMediaUrlInput}
+                                                onChange={(e) => setExternalMediaUrlInput(e.target.value)}
+                                                className="sm:flex-1"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                disabled={!formData.isViber || !externalMediaUrlInput.trim()}
+                                                onClick={applyExternalMediaUrl}
+                                            >
+                                                {t("viber.actions.applyExternalMediaUrl")}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : null}
 
                                 <MediaUpload
                                     file={media}
@@ -671,6 +793,57 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                             : undefined
                                     }
                                 />
+
+                                {formData.isViber && isStringVideoMedia(media) && formData.status === CampaignStatus.Draft ? (
+                                    <div className="mt-4 space-y-3 rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">{t("viber.tooltips.hostedVideoMeta")}</p>
+                                        <div>
+                                            <Label>{t("viber.fields.videoDurationSeconds")}</Label>
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                max={900}
+                                                className="mt-1"
+                                                disabled={!formData.isViber || (formData.isTransactional as any)}
+                                                value={formData.viberVideoDuration ?? ""}
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    handleChange(
+                                                        "viberVideoDuration" as any,
+                                                        v === "" ? (undefined as any) : (Number(v) as any)
+                                                    );
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>{t("viber.fields.videoFileSizeMb")}</Label>
+                                            <Input
+                                                type="number"
+                                                min={0.01}
+                                                step={0.1}
+                                                className="mt-1"
+                                                disabled={!formData.isViber || (formData.isTransactional as any)}
+                                                value={
+                                                    formData.viberFileSize != null && formData.viberFileSize > 0
+                                                        ? Math.round((formData.viberFileSize / (1024 * 1024)) * 100) / 100
+                                                        : ""
+                                                }
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    if (v === "") {
+                                                        handleChange("viberFileSize" as any, undefined as any);
+                                                        return;
+                                                    }
+                                                    const mb = Number(v);
+                                                    if (!Number.isFinite(mb) || mb <= 0) {
+                                                        return;
+                                                    }
+                                                    handleChange("viberFileSize" as any, Math.round(mb * 1024 * 1024) as any);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
 
                             {checkIsThumbnailVisible() ? (

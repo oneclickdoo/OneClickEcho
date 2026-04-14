@@ -20,7 +20,7 @@ services:
       # Same base64 32+ byte secret on every replica (optional if omitted, encryption key is derived from RSA PKCS#8).
       OpenIddict__SigningKey: ${OPENIDDICT_SIGNING_KEY:-}
       OpenIddict__EncryptionKey: ${OPENIDDICT_ENCRYPTION_KEY:-}
-      # Viber fetches campaign media from this public HTTPS URL (e.g. https://your-domain/uploads). Empty = legacy default in app.
+      # Required for Viber video/image: absolute HTTPS URL where /uploads is reachable (same host as browser or CDN). Example: https://viber.oneclick.rs/uploads — NOT http://api:3901. Empty = wrong legacy default and Comtrade often returns substatus 28.
       PublicUploads__BaseUrl: ${PUBLIC_UPLOADS_BASE_URL:-}
     volumes:
       - api-logs:/app/logs

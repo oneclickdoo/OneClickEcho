@@ -534,22 +534,30 @@
             "validity": "Validity period (seconds)",
             "buttonText": "Button text",
             "buttonUrl": "Button URL",
-            "characters": "Characters"
+            "characters": "Characters",
+            "externalMediaUrl": "Media URL (already online)",
+            "externalMediaUrlPlaceholder": "https://example.com/video.mp4",
+            "videoDurationSeconds": "Video duration (seconds)",
+            "videoFileSizeMb": "Video file size (MB)"
           },
           "tooltips": {
             "transactional": "Transactional messages are used for service notifications and may follow different delivery rules.",
             "enableReplies": "Allow recipients to reply to this Viber message.",
             "formattingHint": "Formatting: *bold* and _italic_ (Viber markdown). Put a space after the closing marker before the next word (e.g. *Hi* there). You can insert stickers below.",
             "videoPromoOnly": "Video selected, no button: you can leave the message empty for promotional video-only (thumbnail required). Add text if you want video + caption.",
-            "validityHint": "How long Viber will try to deliver the message (seconds). This is not the maximum video length. Typical value: 86400 (24 hours). Max video duration for types 230–232 is 900 seconds (15 minutes)."
+            "validityHint": "How long Viber will try to deliver the message (seconds). This is not the maximum video length. Typical value: 86400 (24 hours). Max video duration for types 230–232 is 900 seconds (15 minutes).",
+            "externalMediaUrl": "Paste a public HTTPS (or HTTP) link to an image or video file. Extension must be .jpg, .png, .mp4, or .avi. For hosted video you must also enter duration and size below (required for sending).",
+            "hostedVideoMeta": "Hosted video: enter duration (1–900 s) and approximate file size in MB. Viber/Comtrade need these values with the media URL. Use your player or file properties to read them."
           },
           "formatting": {
             "previewLabel": "Preview (approximate)"
           },
           "actions": {
             "selectExistingMedia": "Select existing media",
-            "selectImageTitle": "Select image",
-            "imageAlt": "Selected image"
+            "selectExistingMediaTitle": "Select existing media",
+            "applyExternalMediaUrl": "Use URL",
+            "mediaAlt": "Campaign media",
+            "noExistingMedia": "No media from completed campaigns yet. Upload a file or paste a URL."
           },
           "mediaUpload": {
             "dropzoneImage": "Drag & drop your image, or click to select it. Recommended image dimensions are 500×500.",
@@ -574,7 +582,10 @@
         "toasts": {
           "saved": "Messaging settings saved.",
           "videoWaitDuration": "Wait until the video preview shows duration, then save again.",
-          "videoTooLong": "Video is longer than 15 minutes (900 s). Viber does not accept it for message types 230–232."
+          "videoTooLong": "Video is longer than 15 minutes (900 s). Viber does not accept it for message types 230–232.",
+          "videoDurationInvalid": "Video duration must be between 1 and 900 seconds.",
+          "invalidMediaUrl": "URL must start with http:// or https:// and end with a supported extension (.jpg, .png, .mp4, .avi).",
+          "externalVideoMetaRequired": "For hosted video, enter duration (seconds) and file size (MB), then save."
         }
       },
       "CampaignSettings": {

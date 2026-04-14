@@ -112,7 +112,12 @@ export const MediaUpload = (props: IMediaUploadProps) => {
 
     useEffect(() => {
         if (props.file && typeof props.file === "string") {
-            setMediaType(getMediaType(props.file));
+            try {
+                setMediaType(getMediaType(props.file));
+            } catch {
+                const s = props.file.toLowerCase();
+                setMediaType(/\.(mp4|avi)(\?|#|$)/i.test(s) ? CampaignMediaType.Video : CampaignMediaType.Image);
+            }
         }
 
         return () => {

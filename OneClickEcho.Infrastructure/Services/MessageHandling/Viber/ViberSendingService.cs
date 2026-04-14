@@ -27,13 +27,13 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
         /// <summary>Absolute URL for a stored upload file name (Viber must fetch this over the public internet).</summary>
         private static string PublicFileUrl(string uploadsBase, string fileName) =>
-            $"{uploadsBase.TrimEnd('/')}/{fileName}";
+            $"{uploadsBase.TrimEnd('/')}/{fileName.TrimStart('/')}";
 
-        private static string? PublicFileUrlOrNull(string uploadsBase, string? fileName) =>
-            string.IsNullOrEmpty(fileName) ? null : PublicFileUrl(uploadsBase, fileName);
-
-        private static string ResolveApiMediaUrl(string uploadsBase, string media) =>
+        private static string ResolvePublicMediaUrl(string uploadsBase, string media) =>
             media.Contains("://", StringComparison.Ordinal) ? media : PublicFileUrl(uploadsBase, media);
+
+        private static string? ResolvePublicMediaUrlOrNull(string uploadsBase, string? media) =>
+            string.IsNullOrEmpty(media) ? null : ResolvePublicMediaUrl(uploadsBase, media);
 
         /// <summary>
         /// Comtrade JSON model includes <see cref="ViberMessage.NameOfFile"/> and <see cref="ViberMessage.FileType"/>; omitting them may cause video to be rejected.
@@ -109,12 +109,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 if (mediaType == CampaignMediaType.Image)
                 {
-                    imageUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
+                    imageUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
                 }
                 else
                 {
-                    videoUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
-                    videoThumbnailUrl = PublicFileUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
+                    videoUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                    videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
                     duration = campaign.ViberVideoDuration;
                     fileSize = campaign.ViberFileSize;
                 }
@@ -344,12 +344,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 if (mediaType == CampaignMediaType.Image)
                 {
-                    imageUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
+                    imageUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
                 }
                 else
                 {
-                    videoUrl = PublicFileUrl(uploadsBase, campaign.ViberMedia);
-                    videoThumbnailUrl = PublicFileUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
+                    videoUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                    videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
                     duration = campaign.ViberVideoDuration;
                     fileSize = campaign.ViberFileSize;
                 }
@@ -699,18 +699,15 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                         if (mediaType == CampaignMediaType.Image)
                         {
-                            imageUrl = ResolveApiMediaUrl(uploadsBase, apiMessage.ViberMedia);
+                            imageUrl = ResolvePublicMediaUrl(uploadsBase, apiMessage.ViberMedia);
                         }
                         else
                         {
-                            videoUrl = ResolveApiMediaUrl(uploadsBase, apiMessage.ViberMedia);
+                            videoUrl = ResolvePublicMediaUrl(uploadsBase, apiMessage.ViberMedia);
                         }
                     }
 
-                    if (!string.IsNullOrEmpty(apiMessage.ViberVideoThumbnail))
-                    {
-                        videoThumbnailUrl = ResolveApiMediaUrl(uploadsBase, apiMessage.ViberVideoThumbnail);
-                    }
+                    videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, apiMessage.ViberVideoThumbnail);
 
                     switch (messageType)
                     {
