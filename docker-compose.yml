@@ -10,6 +10,10 @@ services:
       context: .
       dockerfile: docker/Dockerfile_Api
     image: oneclickecho-api:local
+    # Optional: loads repo-root .env into the container (long names like Messaging__…). Omit file or set required: false if you have no .env.
+    env_file:
+      - path: .env
+        required: false
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
       # OpenIddict 5+: RSA PKCS#8 DER as one-line base64 (required in Docker). Symmetric keys are encryption-only.
@@ -22,6 +26,10 @@ services:
       OpenIddict__EncryptionKey: ${OPENIDDICT_ENCRYPTION_KEY:-}
       # Required for Viber video/image: absolute HTTPS URL where /uploads is reachable (same host as browser or CDN). Example: https://viber.oneclick.rs/uploads — NOT http://api:3901. Empty = wrong legacy default and Comtrade often returns substatus 28.
       PublicUploads__BaseUrl: ${PUBLIC_UPLOADS_BASE_URL:-}
+      # Passed into the container (root .env alone is NOT enough — list here or use env_file). Next id = max(MAX(viber_message_id), Floor)+1 on campaign launch.
+      Messaging__CampaignLeadViberMessageId__Floor: ${Messaging__CampaignLeadViberMessageId__Floor:-0}
+      # Optional shorter alias (overrides Floor when set in Program.cs after env load); use e.g. 50000000 in .env
+      VIBER_CAMPAIGN_MESSAGE_ID_FLOOR: ${VIBER_CAMPAIGN_MESSAGE_ID_FLOOR:-}
     volumes:
       - api-logs:/app/logs
       - api-uploads:/app/UploadedFiles
