@@ -287,7 +287,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IOptions<Cam
                 GREATEST(COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 0), {0}),
                 true);
             """,
-            _viberMessageIdFloor,
-            cancellationToken);
+            cancellationToken,
+            _viberMessageIdFloor);
     }
 }
