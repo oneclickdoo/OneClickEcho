@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OneClickEcho.Persistence.Identity;
+using OneClickEcho.Persistence.Options;
 using System.Reflection;
 
 namespace OneClickEcho.Persistence;
@@ -17,6 +18,9 @@ public static class PersistenceServiceRegistration
             options.UseNpgsql(configuration.GetConnectionString("Database")).UseSnakeCaseNamingConvention();
             options.UseOpenIddict();
         });
+
+        services.Configure<CampaignLeadViberMessageIdOptions>(
+            configuration.GetSection(CampaignLeadViberMessageIdOptions.SectionName));
 
         services
             .Scan(selector => selector

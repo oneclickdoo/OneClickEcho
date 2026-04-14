@@ -13,12 +13,16 @@ using OneClickEcho.Domain.Common.Queries;
 using OneClickEcho.Domain.LeadAggregate;
 using OneClickEcho.Domain.LeadAggregate.ValueObjects;
 using OneClickEcho.Persistence.Common;
+using OneClickEcho.Persistence.Options;
+using Microsoft.Extensions.Options;
 
 namespace OneClickEcho.Persistence.Repositories;
 
-public class CampaignLeadRepository(ApplicationDbContext dbContext) : ICampaignLeadRepository
+public class CampaignLeadRepository(ApplicationDbContext dbContext, IOptions<CampaignLeadViberMessageIdOptions> viberMessageIdOptions)
+    : ICampaignLeadRepository
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
+    private readonly long _viberMessageIdFloor = Math.Max(0, viberMessageIdOptions.Value.Floor);
 
     public async Task<CampaignLead?> GetByIdAsync(CampaignLeadId id, CancellationToken cancellationToken = default)
     {
@@ -265,7 +269,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext) : ICampaignL
             maxCl = await _dbContext.Set<CampaignLead>().MaxAsync(x => x.ViberMessageId, cancellationToken);
         }
 
-        long next = maxCl + 1;
+        long next = Math.Max(maxCl, _viberMessageIdFloor) + 1;
         foreach (CampaignLead cl in campaignLeads)
         {
             cl.ViberMessageId = next++;
@@ -280,9 +284,10 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext) : ICampaignL
             """
             SELECT setval(
                 pg_get_serial_sequence('campaign_leads', 'viber_message_id'),
-                GREATEST(COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 0), 0),
+                GREATEST(COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 0), {0}),
                 true);
             """,
+            _viberMessageIdFloor,
             cancellationToken);
     }
 }
