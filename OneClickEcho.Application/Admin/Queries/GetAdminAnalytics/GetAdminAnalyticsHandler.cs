@@ -1,4 +1,5 @@
-﻿using OneClickEcho.Application.Common.Messaging;
+﻿using System.Globalization;
+using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Domain.CampaignAggregate.Repositories;
 using OneClickEcho.Domain.CampaignLeadAggregate.Enums;
 using OneClickEcho.Domain.CampaignLeadAggregate.Repositories;
@@ -20,17 +21,42 @@ namespace OneClickEcho.Application.Admin.Queries.GetAdminAnalytics
 
         public async Task<Result<GetAdminAnalyticsResponse>> Handle(GetAdminAnalyticsQuery request, CancellationToken cancellationToken)
         {
-            // parse date
             DateTime? startDate = null;
             DateTime? endDate = null;
 
-            if (request.StartDate != null)
+            if (!TryParseAdminFilterDate(request.StartDate, out startDate, out string? startErr))
             {
-                startDate = DateTime.Parse(request.StartDate);
+                return Result.Failure<GetAdminAnalyticsResponse>(
+                    new Error("AdminAnalytics.InvalidStartDate", startErr ?? "Invalid startDate."));
             }
-            if (request.EndDate != null)
+
+            if (!TryParseAdminFilterDate(request.EndDate, out endDate, out string? endErr))
             {
-                endDate = DateTime.Parse(request.EndDate);
+                return Result.Failure<GetAdminAnalyticsResponse>(
+                    new Error("AdminAnalytics.InvalidEndDate", endErr ?? "Invalid endDate."));
+            }
+
+            static bool TryParseAdminFilterDate(string? raw, out DateTime? utc, out string? error)
+            {
+                utc = null;
+                error = null;
+                if (string.IsNullOrWhiteSpace(raw))
+                {
+                    return true;
+                }
+
+                if (DateTimeOffset.TryParse(
+                        raw,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.RoundtripKind,
+                        out DateTimeOffset dto))
+                {
+                    utc = dto.UtcDateTime;
+                    return true;
+                }
+
+                error = "Use an ISO 8601 date/time (e.g. 2026-03-31T22:00:00.000Z).";
+                return false;
             }
 
             int totalViberMessagesSent = 0;

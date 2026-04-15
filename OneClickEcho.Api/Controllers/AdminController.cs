@@ -19,7 +19,12 @@ namespace OneClickEcho.App.Controllers
 
             Result<GetAdminAnalyticsResponse> response = await Mediator.Send(query, cancellationToken);
 
-            return response.IsSuccess ? Ok(response.Value) : NotFound(response.Error);
+            if (!response.IsSuccess)
+            {
+                return BadRequest(new { code = response.Error.Code, message = response.Error.Message });
+            }
+
+            return Ok(response.Value);
         }
     }
 }
