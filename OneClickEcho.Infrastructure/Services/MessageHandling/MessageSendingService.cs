@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using OneClickEcho.Application.Common.Helpers;
+using OneClickEcho.Application.Common.Services.ViberService.Request.Enum;
 using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Application.Common.Services;
 using OneClickEcho.Domain.ApiMessageAggregate;
@@ -294,17 +295,22 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
 
             if (CampaignHasViberVideo(campaign))
             {
-                if (campaign.ViberFileSize is null || campaign.ViberVideoDuration is null)
+                // Comtrade 233 (video + text + action): official sample has no Duration/FileSize — do not require them.
+                ViberSendMessageType viberMessageType = ViberService.DetermineMessageType(campaign);
+                if (viberMessageType != ViberSendMessageType.OneWayVideoTextActionButton)
                 {
-                    throw new Exception(
-                        $"Campaign [{campaign.Id.Value}] - Viber video requires file size and duration (save messaging tab after the preview shows duration, or re-upload the MP4).");
-                }
+                    if (campaign.ViberFileSize is null || campaign.ViberVideoDuration is null)
+                    {
+                        throw new Exception(
+                            $"Campaign [{campaign.Id.Value}] - Viber video (types 230–232) requires file size and duration (save messaging tab after the preview shows duration, or re-upload the MP4).");
+                    }
 
-                int d = campaign.ViberVideoDuration.Value;
-                if (d < 1 || d > ViberVideoConstraints.MaxDurationSeconds)
-                {
-                    throw new Exception(
-                        $"Campaign [{campaign.Id.Value}] - Viber video duration must be 1–{ViberVideoConstraints.MaxDurationSeconds} seconds (provider limit). Current: {d} s.");
+                    int d = campaign.ViberVideoDuration.Value;
+                    if (d < 1 || d > ViberVideoConstraints.MaxDurationSeconds)
+                    {
+                        throw new Exception(
+                            $"Campaign [{campaign.Id.Value}] - Viber video duration must be 1–{ViberVideoConstraints.MaxDurationSeconds} seconds (provider limit). Current: {d} s.");
+                    }
                 }
 
                 if (IsPromoViberVideoOnly(campaign) && string.IsNullOrEmpty(campaign.ViberVideoThumbnail))

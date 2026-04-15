@@ -1,4 +1,3 @@
-using System.IO;
 using Microsoft.Extensions.Options;
 using OneClickEcho.Application.Common.Helpers;
 using OneClickEcho.Application.Common.Services;
@@ -34,42 +33,6 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
         private static string? ResolvePublicMediaUrlOrNull(string uploadsBase, string? media) =>
             string.IsNullOrEmpty(media) ? null : ResolvePublicMediaUrl(uploadsBase, media);
-
-        /// <summary>
-        /// Comtrade JSON model includes <see cref="ViberMessage.NameOfFile"/> and <see cref="ViberMessage.FileType"/>; omitting them may cause video to be rejected.
-        /// </summary>
-        private static void ApplyComtradeVideoFileMetadata(ViberMessage message, string? storedVideoFileNameOrUrl)
-        {
-            if (string.IsNullOrWhiteSpace(storedVideoFileNameOrUrl))
-            {
-                return;
-            }
-
-            string name = storedVideoFileNameOrUrl.Trim();
-            if (name.Contains("://", StringComparison.Ordinal))
-            {
-                try
-                {
-                    name = Path.GetFileName(new Uri(name, UriKind.Absolute).AbsolutePath);
-                }
-                catch (UriFormatException)
-                {
-                    name = Path.GetFileName(name);
-                }
-            }
-
-            if (string.IsNullOrEmpty(name))
-            {
-                return;
-            }
-
-            message.NameOfFile = name;
-            string ext = Path.GetExtension(name).TrimStart('.').ToLowerInvariant();
-            if (ext.Length > 0)
-            {
-                message.FileType = ext;
-            }
-        }
 
         public static async Task SendViberMessagesToTestPhoneNumbers(
             Campaign campaign,
@@ -254,13 +217,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             };
                             break;
                         case ViberSendMessageType.OneWayVideoTextActionButton:
+                            // Comtrade 233: MediaUrl = video, ButtonUrl = action; example JSON has no Duration/FileSize/FileType/NameOfFile (those belong to type 220 file flow).
                             viberMessage = new()
                             {
                                 MediaUrl = videoUrl,
                                 ButtonUrl = campaign.ViberButtonUrl,
                                 Thumbnail = videoThumbnailUrl,
-                                FileSize = fileSize,
-                                Duration = duration,
                                 MessageText = testViberText!,
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 Display = campaign.ViberSender!,
@@ -275,14 +237,6 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             break;
                         default:
                             throw new Exception("Unhandled message type");
-                    }
-
-                    if (messageType is ViberSendMessageType.OneWayVideo
-                        or ViberSendMessageType.OneWayVideoText
-                        or ViberSendMessageType.OneWayVideoTextButton
-                        or ViberSendMessageType.OneWayVideoTextActionButton)
-                    {
-                        ApplyComtradeVideoFileMetadata(viberMessage, campaign.ViberMedia);
                     }
 
                     viberMessages.Add(viberMessage);
@@ -359,13 +313,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
             if (messageType is ViberSendMessageType.OneWayVideo
                 or ViberSendMessageType.OneWayVideoText
-                or ViberSendMessageType.OneWayVideoTextButton
-                or ViberSendMessageType.OneWayVideoTextActionButton)
+                or ViberSendMessageType.OneWayVideoTextButton)
             {
                 if (duration is null || fileSize is null)
                 {
                     Console.WriteLine(
-                        $"{DateTime.UtcNow:O} Viber video campaign {campaign.Id.Value}: missing ViberVideoDuration and/or ViberFileSize — Comtrade often returns empty statuses; set both in campaign.");
+                        $"{DateTime.UtcNow:O} Viber video campaign {campaign.Id.Value}: missing ViberVideoDuration and/or ViberFileSize for message type {(int)messageType} — set both in campaign.");
                 }
             }
 
@@ -555,8 +508,6 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 MediaUrl = videoUrl,
                                 ButtonUrl = campaign.ViberButtonUrl,
                                 Thumbnail = videoThumbnailUrl,
-                                FileSize = fileSize,
-                                Duration = duration,
                                 MessageText = personalizedMarkdown!,
                                 ButtonCaption = campaign.ViberButtonUrlTitle,
                                 Display = campaign.ViberSender!,
@@ -571,14 +522,6 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             break;
                         default:
                             throw new Exception("Unhandled message type");
-                    }
-
-                    if (messageType is ViberSendMessageType.OneWayVideo
-                        or ViberSendMessageType.OneWayVideoText
-                        or ViberSendMessageType.OneWayVideoTextButton
-                        or ViberSendMessageType.OneWayVideoTextActionButton)
-                    {
-                        ApplyComtradeVideoFileMetadata(viberMessage, campaign.ViberMedia);
                     }
 
                     viberMessages.Add(viberMessage);
@@ -849,8 +792,6 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 MediaUrl = videoUrl,
                                 ButtonUrl = apiMessage.ViberButtonUrl,
                                 Thumbnail = videoThumbnailUrl,
-                                FileSize = apiVideoFileSize,
-                                Duration = apiVideoDuration,
                                 MessageText = apiViberText!,
                                 ButtonCaption = apiMessage.ViberButtonUrlTitle,
                                 Display = apiMessage.Sender!,
@@ -865,14 +806,6 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             break;
                         default:
                             throw new Exception("Unhandled message type");
-                    }
-
-                    if (messageType is ViberSendMessageType.OneWayVideo
-                        or ViberSendMessageType.OneWayVideoText
-                        or ViberSendMessageType.OneWayVideoTextButton
-                        or ViberSendMessageType.OneWayVideoTextActionButton)
-                    {
-                        ApplyComtradeVideoFileMetadata(viberMessage, apiMessage.ViberMedia);
                     }
 
                     viberMessages.Add(viberMessage);

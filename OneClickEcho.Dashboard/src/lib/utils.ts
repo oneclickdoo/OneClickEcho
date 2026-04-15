@@ -179,6 +179,15 @@ function campaignHasViberVideoMedia(campaign: CampaignChannelsLike): boolean {
     }
 }
 
+/** Backend uses Comtrade 233: video in MediaUrl, action in ButtonUrl; no Duration/FileSize in the official request sample. */
+function isViberVideoType233Layout(campaign: CampaignChannelsLike): boolean {
+    if (!campaignHasViberVideoMedia(campaign)) {
+        return false;
+    }
+    const btn = campaign.viberButtonUrl;
+    return typeof btn === "string" && btn.trim().length > 0;
+}
+
 export const validateCampaignChannels = (
     campaign: CampaignChannelsLike,
     showErrorMessage: (message: string) => void
@@ -196,7 +205,7 @@ export const validateCampaignChannels = (
             return false;
         }
 
-        if (campaignHasViberVideoMedia(campaign)) {
+        if (campaignHasViberVideoMedia(campaign) && !isViberVideoType233Layout(campaign)) {
             const d = campaign.viberVideoDuration;
             const sz = campaign.viberFileSize;
             if (typeof d !== "number" || !Number.isFinite(d) || d < 1) {
