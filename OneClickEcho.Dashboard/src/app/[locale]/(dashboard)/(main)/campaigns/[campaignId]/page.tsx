@@ -32,7 +32,7 @@ import { useToast } from "@/lib/useToast";
 import { isOutOfWorkingHours, validateCampaignChannels } from "@/lib/utils";
 import { migrateLegacyViberHtmlToMarkdown } from "@/lib/viberTextFormat";
 
-import { CampaignSendingType, CampaignStatus } from "@/lib/enums";
+import { CampaignSendingType, CampaignStatus, CampaignViberContentKind } from "@/lib/enums";
 
 // ✅ Match what <Badge variant> actually accepts (from TS error message)
 type BadgeVariant = "default" | "success" | "warning" | "error" | "neutral";
@@ -57,7 +57,8 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
         isSms: false,
         sendingType: CampaignSendingType.Immediate,
         // Viber "Validity" = delivery retry window (seconds), not max video length. 86400 = 24h (matches API default).
-        viberValidity: 86400
+        viberValidity: 86400,
+        viberContentKind: CampaignViberContentKind.Text
     });
 
     const [currentTab, setCurrentTab] = useState<string>("tab1");
@@ -211,7 +212,13 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
     const saveCampaign = async () => {
         try {
             await updateCampaign(campaign, authFetch);
-            await refetch();
+            const { data } = await refetch();
+            if (data) {
+                setCampaign({
+                    ...data,
+                    viberMessage: migrateLegacyViberHtmlToMarkdown(data.viberMessage)
+                });
+            }
         } catch (e) {
             console.error(e);
         }

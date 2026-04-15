@@ -5,17 +5,23 @@
         OneWayTextOnly = 106,
         OneWayTextImageButton = 108,
         OneWayTextButton = 109,
+        /// <summary>Comtrade <b>231</b>: video URL in <c>ButtonUrl</c>, <c>MessageText</c>, <c>Thumbnail</c>, <c>Duration</c>, <c>FileSize</c>.</summary>
         OneWayVideoText = 231,
+        /// <summary>Comtrade <b>232</b>: video URL in <c>ButtonUrl</c>, <c>MessageText</c>, <c>ButtonCaption</c>, <c>Thumbnail</c>, <c>Duration</c>, <c>FileSize</c>.</summary>
         OneWayVideoTextButton = 232,
-        /// <summary>Video + text + action button: video in <c>MediaUrl</c>, action link in <c>ButtonUrl</c>.</summary>
+        /// <summary>Comtrade <b>233</b>: video in <c>MediaUrl</c>, action in <c>ButtonUrl</c>, <c>MessageText</c>, <c>ButtonCaption</c>, <c>Thumbnail</c>.</summary>
         OneWayVideoTextActionButton = 233,
 
         // You always need text
         OneWayImageOnly = 107,
+        /// <summary>Comtrade <b>230</b>: video-only — <c>ButtonUrl</c> = video, <c>Thumbnail</c>, <c>Duration</c>, <c>FileSize</c> (no <c>MessageText</c>).</summary>
         OneWayVideo = 230,
 
-        // We dont handle files
+        /// <summary>File only (Comtrade 220): <c>ButtonUrl</c> = file URL, <c>FileType</c>, <c>NameOfFile</c>.</summary>
         OneWayFile = 220,
+
+        /// <summary>Survey / list (Comtrade 801).</summary>
+        OneWaySurveyList = 801,
 
         // We dont handle two way connection
         TwoWayTextOnly = 206,

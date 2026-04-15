@@ -128,6 +128,12 @@ public sealed class Campaign : AggregateRoot<CampaignId>
     public string? ViberVideoThumbnail { get; set; }
 
     public int? ViberVideoDuration { get; set; }
+
+    /// <summary>Explicit Viber layout; when <see cref="CampaignViberContentKind.Text"/> and <see cref="ViberMedia"/> is set, sending infers image/video/file from media.</summary>
+    public CampaignViberContentKind ViberContentKind { get; set; }
+
+    /// <summary>JSON array of 2–5 strings (Comtrade survey options), used when <see cref="ViberContentKind"/> is <see cref="CampaignViberContentKind.Survey"/>.</summary>
+    public string? ViberSurveyOptionsJson { get; set; }
     
     public int? ViberValidity { get; set; }
 

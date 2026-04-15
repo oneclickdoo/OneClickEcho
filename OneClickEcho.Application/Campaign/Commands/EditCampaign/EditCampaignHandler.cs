@@ -41,6 +41,8 @@ public class EditCampaignHandler(ICampaignRepository campaignRepository, IUnitOf
         campaign.ViberFileSize = request.ViberFileSize;
         campaign.ViberVideoDuration = request.ViberVideoDuration;
         campaign.ViberValidity = request.ViberValidity;
+        campaign.ViberContentKind = request.ViberContentKind;
+        campaign.ViberSurveyOptionsJson = request.ViberSurveyOptionsJson;
         campaign.SmsSender = request.SmsSender;
         campaign.SmsMessage = request.SmsMessage;
         campaign.SendingType = request.SendingType;

@@ -59,6 +59,15 @@ export enum CampaignMediaType {
     Video = 2
 }
 
+/** Matches backend <c>CampaignViberContentKind</c>. */
+export enum CampaignViberContentKind {
+    Text = 0,
+    Image = 1,
+    Video = 2,
+    File = 3,
+    Survey = 4
+}
+
 export enum LeadGender {
     Male = 1,
     Female = 2

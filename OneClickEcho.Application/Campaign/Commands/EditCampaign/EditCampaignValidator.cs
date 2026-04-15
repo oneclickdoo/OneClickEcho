@@ -73,6 +73,31 @@ public sealed class EditCampaignValidator : AbstractValidator<EditCampaignComman
             .IsInEnum()
             .WithMessage("SendingType is invalid.");
 
+        RuleFor(x => x.ViberContentKind)
+            .IsInEnum()
+            .When(x => x.IsViber)
+            .WithMessage("ViberContentKind is invalid.");
+
+        When(x => x.IsViber && x.ViberContentKind == CampaignViberContentKind.Survey, () =>
+        {
+            RuleFor(x => x.ViberSurveyOptionsJson)
+                .NotEmpty()
+                .WithMessage("Survey options are required for survey campaigns.")
+                .Must(json =>
+                {
+                    try
+                    {
+                        ViberSurveyOptionsHelper.ParseRequired(json);
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                })
+                .WithMessage("Survey options must be valid JSON with 2–5 non-empty options (max 50 characters each).");
+        });
+
         RuleFor(x => x.SendingDatetime)
             .NotEmpty()
             .WithMessage("SendingDatetime is required.")

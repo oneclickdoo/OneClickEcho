@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.Extensions.Options;
 using OneClickEcho.Application.Common.Helpers;
 using OneClickEcho.Application.Common.Services;
@@ -34,6 +35,28 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
         private static string? ResolvePublicMediaUrlOrNull(string uploadsBase, string? media) =>
             string.IsNullOrEmpty(media) ? null : ResolvePublicMediaUrl(uploadsBase, media);
 
+        private static string FileNameFromStoredMedia(string stored)
+        {
+            string name = stored.Trim();
+            if (name.Contains("://", StringComparison.Ordinal))
+            {
+                try
+                {
+                    name = Path.GetFileName(new Uri(name, UriKind.Absolute).AbsolutePath);
+                }
+                catch (UriFormatException)
+                {
+                    name = Path.GetFileName(name);
+                }
+            }
+            else
+            {
+                name = Path.GetFileName(name);
+            }
+
+            return string.IsNullOrEmpty(name) ? "file" : name;
+        }
+
         public static async Task SendViberMessagesToTestPhoneNumbers(
             Campaign campaign,
             TestMessage testMessage,
@@ -67,23 +90,35 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
             if (campaign.ViberMedia is not null)
             {
-                // get campaign media type
-                CampaignMediaType? mediaType = MediaHelper.GetMediaType(campaign.ViberMedia);
-
-                if (mediaType == CampaignMediaType.Image)
+                if (MediaHelper.TryGetViberDocumentFileType(campaign.ViberMedia, out _))
                 {
-                    imageUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                    // Comtrade 220: file URL only in payload — no Thumbnail in official sample.
                 }
                 else
                 {
-                    videoUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
-                    videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
-                    duration = campaign.ViberVideoDuration;
-                    fileSize = campaign.ViberFileSize;
+                    CampaignMediaType? mediaType = MediaHelper.GetMediaType(campaign.ViberMedia);
+
+                    if (mediaType == CampaignMediaType.Image)
+                    {
+                        imageUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                    }
+                    else
+                    {
+                        videoUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                        videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
+                        duration = campaign.ViberVideoDuration;
+                        fileSize = campaign.ViberFileSize;
+                    }
                 }
             }
 
             ViberSendMessageType messageType = ViberService.DetermineMessageType(campaign);
+
+            List<string>? testSurveyOptions = null;
+            if (messageType == ViberSendMessageType.OneWaySurveyList)
+            {
+                testSurveyOptions = ViberSurveyOptionsHelper.ParseRequired(campaign.ViberSurveyOptionsJson);
+            }
 
             string? testViberText = string.IsNullOrWhiteSpace(campaign.ViberMessage)
                 ? null
@@ -102,6 +137,62 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                     switch (messageType)
                     {
+                        case ViberSendMessageType.OneWaySurveyList:
+                            viberMessage = new()
+                            {
+                                MessageText = testViberText!,
+                                Survey = new ViberSurveyPayload { Options = testSurveyOptions! },
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = testPhoneNumber,
+                                MessageId = testMessage.ViberId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "no tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayFile:
+                        {
+                            if (string.IsNullOrEmpty(campaign.ViberMedia) ||
+                                !MediaHelper.TryGetViberDocumentFileType(campaign.ViberMedia, out string docFt))
+                            {
+                                throw new InvalidOperationException(
+                                    "Viber file campaign requires a document URL or filename with an allowed extension.");
+                            }
+
+                            string fileUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                            string docName = FileNameFromStoredMedia(campaign.ViberMedia);
+                            viberMessage = new()
+                            {
+                                Display = campaign.ViberSender!,
+                                FileType = docFt,
+                                ButtonUrl = fileUrl,
+                                NameOfFile = docName,
+                                MSISDN = testPhoneNumber,
+                                MessageId = testMessage.ViberId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity,
+                                Label = "promotion"
+                            };
+                            break;
+                        }
+                        case ViberSendMessageType.OneWayImageOnly:
+                            viberMessage = new()
+                            {
+                                ImageUrl = imageUrl,
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = testPhoneNumber,
+                                MessageId = testMessage.ViberId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
                         case ViberSendMessageType.OneWayTextOnly:
                             viberMessage = new()
                             {
@@ -293,19 +384,25 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
             if (campaign.ViberMedia is not null)
             {
-                // get campaign media type
-                CampaignMediaType? mediaType = MediaHelper.GetMediaType(campaign.ViberMedia);
-
-                if (mediaType == CampaignMediaType.Image)
+                if (MediaHelper.TryGetViberDocumentFileType(campaign.ViberMedia, out _))
                 {
-                    imageUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                    // Comtrade 220: file URL only — no Thumbnail in official sample.
                 }
                 else
                 {
-                    videoUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
-                    videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
-                    duration = campaign.ViberVideoDuration;
-                    fileSize = campaign.ViberFileSize;
+                    CampaignMediaType? mediaType = MediaHelper.GetMediaType(campaign.ViberMedia);
+
+                    if (mediaType == CampaignMediaType.Image)
+                    {
+                        imageUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                    }
+                    else
+                    {
+                        videoUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                        videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, campaign.ViberVideoThumbnail);
+                        duration = campaign.ViberVideoDuration;
+                        fileSize = campaign.ViberFileSize;
+                    }
                 }
             }
 
@@ -320,6 +417,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     Console.WriteLine(
                         $"{DateTime.UtcNow:O} Viber video campaign {campaign.Id.Value}: missing ViberVideoDuration and/or ViberFileSize for message type {(int)messageType} — set both in campaign.");
                 }
+            }
+
+            List<string>? surveyOptionsList = null;
+            if (messageType == ViberSendMessageType.OneWaySurveyList)
+            {
+                surveyOptionsList = ViberSurveyOptionsHelper.ParseRequired(campaign.ViberSurveyOptionsJson);
             }
 
             // Split leads into batches
@@ -389,6 +492,62 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                     switch (messageType)
                     {
+                        case ViberSendMessageType.OneWaySurveyList:
+                            viberMessage = new()
+                            {
+                                MessageText = personalizedMarkdown!,
+                                Survey = new ViberSurveyPayload { Options = surveyOptionsList! },
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = lead.PhoneNumber,
+                                MessageId = campaignLead.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "no tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayFile:
+                        {
+                            if (string.IsNullOrEmpty(campaign.ViberMedia) ||
+                                !MediaHelper.TryGetViberDocumentFileType(campaign.ViberMedia, out string docFt))
+                            {
+                                throw new InvalidOperationException(
+                                    "Viber file campaign requires a document URL or filename with an allowed extension.");
+                            }
+
+                            string fileUrl = ResolvePublicMediaUrl(uploadsBase, campaign.ViberMedia);
+                            string docName = FileNameFromStoredMedia(campaign.ViberMedia);
+                            viberMessage = new()
+                            {
+                                Display = campaign.ViberSender!,
+                                FileType = docFt,
+                                ButtonUrl = fileUrl,
+                                NameOfFile = docName,
+                                MSISDN = lead.PhoneNumber,
+                                MessageId = campaignLead.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity,
+                                Label = "promotion"
+                            };
+                            break;
+                        }
+                        case ViberSendMessageType.OneWayImageOnly:
+                            viberMessage = new()
+                            {
+                                ImageUrl = imageUrl,
+                                Display = campaign.ViberSender!,
+                                Label = "promotion",
+                                MSISDN = lead.PhoneNumber,
+                                MessageId = campaignLead.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
                         case ViberSendMessageType.OneWayTextOnly:
                             viberMessage = new()
                             {

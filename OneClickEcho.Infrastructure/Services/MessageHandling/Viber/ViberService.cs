@@ -4,11 +4,13 @@ using OneClickEcho.Application.Common.Services.ViberService.Request;
 using OneClickEcho.Application.Common.Services.ViberService.Request.Enum;
 using OneClickEcho.Application.Common.Services.ViberService.Response;
 using OneClickEcho.Domain.CampaignAggregate;
+using OneClickEcho.Domain.CampaignAggregate.Enums;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using OneClickEcho.Domain.ApiMessageAggregate;
 using Polly;
+using System.IO;
 
 namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 {
@@ -175,98 +177,171 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
         public static ViberSendMessageType DetermineMessageType(Campaign campaign)
         {
-            // TODO: Ukoliko se ne koristi two way, obrisati ceo ovaj komentar
-            // // two-way
-            // if (campaign.IsViberReceivable)
-            // {
-            //     if (string.IsNullOrEmpty(campaign.ViberMedia) && string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            //     {
-            //         return ViberSendMessageType.TwoWayTextOnly;
-            //     }
-            //
-            //     if (string.IsNullOrEmpty(campaign.ViberMedia) && !string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            //     {
-            //         return ViberSendMessageType.TwoWayTextButton;
-            //     }
-            //
-            //     if (!string.IsNullOrEmpty(campaign.ViberMedia) && !string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            //     {
-            //         return MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Image
-            //             ? ViberSendMessageType.TwoWayTextImageButton
-            //             : ViberSendMessageType.TwoWayTextVideoButton;
-            //     }
-            //
-            //     // default
-            //     return ViberSendMessageType.TwoWayTextOnly;
-            // }
-            // // one-way
-            // else
-            // {
-            //     if (string.IsNullOrEmpty(campaign.ViberMedia) && string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            //     {
-            //         return ViberSendMessageType.OneWayTextOnly;
-            //     }
-            //
-            //     if (string.IsNullOrEmpty(campaign.ViberMedia) && !string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            //     {
-            //         return ViberSendMessageType.OneWayTextButton;
-            //     }
-            //
-            //     if (!string.IsNullOrEmpty(campaign.ViberMedia) && MediaHelper.GetMediaType(campaign.ViberMedia)
-            //         == CampaignMediaType.Video && string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            //     {
-            //         return ViberSendMessageType.OneWayVideoText;
-            //     }
-            //
-            //     if (!string.IsNullOrEmpty(campaign.ViberMedia) && !string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            //     {
-            //         return MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Image
-            //             ? ViberSendMessageType.OneWayTextImageButton
-            //             : ViberSendMessageType.OneWayVideoTextButton;
-            //     }
-            //
-            //     // default
-            //     return ViberSendMessageType.OneWayTextOnly;
-            // }
+            CampaignViberContentKind kind = campaign.ViberContentKind;
+            if (kind == CampaignViberContentKind.Text && !string.IsNullOrWhiteSpace(campaign.ViberSurveyOptionsJson))
+            {
+                kind = CampaignViberContentKind.Survey;
+            }
 
-            // Text only
+            if (kind == CampaignViberContentKind.Text && !string.IsNullOrEmpty(campaign.ViberMedia))
+            {
+                kind = InferLegacyContentKindFromMedia(campaign.ViberMedia);
+            }
+
+            return kind switch
+            {
+                CampaignViberContentKind.Survey => ViberSendMessageType.OneWaySurveyList,
+                CampaignViberContentKind.File => ViberSendMessageType.OneWayFile,
+                CampaignViberContentKind.Image => string.IsNullOrWhiteSpace(campaign.ViberButtonUrl)
+                    ? ViberSendMessageType.OneWayImageOnly
+                    : ViberSendMessageType.OneWayTextImageButton,
+                CampaignViberContentKind.Video => DetermineVideoMessageType(campaign),
+                _ => DetermineTextOnlyMessageType(campaign)
+            };
+        }
+
+        private static CampaignViberContentKind InferLegacyContentKindFromMedia(string media)
+        {
+            try
+            {
+                return MediaHelper.GetMediaType(media) == CampaignMediaType.Image
+                    ? CampaignViberContentKind.Image
+                    : CampaignViberContentKind.Video;
+            }
+            catch (Exception)
+            {
+                return MediaHelper.TryGetViberDocumentFileType(media, out _)
+                    ? CampaignViberContentKind.File
+                    : CampaignViberContentKind.Text;
+            }
+        }
+
+        /// <summary>
+        /// Comtrade 230–233: 230–232 carry the video URL in <c>ButtonUrl</c>; 233 carries video in <c>MediaUrl</c> and the action in <c>ButtonUrl</c>.
+        /// Use <see cref="VideoButtonUrlMatchesMedia"/> so a duplicate/pasted video link does not force type 233.
+        /// </summary>
+        public static ViberSendMessageType DetermineVideoOutboundType(
+            string? viberMedia,
+            string? messageText,
+            string? viberButtonUrl,
+            string? viberButtonUrlTitle)
+        {
+            if (string.IsNullOrEmpty(viberMedia))
+            {
+                return ViberSendMessageType.OneWayTextOnly;
+            }
+
+            try
+            {
+                if (MediaHelper.GetMediaType(viberMedia) != CampaignMediaType.Video)
+                {
+                    return ViberSendMessageType.OneWayTextOnly;
+                }
+            }
+            catch (Exception)
+            {
+                return ViberSendMessageType.OneWayTextOnly;
+            }
+
+            bool hasMsg = !string.IsNullOrWhiteSpace(messageText);
+            bool hasCaption = !string.IsNullOrWhiteSpace(viberButtonUrlTitle);
+            bool hasBtnUrl = !string.IsNullOrWhiteSpace(viberButtonUrl);
+
+            if (!hasMsg)
+            {
+                return ViberSendMessageType.OneWayVideo;
+            }
+
+            if (!hasCaption)
+            {
+                if (!hasBtnUrl)
+                {
+                    return ViberSendMessageType.OneWayVideoText;
+                }
+
+                return VideoButtonUrlMatchesMedia(viberMedia, viberButtonUrl)
+                    ? ViberSendMessageType.OneWayVideoText
+                    : ViberSendMessageType.OneWayVideoTextActionButton;
+            }
+
+            if (!hasBtnUrl || VideoButtonUrlMatchesMedia(viberMedia, viberButtonUrl))
+            {
+                return ViberSendMessageType.OneWayVideoTextButton;
+            }
+
+            return ViberSendMessageType.OneWayVideoTextActionButton;
+        }
+
+        /// <summary>True if <paramref name="viberButtonUrl"/> refers to the same video asset as <paramref name="viberMedia"/> (equality or same file name in path/URL).</summary>
+        public static bool VideoButtonUrlMatchesMedia(string? viberMedia, string? viberButtonUrl)
+        {
+            if (string.IsNullOrWhiteSpace(viberButtonUrl) || string.IsNullOrWhiteSpace(viberMedia))
+            {
+                return false;
+            }
+
+            string m = viberMedia.Trim();
+            string b = viberButtonUrl.Trim();
+
+            if (string.Equals(m, b, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            string fileNameFromRef(string s)
+            {
+                if (s.Contains("://", StringComparison.Ordinal))
+                {
+                    try
+                    {
+                        var u = new Uri(s, UriKind.Absolute);
+                        return Path.GetFileName(u.AbsolutePath);
+                    }
+                    catch (UriFormatException)
+                    {
+                        int q = s.IndexOf('?', StringComparison.Ordinal);
+                        if (q >= 0)
+                        {
+                            s = s[..q];
+                        }
+
+                        return Path.GetFileName(s.Replace('\\', '/'));
+                    }
+                }
+
+                int q2 = s.IndexOf('?', StringComparison.Ordinal);
+                if (q2 >= 0)
+                {
+                    s = s[..q2];
+                }
+
+                return Path.GetFileName(s.Replace('\\', '/'));
+            }
+
+            string fm = fileNameFromRef(m);
+            string fb = fileNameFromRef(b);
+            return fm.Length > 0 && fb.Length > 0 && string.Equals(fm, fb, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static ViberSendMessageType DetermineVideoMessageType(Campaign campaign) =>
+            DetermineVideoOutboundType(
+                campaign.ViberMedia,
+                campaign.ViberMessage,
+                campaign.ViberButtonUrl,
+                campaign.ViberButtonUrlTitle);
+
+        private static ViberSendMessageType DetermineTextOnlyMessageType(Campaign campaign)
+        {
             if (string.IsNullOrEmpty(campaign.ViberMedia) && string.IsNullOrEmpty(campaign.ViberButtonUrl))
             {
                 return ViberSendMessageType.OneWayTextOnly;
             }
 
-            // Text with button
             if (string.IsNullOrEmpty(campaign.ViberMedia) && !string.IsNullOrEmpty(campaign.ViberButtonUrl))
             {
                 return ViberSendMessageType.OneWayTextButton;
             }
 
-            // Video without button: 230 = video only (promo), 231 = video + text
-            if (!string.IsNullOrEmpty(campaign.ViberMedia) && string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            {
-                if (MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Video)
-                {
-                    return string.IsNullOrWhiteSpace(campaign.ViberMessage)
-                        ? ViberSendMessageType.OneWayVideo
-                        : ViberSendMessageType.OneWayVideoText;
-                }
-            }
-
-            // Video or Image with text and button
-            if (!string.IsNullOrEmpty(campaign.ViberMedia) && !string.IsNullOrEmpty(campaign.ViberButtonUrl))
-            {
-                if (MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Video)
-                {
-                    return ViberSendMessageType.OneWayVideoTextActionButton;
-                }
-
-                if (MediaHelper.GetMediaType(campaign.ViberMedia) == CampaignMediaType.Image)
-                {
-                    return ViberSendMessageType.OneWayTextImageButton;
-                }
-            }
-
-            // Text only
             return ViberSendMessageType.OneWayTextOnly;
         }
         
@@ -284,32 +359,33 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 return ViberSendMessageType.OneWayTextButton;
             }
 
-            // Video with text
-            if (!string.IsNullOrEmpty(apiMessage.ViberMedia) && string.IsNullOrEmpty(apiMessage.ViberButtonUrl))
+            if (!string.IsNullOrEmpty(apiMessage.ViberMedia))
             {
-                if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Video)
+                ViberSendMessageType videoType = DetermineVideoOutboundType(
+                    apiMessage.ViberMedia,
+                    apiMessage.Message,
+                    apiMessage.ViberButtonUrl,
+                    apiMessage.ViberButtonUrlTitle);
+
+                if (videoType != ViberSendMessageType.OneWayTextOnly)
                 {
-                    return string.IsNullOrWhiteSpace(apiMessage.Message)
-                        ? ViberSendMessageType.OneWayVideo
-                        : ViberSendMessageType.OneWayVideoText;
+                    return videoType;
+                }
+
+                try
+                {
+                    if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Image
+                        && !string.IsNullOrEmpty(apiMessage.ViberButtonUrl))
+                    {
+                        return ViberSendMessageType.OneWayTextImageButton;
+                    }
+                }
+                catch (Exception)
+                {
+                    // fall through
                 }
             }
 
-            // Video or Image with text and button
-            if (!string.IsNullOrEmpty(apiMessage.ViberMedia) && !string.IsNullOrEmpty(apiMessage.ViberButtonUrl))
-            {
-                if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Video)
-                {
-                    return ViberSendMessageType.OneWayVideoTextActionButton;
-                }
-
-                if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Image)
-                {
-                    return ViberSendMessageType.OneWayTextImageButton;
-                }
-            }
-
-            // Text only
             return ViberSendMessageType.OneWayTextOnly;
         }
     }

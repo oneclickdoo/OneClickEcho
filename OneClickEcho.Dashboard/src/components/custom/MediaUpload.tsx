@@ -27,6 +27,8 @@ interface IMediaUploadProps {
     setFile: Function;
     setDuration?: Function;
     imageOnly: boolean;
+    /** Comtrade type 220 documents (pdf, office…). */
+    documentsOnly?: boolean;
     disabled?: boolean;
     handleChange?: Function;
     /** When `file` is a server path (string), show size/duration from campaign. */
@@ -81,18 +83,34 @@ export const MediaUpload = (props: IMediaUploadProps) => {
     const [mediaType, setMediaType] = useState<CampaignMediaType>(CampaignMediaType.Image);
     const [detectedDurationSec, setDetectedDurationSec] = useState<number | null>(null);
 
+    const docAccept = {
+        "application/pdf": [".pdf"],
+        "application/msword": [".doc"],
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+        "application/rtf": [".rtf"],
+        "text/plain": [".txt"],
+        "application/vnd.ms-excel": [".xls"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+        "text/csv": [".csv"]
+    };
+
     const { getRootProps, getInputProps } = useDropzone({
         disabled: props.disabled,
-        accept: {
-            "image/jpeg": [".jpg", ".jpeg"],
-            "image/png": [".png"],
-            "video/mp4": [".mp4"]
-        },
+        accept: props.documentsOnly
+            ? docAccept
+            : {
+                  "image/jpeg": [".jpg", ".jpeg"],
+                  "image/png": [".png"],
+                  "video/mp4": [".mp4"]
+              },
+        maxSize: props.documentsOnly ? 200 * 1024 * 1024 : undefined,
         multiple: false,
         onDrop: (acceptedFiles: FileWithPath[]) => {
             const file = acceptedFiles[0];
 
-            if (file.type.startsWith("video/")) {
+            if (props.documentsOnly) {
+                setMediaType(CampaignMediaType.Image);
+            } else if (file.type.startsWith("video/")) {
                 setMediaType(CampaignMediaType.Video);
             }
 
@@ -127,7 +145,7 @@ export const MediaUpload = (props: IMediaUploadProps) => {
         };
     }, [props.file]);
 
-    const showVideoMeta = !props.imageOnly && isVideoMedia(props.file);
+    const showVideoMeta = !props.imageOnly && !props.documentsOnly && isVideoMedia(props.file);
     let fileSizeLabel: string | null = null;
     let durationLabel: string | null = null;
 
@@ -144,7 +162,11 @@ export const MediaUpload = (props: IMediaUploadProps) => {
         }
     }
 
-    const dropzoneText = props.imageOnly ? t("dropzoneImage") : t("dropzoneMedia");
+    const dropzoneText = props.documentsOnly
+        ? t("dropzoneDocuments")
+        : props.imageOnly
+          ? t("dropzoneImage")
+          : t("dropzoneMedia");
 
     return (
         <Card className="mt-1">
@@ -153,7 +175,14 @@ export const MediaUpload = (props: IMediaUploadProps) => {
                     <div className="flex items-center gap-x-3">
                         <div className="flex justify-center w-[200px] h-[200px] p-1 box-border border border-gray-200 rounded-md dark:border-gray-700">
                             <div className="flex min-w-0 overflow-hidden">
-                                {mediaType === CampaignMediaType.Image ? (
+                                {props.documentsOnly ? (
+                                    <div className="flex flex-col items-center justify-center gap-2 p-3 text-center text-sm text-gray-700 dark:text-gray-200">
+                                        <span className="font-medium">{t("documentLabel")}</span>
+                                        <span className="break-all text-xs opacity-80">
+                                            {props.file instanceof File ? props.file.name : props.file}
+                                        </span>
+                                    </div>
+                                ) : mediaType === CampaignMediaType.Image ? (
                                     <img
                                         src={
                                             props.file instanceof File

@@ -293,9 +293,67 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 throw new Exception($"Campaign [{campaign.Id.Value}] - Viber sender is not defined.");
             }
 
-            if (CampaignHasViberVideo(campaign))
+            ViberSendMessageType outboundType = ViberService.DetermineMessageType(campaign);
+
+            if (outboundType == ViberSendMessageType.OneWaySurveyList)
             {
-                // Comtrade 233 (video + text + action): official sample has no Duration/FileSize — do not require them.
+                ViberSurveyOptionsHelper.ParseRequired(campaign.ViberSurveyOptionsJson);
+                if (string.IsNullOrWhiteSpace(campaign.ViberMessage))
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber survey requires intro message text (MessageText).");
+                }
+
+                if (!campaign.IsViberReceivable)
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Survey campaigns require „Enable responses” (two-way / receivable).");
+                }
+            }
+            else if (outboundType == ViberSendMessageType.OneWayFile)
+            {
+                if (string.IsNullOrEmpty(campaign.ViberMedia) ||
+                    !MediaHelper.TryGetViberDocumentFileType(campaign.ViberMedia, out _))
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber file message requires an uploaded or URL document with an allowed extension.");
+                }
+            }
+            else if (outboundType is ViberSendMessageType.OneWayVideo
+                     or ViberSendMessageType.OneWayVideoText
+                     or ViberSendMessageType.OneWayVideoTextButton
+                     or ViberSendMessageType.OneWayVideoTextActionButton)
+            {
+                if (string.IsNullOrEmpty(campaign.ViberVideoThumbnail))
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber video requires a thumbnail image URL or upload.");
+                }
+
+                if (outboundType != ViberSendMessageType.OneWayVideoTextActionButton)
+                {
+                    if (campaign.ViberFileSize is null || campaign.ViberVideoDuration is null)
+                    {
+                        throw new Exception(
+                            $"Campaign [{campaign.Id.Value}] - Viber video (types 230–232) requires file size and duration (save messaging after setting hosted video metadata).");
+                    }
+
+                    int d = campaign.ViberVideoDuration.Value;
+                    if (d < 1 || d > ViberVideoConstraints.MaxDurationSeconds)
+                    {
+                        throw new Exception(
+                            $"Campaign [{campaign.Id.Value}] - Viber video duration must be 1–{ViberVideoConstraints.MaxDurationSeconds} seconds. Current: {d} s.");
+                    }
+                }
+            }
+            else if (CampaignHasViberVideo(campaign))
+            {
+                if (string.IsNullOrEmpty(campaign.ViberVideoThumbnail))
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber video requires a thumbnail image URL or upload.");
+                }
+
                 ViberSendMessageType viberMessageType = ViberService.DetermineMessageType(campaign);
                 if (viberMessageType != ViberSendMessageType.OneWayVideoTextActionButton)
                 {
@@ -317,6 +375,13 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 {
                     throw new Exception(
                         $"Campaign [{campaign.Id.Value}] - Viber video-only (promotional, message type 230) requires a thumbnail image.");
+                }
+            }
+            else if (outboundType == ViberSendMessageType.OneWayImageOnly)
+            {
+                if (string.IsNullOrEmpty(campaign.ViberMedia))
+                {
+                    throw new Exception($"Campaign [{campaign.Id.Value}] - Viber image message requires image media.");
                 }
             }
             else if (string.IsNullOrWhiteSpace(campaign.ViberMessage))

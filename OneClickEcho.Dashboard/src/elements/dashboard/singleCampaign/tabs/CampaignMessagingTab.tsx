@@ -27,10 +27,17 @@ import { type CampaignDto, updateCampaign, uploadCampaignViberMedia } from "@/el
 import { getCampaignSendingTypeOptions } from "@/lib/selects";
 import { useToast } from "@/lib/useToast";
 import { publicUploadFileUrl } from "@/lib/publicMediaUrl";
-import { filterPassedTime, getMediaType, isOutOfWorkingHours } from "@/lib/utils";
+import { filterPassedTime, getMediaType, isOutOfWorkingHours, tryGetViberDocumentFileTypeFromPath } from "@/lib/utils";
 import { migrateLegacyViberHtmlToMarkdown, viberMarkdownToPreviewHtml } from "@/lib/viberTextFormat";
 
-import { CampaignMediaType, CampaignSendingType, CampaignStatus, convertStringToEnum, SenderType } from "@/lib/enums";
+import {
+    CampaignMediaType,
+    CampaignSendingType,
+    CampaignStatus,
+    CampaignViberContentKind,
+    convertStringToEnum,
+    SenderType
+} from "@/lib/enums";
 import {
     Dialog,
     DialogClose,
@@ -62,6 +69,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
     const [companyMedia, setCompanyMedia] = useState<string[]>([]);
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [externalMediaUrlInput, setExternalMediaUrlInput] = useState("");
+    const [surveyOptionDrafts, setSurveyOptionDrafts] = useState<string[]>(["", "", "", "", ""]);
 
     const viberMessageInputRef = useRef<HTMLTextAreaElement>(null);
     const smsMessageInputRef = useRef<HTMLTextAreaElement>(null);
@@ -118,6 +126,115 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
         }
 
         setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const viberContentKind = formData.viberContentKind ?? CampaignViberContentKind.Text;
+
+    const showRichMediaBlock =
+        !!formData.isViber &&
+        !(formData.isTransactional as boolean) &&
+        (viberContentKind === CampaignViberContentKind.Image ||
+            viberContentKind === CampaignViberContentKind.Video ||
+            viberContentKind === CampaignViberContentKind.File);
+
+    const showSurveyBlock =
+        !!formData.isViber &&
+        !(formData.isTransactional as boolean) &&
+        viberContentKind === CampaignViberContentKind.Survey;
+
+    const setSurveyDraftAt = (index: number, value: string) => {
+        setSurveyOptionDrafts((prev) => {
+            const next = [...prev];
+            next[index] = value;
+            const opts = next.map((s) => s.trim()).filter((s) => s.length > 0);
+            const json = opts.length >= 2 ? JSON.stringify(opts) : null;
+            queueMicrotask(() => handleChange("viberSurveyOptionsJson" as any, json as any));
+            return next;
+        });
+    };
+
+    useEffect(() => {
+        const k = formData.viberContentKind ?? CampaignViberContentKind.Text;
+        if (k !== CampaignViberContentKind.Text) {
+            return;
+        }
+        const m = typeof formData.viberMedia === "string" ? formData.viberMedia.trim() : "";
+        if (!m) {
+            return;
+        }
+        if (tryGetViberDocumentFileTypeFromPath(m)) {
+            handleChange("viberContentKind", CampaignViberContentKind.File as any);
+            return;
+        }
+        try {
+            const mt = getMediaType(m);
+            handleChange(
+                "viberContentKind",
+                (mt === CampaignMediaType.Image ? CampaignViberContentKind.Image : CampaignViberContentKind.Video) as any
+            );
+        } catch {
+            /* ignore */
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- infer legacy campaigns saved before ViberContentKind existed
+    }, [formData.campaignId, formData.viberMedia, formData.viberContentKind]);
+
+    useEffect(() => {
+        if (viberContentKind !== CampaignViberContentKind.Survey) {
+            return;
+        }
+        const raw = formData.viberSurveyOptionsJson;
+        if (!raw?.trim()) {
+            return;
+        }
+        try {
+            const arr = JSON.parse(raw) as unknown;
+            if (!Array.isArray(arr)) {
+                return;
+            }
+            const next = ["", "", "", "", ""];
+            for (let i = 0; i < Math.min(5, arr.length); i++) {
+                next[i] = typeof arr[i] === "string" ? arr[i] : "";
+            }
+            setSurveyOptionDrafts((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+        } catch {
+            /* ignore */
+        }
+    }, [formData.campaignId, formData.viberSurveyOptionsJson, viberContentKind]);
+
+    const onViberContentKindChange = (value: string) => {
+        const kind = Number(value) as CampaignViberContentKind;
+        const prev = formData.viberContentKind ?? CampaignViberContentKind.Text;
+        if (kind === prev) {
+            return;
+        }
+
+        handleChange("viberContentKind", kind as any);
+
+        const clearMedia = () => {
+            setMedia(null);
+            setThumbnail(null);
+            setDuration(undefined);
+            handleChange("viberMedia" as any, null as any);
+            handleChange("viberVideoThumbnail" as any, null as any);
+            handleChange("viberVideoDuration" as any, null as any);
+            handleChange("viberFileSize" as any, null as any);
+        };
+
+        const clearSurvey = () => {
+            handleChange("viberSurveyOptionsJson" as any, null as any);
+            setSurveyOptionDrafts(["", "", "", "", ""]);
+        };
+
+        if (kind === CampaignViberContentKind.Survey) {
+            clearMedia();
+            handleChange("isViberReceivable", true as any);
+        } else if (kind === CampaignViberContentKind.Text) {
+            clearMedia();
+            clearSurvey();
+        } else {
+            clearSurvey();
+            clearMedia();
+        }
     };
 
     const viberStickers = ["😀", "🔥", "🎉", "❤️", "👍", "👏", "📩", "⭐", "✅", "💥"];
@@ -209,8 +326,44 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
             });
             return;
         }
+        const kind = formData.viberContentKind ?? CampaignViberContentKind.Text;
+        if (kind === CampaignViberContentKind.File) {
+            if (!tryGetViberDocumentFileTypeFromPath(raw)) {
+                toast({
+                    variant: "error",
+                    title: tCommon("error"),
+                    description: t("toasts.invalidDocumentUrl"),
+                    duration: 8000
+                });
+                return;
+            }
+            setMedia(raw);
+            handleChange("viberMedia" as any, raw as any);
+            handleChange("viberVideoDuration" as any, null as any);
+            handleChange("viberFileSize" as any, null as any);
+            setExternalMediaUrlInput("");
+            return;
+        }
         try {
             const tMedia = getMediaType(raw);
+            if (kind === CampaignViberContentKind.Image && tMedia !== CampaignMediaType.Image) {
+                toast({
+                    variant: "error",
+                    title: tCommon("error"),
+                    description: t("toasts.invalidImageUrl"),
+                    duration: 6000
+                });
+                return;
+            }
+            if (kind === CampaignViberContentKind.Video && tMedia !== CampaignMediaType.Video) {
+                toast({
+                    variant: "error",
+                    title: tCommon("error"),
+                    description: t("toasts.invalidVideoUrl"),
+                    duration: 6000
+                });
+                return;
+            }
             setMedia(raw);
             handleChange("viberMedia" as any, raw as any);
             if (tMedia === CampaignMediaType.Video) {
@@ -243,7 +396,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                     });
                     return;
                 }
-                if (duration > 900) {
+                if (duration > 600) {
                     toast({
                         variant: "error",
                         title: tCommon("error"),
@@ -266,7 +419,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                     });
                     return;
                 }
-                if (d < 1 || d > 900) {
+                if (d < 1 || d > 600) {
                     toast({
                         variant: "error",
                         title: tCommon("error"),
@@ -324,6 +477,11 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
     };
 
     const checkIsThumbnailVisible = (): boolean => {
+        const kind = formData.viberContentKind ?? CampaignViberContentKind.Text;
+        if (kind === CampaignViberContentKind.Video) {
+            return true;
+        }
+
         if (!media) return false;
 
         if (typeof media === "string") return getMediaType(media) === CampaignMediaType.Video;
@@ -361,7 +519,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                         if (duration == null || !Number.isFinite(duration)) {
                             return;
                         }
-                        if (duration > 900) {
+                        if (duration > 600) {
                             toast({
                                 variant: "error",
                                 title: tCommon("error"),
@@ -409,6 +567,19 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
 
     const scheduledDateFormat = locale === "sr" ? "dd.MM.yyyy. HH:mm" : "dd/MM/yyyy HH:mm";
     const datepickerLocale = locale === "sr" ? "sr" : "en";
+
+    const externalMediaTooltip = useMemo(() => {
+        if (viberContentKind === CampaignViberContentKind.File) {
+            return t("viber.tooltips.externalMediaUrlFile");
+        }
+        if (viberContentKind === CampaignViberContentKind.Image) {
+            return t("viber.tooltips.externalMediaUrlImage");
+        }
+        if (viberContentKind === CampaignViberContentKind.Video) {
+            return t("viber.tooltips.externalMediaUrlVideo");
+        }
+        return t("viber.tooltips.externalMediaUrl");
+    }, [viberContentKind, t]);
 
     return (
         <div>
@@ -651,6 +822,62 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                 handleChange={(newMsg) => handleChange("viberMessage", newMsg as any)}
                             />
 
+                            <div className="mb-4">
+                                <Label>{t("viber.fields.contentKind")}</Label>
+                                <Select
+                                    disabled={
+                                        !formData.isViber ||
+                                        formData.status !== CampaignStatus.Draft ||
+                                        (formData.isTransactional as boolean)
+                                    }
+                                    value={String(viberContentKind)}
+                                    onValueChange={onViberContentKindChange}
+                                >
+                                    <SelectTrigger id="viberContentKind" className="mt-2">
+                                        <SelectValue placeholder={tCommon("select")} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={String(CampaignViberContentKind.Text)}>
+                                            {t("viber.contentKind.text")}
+                                        </SelectItem>
+                                        <SelectItem value={String(CampaignViberContentKind.Image)}>
+                                            {t("viber.contentKind.image")}
+                                        </SelectItem>
+                                        <SelectItem value={String(CampaignViberContentKind.Video)}>
+                                            {t("viber.contentKind.video")}
+                                        </SelectItem>
+                                        <SelectItem value={String(CampaignViberContentKind.File)}>
+                                            {t("viber.contentKind.file")}
+                                        </SelectItem>
+                                        <SelectItem value={String(CampaignViberContentKind.Survey)}>
+                                            {t("viber.contentKind.survey")}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {viberContentKind === CampaignViberContentKind.File ? (
+                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        {t("viber.contentKind.fileFormatsHint")}
+                                    </p>
+                                ) : null}
+                            </div>
+
+                            {showSurveyBlock ? (
+                                <div className="mb-4 space-y-2">
+                                    <Label>{t("viber.survey.optionsLabel")}</Label>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{t("viber.survey.hint")}</p>
+                                    {surveyOptionDrafts.map((draft, idx) => (
+                                        <Input
+                                            key={idx}
+                                            maxLength={50}
+                                            disabled={formData.status !== CampaignStatus.Draft}
+                                            placeholder={t("viber.survey.optionPlaceholder", { n: idx + 1 })}
+                                            value={draft}
+                                            onChange={(e) => setSurveyDraftAt(idx, e.target.value)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : null}
+
                             <div className="mb-4 flex items-center gap-2">
                                 <Checkbox
                                     disabled={!formData.isViber || formData.status !== CampaignStatus.Draft}
@@ -658,9 +885,19 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     onCheckedChange={(checked) => {
                                         handleChange("isTransactional" as any, !!checked as any);
                                         setMedia(null);
+                                        setThumbnail(null);
+                                        setDuration(undefined);
                                         handleChange("viberMedia" as any, null as any);
+                                        handleChange("viberVideoThumbnail" as any, null as any);
+                                        handleChange("viberVideoDuration" as any, null as any);
+                                        handleChange("viberFileSize" as any, null as any);
                                         handleChange("viberButtonUrl" as any, null as any);
                                         handleChange("viberButtonUrlTitle" as any, null as any);
+                                        if (checked) {
+                                            handleChange("viberContentKind", CampaignViberContentKind.Text as any);
+                                            handleChange("viberSurveyOptionsJson" as any, null as any);
+                                            setSurveyOptionDrafts(["", "", "", "", ""]);
+                                        }
                                     }}
                                 />
                                 <Label>
@@ -670,10 +907,12 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                 </Label>
                             </div>
 
+                            {showRichMediaBlock ? (
                             <div className="mb-4">
                                 <Label>{t("viber.fields.media")}</Label>
 
-                                {formData.status === CampaignStatus.Draft && (
+                                {formData.status === CampaignStatus.Draft &&
+                                viberContentKind !== CampaignViberContentKind.File ? (
                                     <div className="flex items-center gap-4 mt-2 mb-4">
                                         <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
                                             <DialogTrigger asChild>
@@ -750,12 +989,12 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                             </DialogContent>
                                         </Dialog>
                                     </div>
-                                )}
+                                ) : null}
 
                                 {formData.status === CampaignStatus.Draft && !(formData.isTransactional as any) ? (
                                     <div className="mt-3 space-y-2">
                                         <Label>{t("viber.fields.externalMediaUrl")}</Label>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t("viber.tooltips.externalMediaUrl")}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{externalMediaTooltip}</p>
                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                                             <Input
                                                 disabled={!formData.isViber}
@@ -782,7 +1021,8 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     setFile={setMedia}
                                     setDuration={setDuration}
                                     handleChange={handleChange as any}
-                                    imageOnly={false}
+                                    imageOnly={viberContentKind === CampaignViberContentKind.Image}
+                                    documentsOnly={viberContentKind === CampaignViberContentKind.File}
                                     disabled={!formData.isViber || (formData.isTransactional as any) || formData.status !== CampaignStatus.Draft}
                                     savedVideoMeta={
                                         typeof media === "string"
@@ -802,7 +1042,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                             <Input
                                                 type="number"
                                                 min={1}
-                                                max={900}
+                                                max={600}
                                                 className="mt-1"
                                                 disabled={!formData.isViber || (formData.isTransactional as any)}
                                                 value={formData.viberVideoDuration ?? ""}
@@ -845,6 +1085,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     </div>
                                 ) : null}
                             </div>
+                            ) : null}
 
                             {checkIsThumbnailVisible() ? (
                                 <div className="mb-4">
@@ -878,8 +1119,15 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
 
                             <div className="mb-4 flex items-center gap-2">
                                 <Checkbox
-                                    disabled={!formData.isViber || (formData.isTransactional as any) || formData.status !== CampaignStatus.Draft}
-                                    checked={formData.isViberReceivable}
+                                    disabled={
+                                        !formData.isViber ||
+                                        (formData.isTransactional as any) ||
+                                        formData.status !== CampaignStatus.Draft ||
+                                        viberContentKind === CampaignViberContentKind.Survey
+                                    }
+                                    checked={
+                                        viberContentKind === CampaignViberContentKind.Survey || formData.isViberReceivable
+                                    }
                                     onCheckedChange={(checked) => handleChange("isViberReceivable", !!checked as any)}
                                 />
                                 <Label>

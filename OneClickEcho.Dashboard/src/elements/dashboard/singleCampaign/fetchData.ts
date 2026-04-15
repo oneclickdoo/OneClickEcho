@@ -10,6 +10,7 @@ import {
     CampaignLeadViberStatusCollection,
     CampaignSendingType,
     CampaignStatus,
+    CampaignViberContentKind,
     LeadGender
 } from "@/lib/enums";
 
@@ -47,6 +48,10 @@ export type CampaignDto = {
     /** Seconds; set for Viber video. */
     viberVideoDuration?: number | null;
     viberValidity?: number;
+    /** Comtrade layout: Text=0, Image, Video, File, Survey */
+    viberContentKind?: CampaignViberContentKind;
+    /** JSON string array of 2–5 options (Survey). */
+    viberSurveyOptionsJson?: string | null;
 
     isSms: boolean;
     smsSender?: string;
@@ -613,9 +618,33 @@ export const exportFromStatus = async (
 export const updateCampaign = async (updatedData: Partial<CampaignDto>, authFetch: IFetch) => {
     const url = new URL("/api/Campaign", window.location.origin);
 
+    const d = updatedData as CampaignDto;
+    // C# record binding: omitted JSON properties become null and wipe DB fields — always send every EditCampaign field.
     const payload = {
-        ...updatedData,
-        sendingDatetime: updatedData.sendingDatetimeObject ? updatedData.sendingDatetimeObject.toISOString() : undefined
+        campaignId: d.campaignId,
+        name: d.name ?? "",
+        isViber: d.isViber ?? false,
+        fallbackToSMS: d.fallbackToSMS ?? false,
+        isViberReceivable: d.isViberReceivable ?? false,
+        viberSender: d.viberSender ?? null,
+        viberMessage: d.viberMessage ?? null,
+        viberMedia: d.viberMedia ?? null,
+        viberButtonUrl: d.viberButtonUrl ?? null,
+        viberButtonUrlTitle: d.viberButtonUrlTitle ?? null,
+        viberVideoThumbnail: d.viberVideoThumbnail ?? null,
+        viberFileSize: d.viberFileSize ?? null,
+        viberVideoDuration: d.viberVideoDuration ?? null,
+        viberValidity: d.viberValidity ?? 86400,
+        viberContentKind: d.viberContentKind ?? CampaignViberContentKind.Text,
+        viberSurveyOptionsJson: d.viberSurveyOptionsJson ?? null,
+        isSms: d.isSms ?? false,
+        smsSender: d.smsSender ?? null,
+        smsMessage: d.smsMessage ?? null,
+        testPhoneNumber: d.testPhoneNumber ?? null,
+        sendingType: d.sendingType,
+        sendingDatetime: d.sendingDatetimeObject
+            ? d.sendingDatetimeObject.toISOString()
+            : (d.sendingDatetime ?? null)
     };
 
     const response = await authFetch(url.toString(), {

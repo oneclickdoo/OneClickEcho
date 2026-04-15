@@ -53,6 +53,9 @@ namespace OneClickEcho.Application.Campaign.Commands.CloneCampaign
 
             _campaignRepository.Add(newCampaign);
 
+            newCampaign.ViberContentKind = campaign.ViberContentKind;
+            newCampaign.ViberSurveyOptionsJson = campaign.ViberSurveyOptionsJson;
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new CloneCampaignResponse(newCampaign.Id.Value);

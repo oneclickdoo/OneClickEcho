@@ -538,16 +538,33 @@
             "externalMediaUrl": "Media URL (already online)",
             "externalMediaUrlPlaceholder": "https://example.com/video.mp4",
             "videoDurationSeconds": "Video duration (seconds)",
-            "videoFileSizeMb": "Video file size (MB)"
+            "videoFileSizeMb": "Video file size (MB)",
+            "contentKind": "Message content type"
+          },
+          "contentKind": {
+            "text": "Text (no media)",
+            "image": "Image",
+            "video": "Video",
+            "file": "File (document)",
+            "survey": "Survey / list",
+            "fileFormatsHint": "Allowed: .doc, .docx, .rtf, .dot, .dotx, .odt, .odf, .fodt, .txt, .info, .pdf, .xps, .pdax, .eps, .xls, .xlsx, .ods, .fods, .csv, .xlsm, .xltx. Max 200 MB per file. Comtrade type 220 uses only the file URL (no thumbnail)."
+          },
+          "survey": {
+            "optionsLabel": "Survey options",
+            "hint": "Enter 2–5 options (max 50 characters each). The intro text is the message field above.",
+            "optionPlaceholder": "Option {n}"
           },
           "tooltips": {
             "transactional": "Transactional messages are used for service notifications and may follow different delivery rules.",
             "enableReplies": "Allow recipients to reply to this Viber message.",
             "formattingHint": "Formatting: *bold* and _italic_ (Viber markdown). Put a space after the closing marker before the next word (e.g. *Hi* there). You can insert stickers below.",
             "videoPromoOnly": "Video selected, no button: you can leave the message empty for promotional video-only (thumbnail required). Add text if you want video + caption.",
-            "validityHint": "How long Viber will try to deliver the message (seconds). This is not the maximum video length. Typical value: 86400 (24 hours). Max video duration for types 230–232 is 900 seconds (15 minutes).",
+            "validityHint": "How long Viber will try to deliver the message (seconds). This is not the maximum video length. Typical value: 86400 (24 hours). Max video duration for types 230–232 is 600 seconds (10 minutes) per provider rules.",
             "externalMediaUrl": "Paste a public HTTPS (or HTTP) link to an image or video file. Extension must be .jpg, .png, .mp4, or .avi. For hosted video you must also enter duration and size below (required for sending).",
-            "hostedVideoMeta": "Hosted video: enter duration (1–900 s) and approximate file size in MB. Viber/Comtrade need these values with the media URL. Use your player or file properties to read them."
+            "externalMediaUrlImage": "Paste a public link to an image. Path must end with .jpg, .jpeg, or .png.",
+            "externalMediaUrlVideo": "Paste a public link to a video. Path must end with .mp4 or .avi. For hosted video, enter duration (1–600 s) and size below.",
+            "externalMediaUrlFile": "Paste a public link to a document with an allowed extension (e.g. .pdf, .docx). Max 200 MB. Type 220 sends only this file URL to Viber.",
+            "hostedVideoMeta": "Hosted video: enter duration (1–600 s) and approximate file size in MB. Viber/Comtrade need these values with the media URL. Use your player or file properties to read them."
           },
           "formatting": {
             "previewLabel": "Preview (approximate)"
@@ -561,7 +578,9 @@
           },
           "mediaUpload": {
             "dropzoneImage": "Drag & drop your image, or click to select it. Recommended image dimensions are 500×500.",
-            "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, up to 1280×720 (720p), max ~100 MB, max length 15 minutes (900 s) per Viber.",
+            "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, up to 1280×720 (720p), max ~200 MB, max length 600 seconds per Viber.",
+            "dropzoneDocuments": "Drag & drop a document, or click to select. Max 200 MB. Use an allowed type (.pdf, Office formats, etc.).",
+            "documentLabel": "Document",
             "videoMeta": "File size: {fileSize} · Duration: {duration}",
             "durationPending": "Detecting…",
             "videoUnsupported": "Your browser does not support video playback."
@@ -582,9 +601,12 @@
         "toasts": {
           "saved": "Messaging settings saved.",
           "videoWaitDuration": "Wait until the video preview shows duration, then save again.",
-          "videoTooLong": "Video is longer than 15 minutes (900 s). Viber does not accept it for message types 230–232.",
-          "videoDurationInvalid": "Video duration must be between 1 and 900 seconds.",
+          "videoTooLong": "Video is longer than 600 seconds. Viber does not accept it for message types 230–232.",
+          "videoDurationInvalid": "Video duration must be between 1 and 600 seconds.",
           "invalidMediaUrl": "URL must start with http:// or https:// and end with a supported extension (.jpg, .png, .mp4, .avi).",
+          "invalidDocumentUrl": "URL must start with http:// or https:// and use an allowed document extension (e.g. .pdf, .docx).",
+          "invalidImageUrl": "For image content, the URL must point to .jpg, .jpeg, or .png.",
+          "invalidVideoUrl": "For video content, the URL must point to .mp4 or .avi.",
           "externalVideoMetaRequired": "For hosted video, enter duration (seconds) and file size (MB), then save."
         }
       },

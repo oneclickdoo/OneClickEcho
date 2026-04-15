@@ -475,6 +475,10 @@ namespace OneClickEcho.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("viber_button_url_title");
 
+                    b.Property<short>("ViberContentKind")
+                        .HasColumnType("smallint")
+                        .HasColumnName("viber_content_kind");
+
                     b.Property<int?>("ViberFileSize")
                         .HasColumnType("integer")
                         .HasColumnName("viber_file_size");
@@ -490,6 +494,10 @@ namespace OneClickEcho.Persistence.Migrations
                     b.Property<string>("ViberSender")
                         .HasColumnType("text")
                         .HasColumnName("viber_sender");
+
+                    b.Property<string>("ViberSurveyOptionsJson")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_survey_options_json");
 
                     b.Property<int?>("ViberValidity")
                         .HasColumnType("integer")

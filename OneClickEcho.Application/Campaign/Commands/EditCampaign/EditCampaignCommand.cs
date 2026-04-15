@@ -18,6 +18,8 @@ public record EditCampaignCommand(
     int? ViberFileSize,
     int? ViberVideoDuration,
     int? ViberValidity,
+    CampaignViberContentKind ViberContentKind,
+    string? ViberSurveyOptionsJson,
     bool IsSms,
     string? SmsSender,
     string? SmsMessage,

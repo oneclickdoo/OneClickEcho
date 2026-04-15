@@ -53,9 +53,22 @@ namespace OneClickEcho.Application.Campaign.Commands.UploadCampaignViberMedia
                 campaign.ViberMedia = filename;
                 campaign.ViberFileSize = (int?)request.File.Length;
 
-
-                CampaignMediaType? mediaType = MediaHelper.GetMediaType(campaign.ViberMedia);
-                if (mediaType is CampaignMediaType.Video) campaign.ViberVideoDuration = request.Duration;
+                if (MediaHelper.TryGetViberDocumentFileType(filename, out _))
+                {
+                    campaign.ViberVideoDuration = null;
+                }
+                else
+                {
+                    CampaignMediaType? mediaType = MediaHelper.GetMediaType(campaign.ViberMedia);
+                    if (mediaType is CampaignMediaType.Video)
+                    {
+                        campaign.ViberVideoDuration = request.Duration;
+                    }
+                    else
+                    {
+                        campaign.ViberVideoDuration = null;
+                    }
+                }
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

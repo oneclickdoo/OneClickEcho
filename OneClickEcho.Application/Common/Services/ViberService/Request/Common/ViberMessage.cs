@@ -65,6 +65,9 @@ namespace OneClickEcho.Application.Common.Services.ViberService.Request.Common
         // the opening image of the video
         public string? Thumbnail { get; set; }
 
+        /// <summary>Comtrade type <b>801</b> survey / list.</summary>
+        public ViberSurveyPayload? Survey { get; set; }
+
         // validity time in seconds
         public int Validity { get; set; }
     }
