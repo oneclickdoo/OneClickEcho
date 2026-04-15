@@ -58,6 +58,8 @@ public static class InfrastructureServiceRegistration
         {
             client.BaseAddress = new Uri("http://publicbulk.comtrade.com/");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            // Default ~100s can still allow long Polly retry chains; cap so a stuck Comtrade call cannot block sends for many minutes.
+            client.Timeout = TimeSpan.FromSeconds(120);
         });
 
         if (viberConfigured)

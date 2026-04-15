@@ -15,6 +15,8 @@ public record EditCampaignCommand(
     string? ViberButtonUrl,
     string? ViberButtonUrlTitle,
     string? ViberVideoThumbnail,
+    int? ViberFileSize,
+    int? ViberVideoDuration,
     int? ViberValidity,
     bool IsSms,
     string? SmsSender,

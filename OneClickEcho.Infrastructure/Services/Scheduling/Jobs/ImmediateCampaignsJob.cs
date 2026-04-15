@@ -23,6 +23,12 @@ namespace OneClickEcho.Infrastructure.Services.Scheduling.Jobs
             {
                 // Console.WriteLine($"Scheduling immediate campaign: {campaign.Id.Value} - {campaign.Name}");
 
+                JobKey sendJobKey = new($"send-job-campaign-{campaign.Id.Value}");
+                if (await context.Scheduler.CheckExists(sendJobKey))
+                {
+                    continue;
+                }
+
                 ITrigger sendCampaignMessagesTrigger = TriggerBuilder.Create()
                     .WithIdentity($"send-trigger-campaign-{campaign.Id.Value}")
                     .StartAt(DateTimeOffset.UtcNow) // same instant regardless of server OS timezone

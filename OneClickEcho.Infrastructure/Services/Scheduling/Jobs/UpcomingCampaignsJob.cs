@@ -23,6 +23,12 @@ public class UpcomingCampaignsJob(IMediator mediator) : IJob
         {
             // Console.WriteLine($"Scheduling upcoming campaign: {campaign.Id.Value} - {campaign.Name}");
 
+            JobKey sendJobKey = new($"send-job-campaign-{campaign.Id.Value}");
+            if (await context.Scheduler.CheckExists(sendJobKey))
+            {
+                continue;
+            }
+
             DateTime sendingUtc = campaign.SendingDatetime.ToUniversalTime();
             ITrigger sendCampaignMessagesTrigger = TriggerBuilder.Create()
                 .WithIdentity($"send-trigger-campaign-{campaign.Id.Value}")

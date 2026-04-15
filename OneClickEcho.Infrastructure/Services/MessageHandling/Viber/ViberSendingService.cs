@@ -357,6 +357,18 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
             ViberSendMessageType messageType = ViberService.DetermineMessageType(campaign);
 
+            if (messageType is ViberSendMessageType.OneWayVideo
+                or ViberSendMessageType.OneWayVideoText
+                or ViberSendMessageType.OneWayVideoTextButton
+                or ViberSendMessageType.OneWayVideoTextActionButton)
+            {
+                if (duration is null || fileSize is null)
+                {
+                    Console.WriteLine(
+                        $"{DateTime.UtcNow:O} Viber video campaign {campaign.Id.Value}: missing ViberVideoDuration and/or ViberFileSize — Comtrade often returns empty statuses; set both in campaign.");
+                }
+            }
+
             // Split leads into batches
             List<List<Lead>> dividedLeads = [];
 
@@ -589,9 +601,19 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 if (viberMessages.Count > 0 && response.ViberMessageResponses.Count == 0)
                 {
-                    throw new InvalidOperationException(
-                        "Viber API returned HTTP success but zero per-message statuses (empty ViberMessageResponses). " +
-                        "Nothing was applied to leads; campaign must not be marked complete.");
+                    Console.WriteLine(
+                        $"{DateTime.UtcNow:O} Viber bulk send: Comtrade HTTP OK but empty ViberMessageResponses. " +
+                        $"Campaign={campaign.Id.Value} batch={viberMessages.Count} messageType={(int)messageType}. " +
+                        "Marking batch Undelivered so campaign can finish (check video URL, duration, file size, codec).");
+
+                    foreach (CampaignLead cl in campaignLeadsByViberMessageId.Values)
+                    {
+                        cl.ViberStatus = CampaignLeadViberStatus.Undelivered;
+                        cl.ViberStatusDescription = CampaignLeadViberStatusDescriptions.ForBulkSendEmptyComtradeResponse();
+                    }
+
+                    await unitOfWork.SaveChangesAsync();
+                    continue;
                 }
 
                 Dictionary<long, SendViberMessageResponse> responseByMessageId = [];

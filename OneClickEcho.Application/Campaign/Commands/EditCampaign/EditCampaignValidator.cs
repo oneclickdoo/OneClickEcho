@@ -1,4 +1,5 @@
 using FluentValidation;
+using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Domain.CampaignAggregate.Enums;
 
 namespace OneClickEcho.Application.Campaign.Commands.EditCampaign;
@@ -42,6 +43,17 @@ public sealed class EditCampaignValidator : AbstractValidator<EditCampaignComman
             .MaximumLength(255)
             .WithMessage("ViberUrlTitle must be less than 255 characters.")
             .When(x => x.IsViber && !string.IsNullOrEmpty(x.ViberButtonUrlTitle));
+
+        RuleFor(x => x.ViberFileSize)
+            .GreaterThan(0)
+            .When(x => x.IsViber && x.ViberFileSize.HasValue)
+            .WithMessage("ViberFileSize must be positive when set.");
+
+        RuleFor(x => x.ViberVideoDuration)
+            .InclusiveBetween(1, ViberVideoConstraints.MaxDurationSeconds)
+            .When(x => x.IsViber && x.ViberVideoDuration.HasValue)
+            .WithMessage(
+                $"ViberVideoDuration must be between 1 and {ViberVideoConstraints.MaxDurationSeconds} seconds when set.");
 
         RuleFor(x => x.IsSms)
             .NotNull()

@@ -38,6 +38,8 @@ public class EditCampaignHandler(ICampaignRepository campaignRepository, IUnitOf
         campaign.ViberButtonUrl = request.ViberButtonUrl;
         campaign.ViberButtonUrlTitle = request.ViberButtonUrlTitle;
         campaign.ViberVideoThumbnail = request.ViberVideoThumbnail;
+        campaign.ViberFileSize = request.ViberFileSize;
+        campaign.ViberVideoDuration = request.ViberVideoDuration;
         campaign.ViberValidity = request.ViberValidity;
         campaign.SmsSender = request.SmsSender;
         campaign.SmsMessage = request.SmsMessage;

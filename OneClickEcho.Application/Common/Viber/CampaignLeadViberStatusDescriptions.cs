@@ -15,6 +15,10 @@ public static class CampaignLeadViberStatusDescriptions
     public static string ForBulkSendFailure(ViberMessageResponseStatus responseStatus) =>
         $"Odbijeno pri slanju ka provajderu: {FormatSendStatus(responseStatus)}.";
 
+    /// <summary>Comtrade HTTP 200 ali bez redova u <c>ViberMessageResponses</c> (često kod videa / metapodataka).</summary>
+    public static string ForBulkSendEmptyComtradeResponse() =>
+        "Comtrade je vratio odgovor bez liste statusa po poruci. Kod videa proverite javni URL, trajanje (s), veličinu fajla, H.264/AAC i da provajder može da preuzme video.";
+
     /// <summary>
     /// Posle Comtrade delivery odgovora: osnovni tekst po statusu + opis <paramref name="subStatus"/> kada nije <see cref="DeliveryViberSubstatus.SRVC_SUCCESS"/>.
     /// </summary>
