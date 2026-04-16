@@ -54,7 +54,17 @@ export class FilterManager {
                 }
 
                 case "select": {
-                    dotnetFindArray.push(`${field} eq ${this.formatValue(filterObject?.value)}`);
+                    const v = filterObject?.value;
+                    const keyLower = filterKey.toLowerCase();
+                    // Backend lexer maps unquoted 0/1 to int; quoted '1' was string and broke bool (500).
+                    if (
+                        (keyLower === "isblacklisted" || keyLower === "isunsubscribed") &&
+                        (v === "0" || v === "1")
+                    ) {
+                        dotnetFindArray.push(`${field} eq ${v}`);
+                    } else {
+                        dotnetFindArray.push(`${field} eq ${this.formatValue(v)}`);
+                    }
                     break;
                 }
 

@@ -8,10 +8,13 @@ import { Searchbar } from "@/components/tremor/Searchbar";
 export const GenericSearchbar = forwardRef(function GenericSearchbar(
     {
         onSearchChange,
+        /** Fires on every keystroke (before debounce). Use to reset pagination so results are visible immediately. */
+        onInputChange,
         placeholder
     }: {
         // eslint-disable-next-line no-unused-vars
         onSearchChange: (value: string) => void;
+        onInputChange?: (value: string) => void;
         placeholder: string;
     },
     ref
@@ -28,6 +31,7 @@ export const GenericSearchbar = forwardRef(function GenericSearchbar(
         const value = event.target.value;
 
         setSearchTerm(value);
+        onInputChange?.(value);
 
         debouncedSetFilterValue(value);
     };

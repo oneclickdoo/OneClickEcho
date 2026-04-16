@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 import type { Cell, ColumnDef, PaginationState, SortingState } from "@tanstack/react-table";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
@@ -55,6 +55,15 @@ export const CampaignLeadsTable = forwardRef<CampaignLeadsTableHandle, {}>((_, r
         queryFn: () => fetchLeadsData(pagination, sorting, filterManager.generate(), null, authFetch),
         placeholderData: keepPreviousData
     });
+
+    const rowCount = dataQuery.data?.rowCount ?? 0;
+
+    useEffect(() => {
+        const pages = Math.max(1, Math.ceil(rowCount / pagination.pageSize));
+        if (pagination.pageIndex >= pages) {
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+        }
+    }, [rowCount, pagination.pageSize, pagination.pageIndex]);
 
     useImperativeHandle(ref, () => ({
         refetchData: () => dataQuery.refetch()
@@ -210,7 +219,7 @@ export const CampaignLeadsTable = forwardRef<CampaignLeadsTableHandle, {}>((_, r
         manualFiltering: true,
         manualSorting: true,
         enableMultiSort: true,
-        rowCount: dataQuery.data?.rowCount ?? 0
+        rowCount
     });
 
     return (
@@ -220,8 +229,8 @@ export const CampaignLeadsTable = forwardRef<CampaignLeadsTableHandle, {}>((_, r
                     <GenericSearchbar
                         ref={searchbarRef}
                         placeholder={t("searchPhonePlaceholder")}
+                        onInputChange={() => setPagination((p) => ({ ...p, pageIndex: 0 }))}
                         onSearchChange={(value) => {
-                            setPagination((p) => ({ ...p, pageIndex: 0 }));
                             if (value !== "") {
                                 filterManager.setFilter("phoneNumber", { type: "search", value });
                             } else {

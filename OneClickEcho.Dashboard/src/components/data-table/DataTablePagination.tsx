@@ -49,6 +49,12 @@ export function DataTablePagination<TData>({ table, pagination, isSelectable }: 
     ];
 
     const totalRows = table.getRowCount();
+    const pageCount = table.getPageCount();
+
+    if (pageCount <= 1) {
+        return null;
+    }
+
     const currentPage = table.getState().pagination.pageIndex;
     const firstRowIndex = currentPage * pagination.pageSize + 1;
     const lastRowIndex = Math.min(totalRows, firstRowIndex + pagination.pageSize - 1);

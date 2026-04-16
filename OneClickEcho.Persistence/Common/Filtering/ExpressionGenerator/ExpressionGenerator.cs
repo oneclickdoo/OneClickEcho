@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using OneClickEcho.Domain.ApplicationUserAggregate.Entities;
 using OneClickEcho.Domain.CampaignAggregate.Enums;
 using OneClickEcho.Domain.Common.Primitives;
@@ -43,23 +44,26 @@ public class ExpressionGenerator
                 );
             }
 
-            MemberExpression member;
+            PropertyInfo? propInfo = parameter.Type.GetProperty(
+                valueNode.Variable.Value,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
-            try
+            if (propInfo is null && valueNode.Variable.Value.Equals("Id", StringComparison.OrdinalIgnoreCase))
             {
-                member = Expression.Property(parameter, valueNode.Variable.Value);
+                propInfo = parameter.Type
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault(p =>
+                        p.Name == "Id" &&
+                        p.PropertyType == parameter.Type.BaseType?.GetGenericArguments().FirstOrDefault());
             }
-            catch
+
+            if (propInfo is null)
             {
-                // AggregateRootId doesn't handle shadowed Id well, so I have to manually tell him which one to take
-                // Get the first one with the name Id and of the correct type
-                member = Expression.Property(parameter,
-                    parameter.Type
-                        .GetProperties()
-                        .First(p =>
-                            p.Name == valueNode.Variable.Value &&
-                            p.PropertyType == parameter.Type.BaseType?.GetGenericArguments().FirstOrDefault()));
+                throw new ArgumentException(
+                    $"Filter property '{valueNode.Variable.Value}' was not found on type {parameter.Type.Name}.");
             }
+
+            MemberExpression member = Expression.Property(parameter, propInfo);
 
             ConstantExpression constant;
 
