@@ -140,7 +140,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         case ViberSendMessageType.OneWaySurveyList:
                             viberMessage = new()
                             {
-                                MessageText = testViberText!,
+                                MessageText = ViberMessageFormatting.ToComtradeSurveyIntroText(campaign.ViberMessage),
                                 Survey = new ViberSurveyPayload { Options = testSurveyOptions! },
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",
@@ -495,7 +495,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         case ViberSendMessageType.OneWaySurveyList:
                             viberMessage = new()
                             {
-                                MessageText = personalizedMarkdown!,
+                                MessageText = ViberMessageFormatting.ToComtradeSurveyIntroText(
+                                    stringTemplatingService.SubstituteLeadInfo(campaign.ViberMessage ?? string.Empty, lead)),
                                 Survey = new ViberSurveyPayload { Options = surveyOptionsList! },
                                 Display = campaign.ViberSender!,
                                 Label = "promotion",

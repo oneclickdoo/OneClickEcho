@@ -304,6 +304,13 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                         $"Campaign [{campaign.Id.Value}] - Viber survey requires intro message text (MessageText).");
                 }
 
+                string surveyIntro = ViberMessageFormatting.ToComtradeSurveyIntroText(campaign.ViberMessage);
+                if (string.IsNullOrWhiteSpace(surveyIntro))
+                {
+                    throw new Exception(
+                        $"Campaign [{campaign.Id.Value}] - Viber survey intro is empty after normalization for Comtrade (type 801); use visible text, not only formatting characters.");
+                }
+
                 if (!campaign.IsViberReceivable)
                 {
                     throw new Exception(

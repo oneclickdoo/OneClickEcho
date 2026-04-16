@@ -393,7 +393,7 @@ export const validateCampaignChannels = (
             }
             const opts = arr
                 .filter((x): x is string => typeof x === "string")
-                .map((s) => s.trim())
+                .map((s) => s.replace(/\r\n|\r|\n|\t/g, " ").trim())
                 .filter((s) => s.length > 0);
             if (opts.length < 2 || opts.length > 5) {
                 showErrorMessage("Survey requires between 2 and 5 non-empty options.");
@@ -401,6 +401,11 @@ export const validateCampaignChannels = (
             }
             if (opts.some((o) => o.length > 50)) {
                 showErrorMessage("Each survey option must be at most 50 characters.");
+                return false;
+            }
+            const unique = new Set(opts);
+            if (unique.size !== opts.length) {
+                showErrorMessage("Survey options must be unique (no duplicate answers).");
                 return false;
             }
         } else if (kind === CampaignViberContentKind.File) {
