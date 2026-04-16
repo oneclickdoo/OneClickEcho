@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using OneClickEcho.Domain.CampaignAggregate;
@@ -23,8 +24,36 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly IConfiguration _configuration = configuration;
 
-    private long ViberMessageIdFloor =>
-        Math.Max(0, _configuration.GetValue<long>("Messaging:CampaignLeadViberMessageId:Floor"));
+    /// <summary>
+    /// Uses <see cref="IConfiguration"/> plus direct process env reads. Some hosts load <c>.env</c> into the process
+    /// environment but not into the configuration pipeline; taking the max avoids staying at appsettings.json default 0.
+    /// </summary>
+    private long ViberMessageIdFloor => ResolveViberMessageIdFloor(_configuration);
+
+    private static long ResolveViberMessageIdFloor(IConfiguration configuration)
+    {
+        long floor = Math.Max(0, configuration.GetValue<long>("Messaging:CampaignLeadViberMessageId:Floor"));
+
+        static bool TryParseFloor(string? raw, out long value)
+        {
+            value = 0;
+            return !string.IsNullOrWhiteSpace(raw)
+                && long.TryParse(raw.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value)
+                && value >= 0;
+        }
+
+        if (TryParseFloor(Environment.GetEnvironmentVariable("Messaging__CampaignLeadViberMessageId__Floor"), out long fromNested))
+        {
+            floor = Math.Max(floor, fromNested);
+        }
+
+        if (TryParseFloor(Environment.GetEnvironmentVariable("VIBER_CAMPAIGN_MESSAGE_ID_FLOOR"), out long fromShort))
+        {
+            floor = Math.Max(floor, fromShort);
+        }
+
+        return floor;
+    }
 
     public async Task<CampaignLead?> GetByIdAsync(CampaignLeadId id, CancellationToken cancellationToken = default)
     {

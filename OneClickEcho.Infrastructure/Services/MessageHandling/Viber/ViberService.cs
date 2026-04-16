@@ -9,6 +9,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using OneClickEcho.Domain.ApiMessageAggregate;
+using System.Net;
+using System.Net.Http;
 using Polly;
 using System.IO;
 
@@ -20,9 +22,17 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
         public async Task<SendViberMessageResponseDto?> Send(SendViberMessageDto request, int retryCountParam = 6)
         {
+            // Only retry transport / server errors. Retrying on arbitrary Exception after HTTP 200 would re-POST the same
+            // payload (same MessageId) and can duplicate delivery at the provider.
             var retryPolicy = Policy
-                .Handle<Exception>()
-                .OrResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
+                .Handle<HttpRequestException>()
+                .OrResult<HttpResponseMessage>(static r =>
+                {
+                    int c = (int)r.StatusCode;
+                    return c >= (int)HttpStatusCode.InternalServerError
+                        || c == (int)HttpStatusCode.RequestTimeout
+                        || r.StatusCode == HttpStatusCode.TooManyRequests;
+                })
                 .WaitAndRetryAsync(
                     retryCount: retryCountParam,
                     sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
