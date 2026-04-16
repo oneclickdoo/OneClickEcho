@@ -70,14 +70,18 @@ namespace OneClickEcho.App.Controllers
         [HttpGet]
         public async Task<IActionResult> GetLeads([FromQuery] PagedQueryParams pagedQueryParams, CancellationToken cancellationToken)
         {
+            // Merge company constraint into the filter string first, then copy into the query.
+            // Otherwise <see cref="PagedQueryParams.ConvertToBasePagedQuery{T}"/> captures a stale Filter
+            // and the handler runs without the intended CompanyId predicate (wrong tenant / wrong page counts).
+            pagedQueryParams.Filter = UpdateFilter.WithCompanyId(User, pagedQueryParams.Filter);
+
             GetLeadsQuery query = pagedQueryParams.ConvertToBasePagedQuery<GetLeadsQuery>();
-            
+
             if ((!User.IsInRole("Administrator") && !string.IsNullOrEmpty(query.Filter) && !query.Filter.Contains("CompanyId")) ||
                 (!User.IsInRole("Administrator") && string.IsNullOrEmpty(query.Filter)))
             {
                 return BadRequest("You are not authorized to filter by CompanyId.");
             }
-            pagedQueryParams.Filter = UpdateFilter.WithCompanyId(User, query.Filter);
 
             Result<GetLeadsResponse> response = await Mediator.Send(query, cancellationToken);
 

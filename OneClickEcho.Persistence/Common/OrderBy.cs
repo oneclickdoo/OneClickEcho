@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace OneClickEcho.Persistence.Common;
 
@@ -32,22 +33,27 @@ public static class OrderBy
             }
             ParameterExpression parameter = Expression.Parameter(typeof(T), "x");
 
-            MemberExpression property;
-            try
+            // Dashboard sends camelCase (e.g. createdAt); CLR properties are PascalCase (CreatedAt).
+            PropertyInfo? propInfo = typeof(T).GetProperty(
+                propertyName,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+            if (propInfo is null && propertyName.Equals("Id", StringComparison.OrdinalIgnoreCase))
             {
-                property = Expression.Property(parameter, propertyName);
+                // AggregateRootId shadowing: pick the Id whose type matches the aggregate's generic id argument.
+                propInfo = parameter.Type
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault(p =>
+                        p.Name == "Id" &&
+                        p.PropertyType == parameter.Type.BaseType?.GetGenericArguments().FirstOrDefault());
             }
-            catch
+
+            if (propInfo is null)
             {
-                // AggregateRootId doesn't handle shadowed Id well, so I have to manually tell him which one to take
-                // Get the first one with the name Id and of the correct type
-                property = Expression.Property(parameter,
-                    parameter.Type
-                        .GetProperties()
-                        .First(p =>
-                            p.Name == propertyName &&
-                            p.PropertyType == parameter.Type.BaseType?.GetGenericArguments().FirstOrDefault()));
+                throw new ArgumentException($"OrderBy property '{propertyName}' was not found on type {typeof(T).Name}.");
             }
+
+            MemberExpression property = Expression.Property(parameter, propInfo);
 
             LambdaExpression selector = Expression.Lambda(property, parameter);
 

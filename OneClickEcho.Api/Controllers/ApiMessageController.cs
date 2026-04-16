@@ -22,14 +22,15 @@ public class ApiMessageController(IMediator mediator) : ApiController(mediator)
     [HttpGet, Produces("application/json")]
     public async Task<IActionResult> GetApiMessages([FromQuery] PagedQueryParams pagedQueryParams, CancellationToken cancellationToken)
     {
+        pagedQueryParams.Filter = UpdateFilter.WithCompanyId(User, pagedQueryParams.Filter);
+
         GetApiMessagesQuery query = pagedQueryParams.ConvertToBasePagedQuery<GetApiMessagesQuery>();
-            
+
         if ((!User.IsInRole("Administrator") && !string.IsNullOrEmpty(query.Filter) && !query.Filter.Contains("CompanyId")) ||
             (!User.IsInRole("Administrator") && string.IsNullOrEmpty(query.Filter)))
         {
             return BadRequest("You are not authorized to filter by CompanyId.");
         }
-        pagedQueryParams.Filter = UpdateFilter.WithCompanyId(User, query.Filter);
 
         Result<GetApiMessagesResponse> response = await Mediator.Send(query, cancellationToken);
 

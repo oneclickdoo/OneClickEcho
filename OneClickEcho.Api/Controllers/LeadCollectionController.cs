@@ -51,15 +51,16 @@ namespace OneClickEcho.App.Controllers
             [FromQuery] PagedQueryParams pagedQueryParams,
             CancellationToken cancellationToken)
         {
+            pagedQueryParams.Filter = UpdateFilter.WithCompanyId(User, pagedQueryParams.Filter);
+
             GetLeadCollectionLeadsQuery query = pagedQueryParams.ConvertToBasePagedQuery<GetLeadCollectionLeadsQuery>();
-            
+
             if ((!User.IsInRole("Administrator") && !string.IsNullOrEmpty(query.Filter) && !query.Filter.Contains("CompanyId")) ||
                 (!User.IsInRole("Administrator") && string.IsNullOrEmpty(query.Filter)))
             {
                 return BadRequest("You are not authorized to filter by CompanyId.");
             }
 
-            pagedQueryParams.Filter = UpdateFilter.WithCompanyId(User, query.Filter);
             query.LeadCollectionId = id;
 
             Result<GetLeadCollectionLeadsResponse> response = await Mediator.Send(query, cancellationToken);

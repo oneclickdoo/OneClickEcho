@@ -1,12 +1,12 @@
+using System.Linq.Expressions;
 using OneClickEcho.Domain.ApplicationUserAggregate.Entities;
+using OneClickEcho.Domain.CampaignAggregate.Enums;
 using OneClickEcho.Domain.Common.Primitives;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Persistence.Common.Filtering.Lexer.Enums;
 using OneClickEcho.Persistence.Common.Filtering.Lexer.Tokens;
 using OneClickEcho.Persistence.Common.Filtering.Lexer.Tokens.Interfaces;
 using OneClickEcho.Persistence.Common.Filtering.Parser.Nodes;
-using System.Linq.Expressions;
-using OneClickEcho.Domain.CampaignAggregate.Enums;
 
 namespace OneClickEcho.Persistence.Common.Filtering.ExpressionGenerator;
 
@@ -80,12 +80,7 @@ public class ExpressionGenerator
                 }
                 else if (member.Type == typeof(bool))
                 {
-                    if (valueNode.Constant is not FilterTokenConstant<int> filterTokenConstantInt)
-                    {
-                        throw new InvalidCastException($"The constant must be int when comparing with enums.");
-                    }
-
-                    constant = Expression.Constant(filterTokenConstantInt.ConstantValue != 0);
+                    constant = Expression.Constant(ParseBoolFilterConstant(valueNode.Constant));
                 }
                 else if (member.Type.IsSubclassOf(typeof(AggregateRootId<Guid>)))
                 {
@@ -164,5 +159,41 @@ public class ExpressionGenerator
         }
 
         throw new NotSupportedException($"Node type {node.GetType().Name} is not supported.");
+    }
+
+    /// <summary>
+    /// Lexer stores quoted literals as strings (<c>'1'</c> → string) and unquoted <c>true</c>/<c>false</c> as string too;
+    /// only bare digits become <see cref="FilterTokenConstant{T}"/> of int. Bool fields must accept all of these.
+    /// </summary>
+    private static bool ParseBoolFilterConstant(FilterToken token)
+    {
+        switch (token)
+        {
+            case FilterTokenConstant<int> i:
+                return i.ConstantValue != 0;
+            case FilterTokenConstant<string> s:
+            {
+                string v = s.ConstantValue?.Trim() ?? string.Empty;
+                if (bool.TryParse(v, out bool parsed))
+                {
+                    return parsed;
+                }
+
+                if (v.Equals("1", StringComparison.Ordinal) || v.Equals("yes", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (v.Equals("0", StringComparison.Ordinal) || v.Equals("no", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                throw new InvalidCastException(
+                    $"Bool filter constant must be true/false, 1/0, yes/no, or an integer; got \"{v}\".");
+            }
+            default:
+                throw new InvalidCastException("Bool filter constant must be a string or int literal.");
+        }
     }
 }

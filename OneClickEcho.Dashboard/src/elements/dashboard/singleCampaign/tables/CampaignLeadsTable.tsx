@@ -69,6 +69,7 @@ export const CampaignLeadsTable = forwardRef<CampaignLeadsTableHandle, {}>((_, r
     const resetAllFilters = () => {
         filterManager.clearFilters();
         searchbarRef.current?.resetInput();
+        setPagination((p) => ({ ...p, pageIndex: 0 }));
         dataQuery.refetch();
     };
 
@@ -220,6 +221,7 @@ export const CampaignLeadsTable = forwardRef<CampaignLeadsTableHandle, {}>((_, r
                         ref={searchbarRef}
                         placeholder={t("searchPhonePlaceholder")}
                         onSearchChange={(value) => {
+                            setPagination((p) => ({ ...p, pageIndex: 0 }));
                             if (value !== "") {
                                 filterManager.setFilter("phoneNumber", { type: "search", value });
                             } else {
@@ -240,6 +242,7 @@ export const CampaignLeadsTable = forwardRef<CampaignLeadsTableHandle, {}>((_, r
                         ]}
                         type="select"
                         onFilter={(filter, column, type) => {
+                            setPagination((p) => ({ ...p, pageIndex: 0 }));
                             if (filter) {
                                 filterManager.setFilter(column, { type, value: filter });
                             } else {
