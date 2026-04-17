@@ -16,26 +16,34 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Sms
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
-        public async Task<SendSmsResponseDto?> Send(SendSmsRequestDto request)
+        /// <summary>
+        /// SMS gateway expects credentials on each request. Send both <c>password</c> and legacy <c>pwd</c>
+        /// so SendMsg and SentMsgDR behave consistently across deployments.
+        /// </summary>
+        private static void AddSmsAuthHeaders(HttpRequestMessage message, string smsUsername, string smsPassword)
         {
-            // serialize the request body to JSON
-            StringContent content = new(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+            message.Headers.TryAddWithoutValidation("username", smsUsername);
+            message.Headers.TryAddWithoutValidation("password", smsPassword);
+            message.Headers.TryAddWithoutValidation("pwd", smsPassword);
+        }
 
-            // create a new HttpRequestMessage
+        public async Task<SendSmsResponseDto?> Send(SendSmsRequestDto request, string smsUsername, string smsPassword)
+        {
+            StringContent content = new(JsonSerializer.Serialize(request, jsonSerializerOptions), Encoding.UTF8, "application/json");
+
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/SmsWebBulkApi/SendMsg.aspx")
             {
                 Content = content
             };
 
+            AddSmsAuthHeaders(httpRequestMessage, smsUsername, smsPassword);
+
             try
             {
-                // send request
                 HttpResponseMessage response = await _httpClient.SendAsync(httpRequestMessage);
 
-                // get response
                 string responseStream = await response.Content.ReadAsStringAsync();
 
-                // serialize response
                 SendSmsResponseDto? responseDto = JsonSerializer
                     .Deserialize<SendSmsResponseDto>(responseStream, jsonSerializerOptions);
 
@@ -48,26 +56,26 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Sms
             }
         }
 
-        public async Task<SendSmsDeliveryResponseDto?> GetDelivery(SendSmsDeliveryRequestDto request)
+        public async Task<SendSmsDeliveryResponseDto?> GetDelivery(
+            SendSmsDeliveryRequestDto request,
+            string smsUsername,
+            string smsPassword)
         {
-            // serialize the request body to JSON
-            StringContent content = new(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+            StringContent content = new(JsonSerializer.Serialize(request, jsonSerializerOptions), Encoding.UTF8, "application/json");
 
-            // create a new HttpRequestMessage
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/SmsWebBulkApi/SentMsgDR.aspx")
             {
                 Content = content
             };
 
+            AddSmsAuthHeaders(httpRequestMessage, smsUsername, smsPassword);
+
             try
             {
-                // send request
                 HttpResponseMessage response = await _httpClient.SendAsync(httpRequestMessage);
 
-                // get response
                 string responseStream = await response.Content.ReadAsStringAsync();
 
-                // serialize response
                 SendSmsDeliveryResponseDto? responseDto = JsonSerializer
                     .Deserialize<SendSmsDeliveryResponseDto>(responseStream, jsonSerializerOptions);
 

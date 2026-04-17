@@ -39,14 +39,10 @@ public class SmsDeliveryService
             throw new Exception($"Unable to fetch delivery report for campaign [{campaignId}] since it is not an SMS campaign.");
         }
 
-        // create HTTP client
         HttpClient httpClient = httpClientFactory.CreateClient("SmsHttpClient");
-
-        // add authorization headers
-        httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
-
         SmsService smsService = new(httpClient);
+        string smsUser = company.SmsUsername ?? string.Empty;
+        string smsPwd = company.SmsPassword ?? string.Empty;
 
         List<CampaignLead> campaignLeads = campaignLeadRepository
             .GetAllCampaignLeadsAsync(campaignId).Result;
@@ -58,17 +54,20 @@ public class SmsDeliveryService
 
         //List<LeadId> undeliveredCampaignLeads = [];
 
-        // check SMS delivery report one-by-one
         foreach (CampaignLead campaignLead in campaignLeads)
         {
+            if (string.IsNullOrWhiteSpace(campaignLead.SMSReferenceId))
+            {
+                continue;
+            }
+
             SendSmsDeliveryRequestDto request = new()
             {
-                Reference = campaignLead.SMSReferenceId!,
+                Reference = campaignLead.SMSReferenceId,
             };
 
-            // send SMS delivery request
             SendSmsDeliveryResponseDto? response = await smsService
-                .GetDelivery(request)
+                .GetDelivery(request, smsUser, smsPwd)
                 ?? throw new Exception($"Failed to get delivery response for campaign [{campaign.Id.Value}].");
 
             // Console.WriteLine($"SMS delivery response: {response}");
@@ -96,24 +95,24 @@ public class SmsDeliveryService
                           ?? throw new Exception($"Company [{companyId}] - not found.");
 
         HttpClient httpClient = httpClientFactory.CreateClient("SmsHttpClient");
-
-        // add authorization headers
-        httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
-
         SmsService smsService = new(httpClient);
+        string smsUser = company.SmsUsername ?? string.Empty;
+        string smsPwd = company.SmsPassword ?? string.Empty;
 
-        // check SMS delivery report one-by-one
         foreach (ApiMessage apiMessage in apiMessages)
         {
+            if (string.IsNullOrWhiteSpace(apiMessage.SMSReferenceId))
+            {
+                continue;
+            }
+
             SendSmsDeliveryRequestDto request = new()
             {
-                Reference = apiMessage.SMSReferenceId!,
+                Reference = apiMessage.SMSReferenceId,
             };
 
-            // send SMS delivery request
             SendSmsDeliveryResponseDto? response = await smsService
-                .GetDelivery(request)
+                .GetDelivery(request, smsUser, smsPwd)
                 ?? throw new Exception($"Failed to get delivery response for SMS API message [{apiMessage.SMSReferenceId}].");
 
             // Console.WriteLine($"SMS delivery response: {response}");
@@ -138,24 +137,24 @@ public class SmsDeliveryService
             Company company = await companyRepository.GetByIdAsync(testMessage.CompanyId)
                               ?? throw new Exception($"Company [{testMessage.CompanyId.Value}] - not found.");
             
-            // create HTTP client
             HttpClient httpClient = httpClientFactory.CreateClient("SmsHttpClient");
-
-            // add authorization headers
-            httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-            httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
-
             SmsService smsService = new(httpClient);
-            
+            string smsUser = company.SmsUsername ?? string.Empty;
+            string smsPwd = company.SmsPassword ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(testMessage.SmsReferenceId))
+            {
+                continue;
+            }
+
             SendSmsDeliveryRequestDto request = new()
             {
                 Reference = testMessage.SmsReferenceId,
             };
 
-            // send SMS delivery request
             SendSmsDeliveryResponseDto? response = await smsService
-                                                       .GetDelivery(request)
-                                                   ?? throw new Exception($"Failed to get test delivery response for message [{testMessage.SmsReferenceId}].");
+                .GetDelivery(request, smsUser, smsPwd)
+                ?? throw new Exception($"Failed to get test delivery response for message [{testMessage.SmsReferenceId}].");
 
             // Console.WriteLine($"SMS delivery response: {response}");
 

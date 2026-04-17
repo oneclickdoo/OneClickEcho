@@ -35,13 +35,7 @@ public class SmsSendingService
         Company company = await companyRepository.GetByIdAsync(campaign.CompanyId)
             ?? throw new Exception($"Company [{campaign.CompanyId.Value}] - not found.");
 
-        // create HTTP client
         HttpClient httpClient = httpClientFactory.CreateClient("SmsHttpClient");
-
-        // add authorization headers
-        httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
-
         SmsService smsService = new(httpClient);
 
         leads = leads.Where(l => !l.IsBlacklisted && !l.IsUnsubscribed).ToList();
@@ -75,7 +69,10 @@ public class SmsSendingService
                 Phone = lead.PhoneNumber
             };
 
-            SendSmsResponseDto? response = await smsService.Send(request);
+            SendSmsResponseDto? response = await smsService.Send(
+                request,
+                company.SmsUsername ?? string.Empty,
+                company.SmsPassword ?? string.Empty);
 
             // handle response
             if (response is not null)
@@ -85,7 +82,7 @@ public class SmsSendingService
                 {
                     case SmsStatus.Success:
                         {
-                            campaignLead.SMSStatus = CampaignLeadSMSStatus.Delivered;
+                            campaignLead.SMSStatus = CampaignLeadSMSStatus.Pending;
                             break;
                         }
                     case SmsStatus.InvalidPhoneNumber:
@@ -124,13 +121,7 @@ public class SmsSendingService
         Company company = await companyRepository.GetByIdAsync(campaign.CompanyId)
             ?? throw new Exception($"Company [{campaign.CompanyId.Value}] - not found.");
 
-        // create HTTP client
         HttpClient httpClient = httpClientFactory.CreateClient("SmsHttpClient");
-
-        // add authorization headers
-        httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
-
         SmsService smsService = new(httpClient);
 
         // send SMS
@@ -141,7 +132,10 @@ public class SmsSendingService
             Phone = testMessage.PhoneNumber
         };
 
-        SendSmsResponseDto? response = await smsService.Send(request);
+        SendSmsResponseDto? response = await smsService.Send(
+            request,
+            company.SmsUsername ?? string.Empty,
+            company.SmsPassword ?? string.Empty);
 
         // handle response
         if (response is not null)
@@ -172,13 +166,7 @@ public class SmsSendingService
         Company company = await companyRepository.GetByIdAsync(companyId)
                           ?? throw new Exception($"Company [{companyId.Value}] - not found.");
         
-        // create HTTP client
         HttpClient httpClient = httpClientFactory.CreateClient("SmsHttpClient");
-
-        // add authorization headers
-        httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
-
         SmsService smsService = new(httpClient);
         
         // send SMS to all leads one-by-one
@@ -192,7 +180,10 @@ public class SmsSendingService
                 Phone = apiMessage.PhoneNumber
             };
 
-            SendSmsResponseDto? response = await smsService.Send(request);
+            SendSmsResponseDto? response = await smsService.Send(
+                request,
+                company.SmsUsername ?? string.Empty,
+                company.SmsPassword ?? string.Empty);
 
             // handle response
             if (response is not null)
@@ -202,7 +193,7 @@ public class SmsSendingService
                 {
                     case SmsStatus.Success:
                         {
-                            apiMessage.SMSStatus = CampaignLeadSMSStatus.Delivered;
+                            apiMessage.SMSStatus = CampaignLeadSMSStatus.Pending;
                             break;
                         }
                     case SmsStatus.InvalidPhoneNumber:

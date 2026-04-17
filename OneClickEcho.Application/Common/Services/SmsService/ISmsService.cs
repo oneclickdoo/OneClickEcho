@@ -5,6 +5,6 @@ namespace OneClickEcho.Application.Common.Services.SmsService
 {
     public interface ISmsService
     {
-        public Task<SendSmsResponseDto?> Send(SendSmsRequestDto request);
+        public Task<SendSmsResponseDto?> Send(SendSmsRequestDto request, string smsUsername, string smsPassword);
     }
 }
