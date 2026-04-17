@@ -40,7 +40,7 @@ public class SmsSendingService
 
         // add authorization headers
         httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("pwd", company.SmsPassword);
+        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
 
         SmsService smsService = new(httpClient);
 
@@ -129,7 +129,7 @@ public class SmsSendingService
 
         // add authorization headers
         httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("pwd", company.SmsPassword);
+        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
 
         SmsService smsService = new(httpClient);
 
@@ -177,7 +177,7 @@ public class SmsSendingService
 
         // add authorization headers
         httpClient.DefaultRequestHeaders.Add("username", company.SmsUsername);
-        httpClient.DefaultRequestHeaders.Add("pwd", company.SmsPassword);
+        httpClient.DefaultRequestHeaders.Add("password", company.SmsPassword);
 
         SmsService smsService = new(httpClient);
         

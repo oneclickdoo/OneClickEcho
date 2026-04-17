@@ -13,6 +13,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Sms
         private readonly JsonSerializerOptions jsonSerializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
         public async Task<SendSmsResponseDto?> Send(SendSmsRequestDto request)
