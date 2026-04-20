@@ -45,4 +45,18 @@ public static class PhoneNumberHelper
     }
 
     public static string NormalizeKey(string phoneNumber) => Standardize(phoneNumber);
+
+    /// <summary>
+    /// International digits only, no leading + (e.g. <c>381641234567</c>). Used for SMS HTTP APIs that expect <c>381…</c> not E.164.
+    /// </summary>
+    public static string ForSmsGateway(string phoneNumber)
+    {
+        string std = Standardize(phoneNumber);
+        if (string.IsNullOrEmpty(std))
+        {
+            return string.Empty;
+        }
+
+        return std[0] == '+' ? std[1..] : std;
+    }
 }

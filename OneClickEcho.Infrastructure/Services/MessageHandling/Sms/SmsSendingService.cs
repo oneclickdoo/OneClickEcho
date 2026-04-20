@@ -11,6 +11,7 @@ using OneClickEcho.Domain.CampaignLeadAggregate.Repositories;
 using OneClickEcho.Domain.Common.Repositories;
 using OneClickEcho.Domain.CompanyAggregate;
 using OneClickEcho.Domain.CompanyAggregate.Repositories;
+using OneClickEcho.Domain.Common;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Domain.LeadAggregate;
 using OneClickEcho.Domain.TestMessageAggregate;
@@ -66,7 +67,7 @@ public class SmsSendingService
             {
                 Sender = campaign.SmsSender!,
                 Message = message,
-                Phone = lead.PhoneNumber
+                Phone = PhoneNumberHelper.ForSmsGateway(lead.PhoneNumber)
             };
 
             SendSmsResponseDto? response = await smsService.Send(
@@ -129,7 +130,7 @@ public class SmsSendingService
         {
             Sender = campaign.SmsSender!,
             Message = campaign.SmsMessage!,
-            Phone = testMessage.PhoneNumber
+            Phone = PhoneNumberHelper.ForSmsGateway(testMessage.PhoneNumber)
         };
 
         SendSmsResponseDto? response = await smsService.Send(
@@ -177,7 +178,7 @@ public class SmsSendingService
             {
                 Sender = apiMessage.SmsSender ?? apiMessage.Sender!,
                 Message = apiMessage.SmsMessage ?? apiMessage.Message,
-                Phone = apiMessage.PhoneNumber
+                Phone = PhoneNumberHelper.ForSmsGateway(apiMessage.PhoneNumber)
             };
 
             SendSmsResponseDto? response = await smsService.Send(
