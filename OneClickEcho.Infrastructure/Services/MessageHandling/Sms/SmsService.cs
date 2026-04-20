@@ -16,15 +16,11 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Sms
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
-        /// <summary>
-        /// SMS gateway expects credentials on each request. Send both <c>password</c> and legacy <c>pwd</c>
-        /// so SendMsg and SentMsgDR behave consistently across deployments.
-        /// </summary>
+        /// <summary>SMS gateway credentials: <c>username</c> and <c>pwd</c> on each request.</summary>
         private static void AddSmsAuthHeaders(HttpRequestMessage message, string smsUsername, string smsPassword)
         {
             message.Headers.TryAddWithoutValidation("username", smsUsername);
             message.Headers.TryAddWithoutValidation("pwd", smsPassword);
-            message.Headers.TryAddWithoutValidation("Content-Type", 'application/json; charset=utf-8');
         }
 
         public async Task<SendSmsResponseDto?> Send(SendSmsRequestDto request, string smsUsername, string smsPassword)

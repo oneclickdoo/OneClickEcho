@@ -86,7 +86,7 @@ public static class InfrastructureServiceRegistration
             client.BaseAddress = new Uri("https://sms.oneclick.rs/");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             //client.DefaultRequestHeaders.Add("username", smsSettings.Username);
-            //client.DefaultRequestHeaders.Add("password", smsSettings.Password);
+            //client.DefaultRequestHeaders.Add("pwd", smsSettings.Password);
             // Do not set Host manually — it can break TLS/SNI or header handling; the host is taken from the request URI.
         });
 
