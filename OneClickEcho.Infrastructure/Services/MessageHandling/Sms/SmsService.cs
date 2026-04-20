@@ -23,8 +23,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Sms
         private static void AddSmsAuthHeaders(HttpRequestMessage message, string smsUsername, string smsPassword)
         {
             message.Headers.TryAddWithoutValidation("username", smsUsername);
-            message.Headers.TryAddWithoutValidation("password", smsPassword);
             message.Headers.TryAddWithoutValidation("pwd", smsPassword);
+            message.Headers.TryAddWithoutValidation("Content-Type", 'application/json; charset=utf-8');
         }
 
         public async Task<SendSmsResponseDto?> Send(SendSmsRequestDto request, string smsUsername, string smsPassword)
