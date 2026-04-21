@@ -45,7 +45,8 @@ public class GetCampaignByIdHandler(ICampaignRepository campaignRepository)
             campaign.SmsMessage,
             campaign.TestPhoneNumber,
             campaign.SendingType,
-            campaign.SendingDatetime
+            campaign.SendingDatetime,
+            campaign.CreatedAt
         );
     }
 }

@@ -62,6 +62,8 @@ export type CampaignDto = {
     sendingType: CampaignSendingType;
     sendingDatetime?: string;
     sendingDatetimeObject?: Date; // Created in the frontend
+    /** UTC from API; used for analytics auto-refresh window. */
+    createdAt?: string;
 };
 
 export type CampaignLeadDto = {

@@ -32,11 +32,22 @@ import {
     getCampaignAnalytics
 } from "../fetchData";
 
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
+function isCampaignCreatedWithinLastTwoDays(createdAt: string | undefined | null): boolean {
+    if (!createdAt) return false;
+    const t = Date.parse(createdAt);
+    if (!Number.isFinite(t)) return false;
+    return Date.now() - t <= TWO_DAYS_MS;
+}
+
 interface ICampaignAnalyticsTab {
     campaignId: string;
     status: CampaignStatus;
     /** When false, analytics polling is disabled (user left the Analytics tab). */
     isActive: boolean;
+    /** ISO from campaign API; polling only while campaign is newer than 48h. */
+    campaignCreatedAt?: string;
 }
 
 interface IFunnelChartData {
@@ -126,17 +137,26 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
         ]
     };
 
+    const analyticsPollIntervalMs = useMemo((): number | false => {
+        if (!props.isActive) return false;
+        if (
+            props.status !== CampaignStatus.Queued &&
+            props.status !== CampaignStatus.InProgress &&
+            props.status !== CampaignStatus.Done
+        ) {
+            return false;
+        }
+        if (!isCampaignCreatedWithinLastTwoDays(props.campaignCreatedAt)) {
+            return false;
+        }
+        return 5_000;
+    }, [props.isActive, props.status, props.campaignCreatedAt]);
+
     const { data: fetchedAnalytics } = useQuery({
         queryKey: ["campaign-analytics", props.campaignId, props.status],
         queryFn: () => getCampaignAnalytics(props.campaignId, authFetch),
         enabled: props.status !== CampaignStatus.Draft,
-        refetchInterval:
-            props.isActive &&
-            (props.status === CampaignStatus.Queued ||
-                props.status === CampaignStatus.InProgress ||
-                props.status === CampaignStatus.Done)
-                ? 15_000
-                : false
+        refetchInterval: analyticsPollIntervalMs
     });
 
     //const getViberData = useCallback(

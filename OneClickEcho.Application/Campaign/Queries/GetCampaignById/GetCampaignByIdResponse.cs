@@ -26,4 +26,5 @@ public record GetCampaignByIdResponse(
     string? SmsMessage,
     string? TestPhoneNumber,
     CampaignSendingType SendingType,
-    DateTime? SendingDatetime);
+    DateTime? SendingDatetime,
+    DateTime CreatedAt);

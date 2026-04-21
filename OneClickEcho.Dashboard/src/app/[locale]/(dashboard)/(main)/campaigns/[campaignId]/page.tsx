@@ -70,21 +70,7 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
     const { data: fetchCampaign, refetch } = useQuery({
         queryKey: ["data", params.campaignId],
         queryFn: () => getCampaignById(params.campaignId, authFetch),
-        enabled: Boolean(params.campaignId),
-        refetchInterval: (q) => {
-            if (currentTab !== ANALYTICS_TAB) {
-                return false;
-            }
-            const s = q.state.data?.status;
-            if (
-                s === CampaignStatus.Queued ||
-                s === CampaignStatus.InProgress ||
-                s === CampaignStatus.Done
-            ) {
-                return 15_000;
-            }
-            return false;
-        }
+        enabled: Boolean(params.campaignId)
     });
 
     // ✅ next-intl aware options (labels translated from Common.campaignStatus.*)
@@ -326,6 +312,7 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
                                 campaignId={params.campaignId}
                                 status={campaign.status}
                                 isActive={currentTab === ANALYTICS_TAB}
+                                campaignCreatedAt={campaign.createdAt}
                             />
                         </TabsContent>
 
