@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Npgsql;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CampaignAggregate.Enums;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
@@ -158,32 +157,41 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             StringBuilder fromWhere = new StringBuilder();
             fromWhere.AppendLine("FROM campaign_leads cl");
             fromWhere.AppendLine("INNER JOIN leads l ON l.id = cl.lead_id");
-            fromWhere.Append("WHERE cl.campaign_id = @cid");
 
-            List<NpgsqlParameter> parameters = [new("cid", cid)];
+            // EF Core SqlQueryRaw / ExecuteSqlRaw expect {0}, {1}, … — not @name (Postgres would error on @).
+            List<object> parameterValues = [];
+            int pi = 0;
+
+            fromWhere.Append($"WHERE cl.campaign_id = {{{pi}}}");
+            parameterValues.Add(cid);
+            pi++;
 
             if (viberStatus.HasValue)
             {
-                fromWhere.Append(" AND cl.viber_status = @viber");
-                parameters.Add(new NpgsqlParameter("viber", (short)viberStatus.Value));
+                fromWhere.Append($" AND cl.viber_status = {{{pi}}}");
+                parameterValues.Add((short)viberStatus.Value);
+                pi++;
             }
 
             if (smsStatus.HasValue)
             {
-                fromWhere.Append(" AND cl.sms_status = @sms");
-                parameters.Add(new NpgsqlParameter("sms", (short)smsStatus.Value));
+                fromWhere.Append($" AND cl.sms_status = {{{pi}}}");
+                parameterValues.Add((short)smsStatus.Value);
+                pi++;
             }
 
             if (!string.IsNullOrWhiteSpace(phoneSearch))
             {
-                fromWhere.Append(" AND l.phone_number ILIKE @phone ESCAPE '\\'");
-                parameters.Add(new NpgsqlParameter("phone", "%" + EscapeForLikePattern(phoneSearch.Trim()) + "%"));
+                fromWhere.Append($" AND l.phone_number ILIKE {{{pi}}} ESCAPE '\\'");
+                parameterValues.Add("%" + EscapeForLikePattern(phoneSearch.Trim()) + "%");
+                pi++;
             }
 
             if (isUnsubscribed.HasValue)
             {
-                fromWhere.Append(" AND l.is_unsubscribed = @unsub");
-                parameters.Add(new NpgsqlParameter("unsub", isUnsubscribed.Value));
+                fromWhere.Append($" AND l.is_unsubscribed = {{{pi}}}");
+                parameterValues.Add(isUnsubscribed.Value);
+                pi++;
             }
 
             const string selectList = """
@@ -197,11 +205,14 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
                   COUNT(*) OVER() AS "TotalCount"
                 """;
 
-            string pagedSql = $"{selectList}\n{fromWhere}\nORDER BY cl.lead_id\nOFFSET @skip LIMIT @take";
-            parameters.Add(new NpgsqlParameter("skip", skip));
-            parameters.Add(new NpgsqlParameter("take", pageSize));
+            string fromWhereSql = fromWhere.ToString();
+            int skipIndex = pi;
+            string pagedSql =
+                $"{selectList}\n{fromWhereSql}\nORDER BY cl.lead_id\nOFFSET {{{skipIndex}}} LIMIT {{{skipIndex + 1}}}";
+            parameterValues.Add(skip);
+            parameterValues.Add(pageSize);
 
-            object[] paramArray = [.. parameters];
+            object[] paramArray = [.. parameterValues];
 
             List<CampaignLeadReportWindowRow> windowRows = await _dbContext.Database
                 .SqlQueryRaw<CampaignLeadReportWindowRow>(pagedSql, paramArray)
@@ -229,7 +240,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             }
             else
             {
-                string countSql = $"SELECT COUNT(*)::bigint AS \"Cnt\"\n{fromWhere}";
+                string countSql = $"SELECT COUNT(*)::bigint AS \"Cnt\"\n{fromWhereSql}";
                 object[] countParams = paramArray[..^2];
 
                 CampaignLeadReportCountRow countRow = await _dbContext.Database
