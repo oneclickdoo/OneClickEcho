@@ -170,6 +170,8 @@ export default function CampaignLeadReportPage() {
         [t, tCommon]
     );
 
+    const rowCount = reportQuery.data?.rowCount ?? 0;
+
     const table = useReactTable({
         data: reportQuery.data?.rows ?? [],
         columns,
@@ -177,10 +179,9 @@ export default function CampaignLeadReportPage() {
         state: { pagination },
         onPaginationChange: setPagination,
         manualPagination: true,
-        pageCount: reportQuery.data?.pageCount ?? 0
+        pageCount: reportQuery.data?.pageCount ?? 0,
+        rowCount
     });
-
-    const rowCount = reportQuery.data?.rowCount ?? 0;
 
     if (campaignQuery.isError) {
         return (
