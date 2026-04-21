@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Caching.Memory;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CampaignAggregate.Enums;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
@@ -18,11 +19,14 @@ using OneClickEcho.Persistence.Common;
 
 namespace OneClickEcho.Persistence.Repositories;
 
-public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfiguration configuration)
+public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfiguration configuration, IMemoryCache memoryCache)
     : ICampaignLeadRepository
 {
+    private const string ReportSnapshotCacheKeyPrefix = "CampaignLeadReportSnapshot:";
+
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly IConfiguration _configuration = configuration;
+    private readonly IMemoryCache _memoryCache = memoryCache;
 
     /// <summary>
     /// Uses <see cref="IConfiguration"/> plus direct process env reads. Some hosts load <c>.env</c> into the process
@@ -120,19 +124,141 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         IPagedQuery paging,
         CancellationToken cancellationToken = default)
     {
-        // Restored from 6dde420: fast COUNT on campaign_leads when filters do not need Lead; null-safe phone filter; coalesce phone in projection.
         int reportTimeoutSeconds = _configuration.GetValue("Persistence:CampaignLeadReportCommandTimeoutSeconds", 120);
         if (reportTimeoutSeconds < 30)
         {
             reportTimeoutSeconds = 120;
         }
 
+        int snapshotMaxRows = _configuration.GetValue("Persistence:CampaignLeadReportSnapshotMaxRows", 250_000);
+        int snapshotCacheMinutes = _configuration.GetValue("Persistence:CampaignLeadReportSnapshotCacheMinutes", 5);
+        int snapshotLoadTimeoutSeconds = _configuration.GetValue("Persistence:CampaignLeadReportSnapshotLoadTimeoutSeconds", 600);
+        int loadTimeout = Math.Max(reportTimeoutSeconds, snapshotLoadTimeoutSeconds);
+
+        int page = Math.Max(1, paging.Page);
+        int pageSize = Math.Clamp(paging.PageSize, 1, 100);
+
+        int leadCount = await _dbContext.Set<CampaignLead>().AsNoTracking()
+            .CountAsync(cl => cl.CampaignId == campaignId, cancellationToken);
+
+        if (leadCount > snapshotMaxRows)
+        {
+            return await GetCampaignLeadReportPagedFromDatabaseAsync(
+                campaignId,
+                phoneSearch,
+                viberStatus,
+                smsStatus,
+                isUnsubscribed,
+                page,
+                pageSize,
+                reportTimeoutSeconds,
+                cancellationToken);
+        }
+
+        string cacheKey = ReportSnapshotCacheKeyPrefix + campaignId.Value;
+        if (!_memoryCache.TryGetValue(cacheKey, out List<CampaignLeadReportRow>? snapshot) || snapshot is null)
+        {
+            int? previousTimeout = _dbContext.Database.GetCommandTimeout();
+            try
+            {
+                _dbContext.Database.SetCommandTimeout(loadTimeout);
+                snapshot = await LoadCampaignLeadReportSnapshotAsync(campaignId, cancellationToken);
+            }
+            finally
+            {
+                _dbContext.Database.SetCommandTimeout(previousTimeout);
+            }
+
+            _memoryCache.Set(
+                cacheKey,
+                snapshot,
+                new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(Math.Max(1, snapshotCacheMinutes))
+                });
+        }
+
+        IEnumerable<CampaignLeadReportRow> filtered = snapshot;
+        if (!string.IsNullOrWhiteSpace(phoneSearch))
+        {
+            string term = phoneSearch.Trim();
+            filtered = filtered.Where(r =>
+                !string.IsNullOrEmpty(r.PhoneNumber) &&
+                r.PhoneNumber.Contains(term, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (viberStatus.HasValue)
+        {
+            short v = (short)viberStatus.Value;
+            filtered = filtered.Where(r => r.ViberStatus == v);
+        }
+
+        if (smsStatus.HasValue)
+        {
+            short s = (short)smsStatus.Value;
+            filtered = filtered.Where(r => r.SmsStatus == s);
+        }
+
+        if (isUnsubscribed.HasValue)
+        {
+            bool u = isUnsubscribed.Value;
+            filtered = filtered.Where(r => r.IsUnsubscribed == u);
+        }
+
+        int totalCount = filtered.Count();
+        List<CampaignLeadReportRow> items = filtered
+            .OrderBy(r => r.PhoneNumber ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return PagedList<CampaignLeadReportRow>.CreateFromParts(items, page, pageSize, totalCount);
+    }
+
+    /// <summary>
+    /// One indexed read for the whole campaign (order by lead id). Filters and paging run in memory on the snapshot.
+    /// </summary>
+    private async Task<List<CampaignLeadReportRow>> LoadCampaignLeadReportSnapshotAsync(
+        CampaignId campaignId,
+        CancellationToken cancellationToken)
+    {
+        return await (
+                from cl in _dbContext.Set<CampaignLead>().AsNoTracking()
+                where cl.CampaignId == campaignId
+                join l in _dbContext.Set<Lead>().AsNoTracking() on cl.LeadId equals l.Id
+                orderby cl.LeadId.Value
+                select new CampaignLeadReportRow
+                {
+                    PhoneNumber = l.PhoneNumber ?? string.Empty,
+                    ViberStatus = (short)cl.ViberStatus,
+                    ViberStatusDescription = cl.ViberStatusDescription,
+                    SmsStatus = (short)cl.SMSStatus,
+                    SmsStatusDescription = cl.SMSStatusDescription,
+                    IsUnsubscribed = l.IsUnsubscribed
+                })
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Very large campaigns: keep everything in SQL, avoid sorting by phone (use lead id for stable paging).
+    /// </summary>
+    private async Task<IPagedList<CampaignLeadReportRow>> GetCampaignLeadReportPagedFromDatabaseAsync(
+        CampaignId campaignId,
+        string? phoneSearch,
+        CampaignLeadViberStatus? viberStatus,
+        CampaignLeadSMSStatus? smsStatus,
+        bool? isUnsubscribed,
+        int page,
+        int pageSize,
+        int commandTimeoutSeconds,
+        CancellationToken cancellationToken)
+    {
         int? previousTimeout = _dbContext.Database.GetCommandTimeout();
         try
         {
-            _dbContext.Database.SetCommandTimeout(reportTimeoutSeconds);
+            _dbContext.Database.SetCommandTimeout(commandTimeoutSeconds);
 
-            IQueryable<CampaignLead> campaignLeadScope = _dbContext.Set<CampaignLead>()
+            IQueryable<CampaignLead> campaignLeadScope = _dbContext.Set<CampaignLead>().AsNoTracking()
                 .Where(cl => cl.CampaignId == campaignId);
 
             if (viberStatus.HasValue)
@@ -153,7 +279,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             int totalCount;
             if (needsLeadForCount)
             {
-                IQueryable<Lead> leadsForCount = _dbContext.Set<Lead>();
+                IQueryable<Lead> leadsForCount = _dbContext.Set<Lead>().AsNoTracking();
 
                 var qCount = from cl in campaignLeadScope
                     join l in leadsForCount on cl.LeadId equals l.Id
@@ -161,8 +287,8 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
                 if (!string.IsNullOrWhiteSpace(phoneSearch))
                 {
-                    string term = phoneSearch.Trim();
-                    qCount = qCount.Where(x => x.l.PhoneNumber != null && x.l.PhoneNumber.Contains(term));
+                    string termLower = phoneSearch.Trim().ToLowerInvariant();
+                    qCount = qCount.Where(x => (x.l.PhoneNumber ?? string.Empty).ToLower().Contains(termLower));
                 }
 
                 if (isUnsubscribed.HasValue)
@@ -178,7 +304,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
                 totalCount = await campaignLeadScope.CountAsync(cancellationToken);
             }
 
-            IQueryable<Lead> leadsForPage = _dbContext.Set<Lead>();
+            IQueryable<Lead> leadsForPage = _dbContext.Set<Lead>().AsNoTracking();
 
             var qPage = from cl in campaignLeadScope
                 join l in leadsForPage on cl.LeadId equals l.Id
@@ -186,8 +312,8 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
             if (!string.IsNullOrWhiteSpace(phoneSearch))
             {
-                string term = phoneSearch.Trim();
-                qPage = qPage.Where(x => x.l.PhoneNumber != null && x.l.PhoneNumber.Contains(term));
+                string termLower = phoneSearch.Trim().ToLowerInvariant();
+                qPage = qPage.Where(x => (x.l.PhoneNumber ?? string.Empty).ToLower().Contains(termLower));
             }
 
             if (isUnsubscribed.HasValue)
@@ -196,11 +322,8 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
                 qPage = qPage.Where(x => x.l.IsUnsubscribed == u);
             }
 
-            int page = Math.Max(1, paging.Page);
-            int pageSize = Math.Clamp(paging.PageSize, 1, 100);
-
             List<CampaignLeadReportRow> items = await qPage
-                .OrderBy(x => x.l.PhoneNumber ?? string.Empty)
+                .OrderBy(x => x.cl.LeadId.Value)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => new CampaignLeadReportRow
