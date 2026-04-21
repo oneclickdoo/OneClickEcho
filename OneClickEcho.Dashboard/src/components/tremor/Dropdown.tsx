@@ -31,7 +31,7 @@ DropdownMenuRadioGroup.displayName = "DropdownMenuRadioGroup";
 const DropdownMenuSubMenuTrigger = React.forwardRef<
     React.ElementRef<typeof DropdownMenuPrimitives.SubTrigger>,
     React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitives.SubTrigger>
->(({ className, children, ...props }, forwardedRef) => {
+>(({ className, children, asChild: _asChild, ...props }, forwardedRef) => {
     return (
         <DropdownMenuPrimitives.SubTrigger
             ref={forwardedRef}
@@ -167,7 +167,7 @@ const DropdownMenuItem = React.forwardRef<
         shortcut?: string;
         hint?: string;
     }
->(({ className, shortcut, hint, children, ...props }, forwardedRef) => {
+>(({ className, shortcut, hint, children, asChild: _asChild, ...props }, forwardedRef) => {
     return (
         <DropdownMenuPrimitives.Item
             ref={forwardedRef}
@@ -199,7 +199,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
         shortcut?: string;
         hint?: string;
     }
->(({ className, hint, shortcut, children, checked, ...props }, forwardedRef) => {
+>(({ className, hint, shortcut, children, checked, asChild: _asChild, ...props }, forwardedRef) => {
     return (
         <DropdownMenuPrimitives.CheckboxItem
             ref={forwardedRef}
@@ -260,7 +260,7 @@ const DropdownMenuRadioItem = React.forwardRef<
         hint?: string;
         iconType?: "check" | "radio";
     }
->(({ className, hint, shortcut, children, iconType = "radio", ...props }, forwardedRef) => {
+>(({ className, hint, shortcut, children, iconType = "radio", asChild: _asChild, ...props }, forwardedRef) => {
     return (
         <DropdownMenuPrimitives.RadioItem
             ref={forwardedRef}

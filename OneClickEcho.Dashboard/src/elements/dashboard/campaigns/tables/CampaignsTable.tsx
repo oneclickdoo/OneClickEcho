@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { withLocale } from "@/lib/routing";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
@@ -51,6 +52,7 @@ export function CampaignsTable() {
     const tCommon = useTranslations("Common");
     const tEnums = useTranslations("Enums");
     const locale = useLocale();
+    const router = useRouter();
     const { toast } = useToast();
 
     const formatDateTime = (value?: string | Date) => {
@@ -256,13 +258,12 @@ export function CampaignsTable() {
                         </DropdownMenuItem>
 
                         {isDoneStatus(row.original.status) ? (
-                            <DropdownMenuItem asChild>
-                                <Link
-                                    href={withLocale(locale, `/campaigns/${row.original.campaignId}/report`)}
-                                    className="cursor-pointer"
-                                >
-                                    {t("actions.report")}
-                                </Link>
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    router.push(withLocale(locale, `/campaigns/${row.original.campaignId}/report`))
+                                }
+                            >
+                                {t("actions.report")}
                             </DropdownMenuItem>
                         ) : null}
 

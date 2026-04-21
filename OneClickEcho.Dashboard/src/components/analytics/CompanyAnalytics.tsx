@@ -80,8 +80,12 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
     );
 
     const getAnalytics = useCallback(
-        async (dateFrom?: string, dateTo?: string) => {
-            setIsLoading(true);
+        async (dateFrom?: string, dateTo?: string, options?: { silent?: boolean }) => {
+            const silent = options?.silent === true;
+            if (!silent) {
+                setIsLoading(true);
+            }
+
             setError("");
             try {
                 const data = await getCompanyAnalytics(props.companyId, authFetch, dateFrom, dateTo);
@@ -91,7 +95,9 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
                 setAnalytics(undefined);
                 setError(e?.message ?? "Error");
             } finally {
-                setIsLoading(false);
+                if (!silent) {
+                    setIsLoading(false);
+                }
             }
         },
         [props.companyId, authFetch]
@@ -122,7 +128,7 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
         const toIso = selectedDate.to ? addDays(selectedDate.to, 1).toISOString() : addDays(selectedDate.from, 1).toISOString();
 
         const id = window.setInterval(() => {
-            void getAnalytics(fromIso, toIso);
+            void getAnalytics(fromIso, toIso, { silent: true });
         }, 15_000);
 
         return () => window.clearInterval(id);
