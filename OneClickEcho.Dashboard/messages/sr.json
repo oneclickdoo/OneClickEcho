@@ -372,7 +372,7 @@
   },
   "CampaignLeadReport": {
     "title": "Izveštaj leadova — {name}",
-    "subtitle": "Status isporuke po leadu za ovu kampanju. Stranice su poređane radi bržeg učitavanja (ne abecedno po telefonu).",
+    "subtitle": "Status isporuke po leadu za ovu kampanju. Redovi su poređani po broju telefona.",
     "backToCampaign": "Nazad na kampanju",
     "searchPhone": "Pretraga po telefonu",
     "searchPhonePlaceholder": "Telefon sadrži…",

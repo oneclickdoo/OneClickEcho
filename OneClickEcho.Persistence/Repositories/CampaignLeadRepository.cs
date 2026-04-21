@@ -112,8 +112,8 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
     }
 
     /// <summary>
-    /// Paged report: filters in SQL; order by campaign lead id for OFFSET (indexed, avoids slow sort by phone).
-    /// Phone / unsub filters use null-safe matching.
+    /// Same flow as commit d511358: one filtered query, <c>CountAsync</c>, then <c>OrderBy</c> phone + page in SQL.
+    /// Coalesces null phones for filter/sort/projection so Postgres never sees invalid string ops on NULL.
     /// </summary>
     public async Task<IPagedList<CampaignLeadReportRow>> GetCampaignLeadReportAsync(
         CampaignId campaignId,
@@ -138,72 +138,43 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         {
             _dbContext.Database.SetCommandTimeout(reportTimeoutSeconds);
 
-            IQueryable<CampaignLead> campaignLeadScope = _dbContext.Set<CampaignLead>().AsNoTracking()
+            IQueryable<CampaignLead> campaignLeadQuery = _dbContext.Set<CampaignLead>()
                 .Where(cl => cl.CampaignId == campaignId);
+
+            IQueryable<Lead> leadQuery = _dbContext.Set<Lead>();
+
+            var q = from cl in campaignLeadQuery
+                join l in leadQuery on cl.LeadId equals l.Id
+                select new { cl, l };
+
+            if (!string.IsNullOrWhiteSpace(phoneSearch))
+            {
+                string term = phoneSearch.Trim();
+                q = q.Where(x => (x.l.PhoneNumber ?? string.Empty).Contains(term));
+            }
 
             if (viberStatus.HasValue)
             {
                 CampaignLeadViberStatus v = viberStatus.Value;
-                campaignLeadScope = campaignLeadScope.Where(cl => cl.ViberStatus == v);
+                q = q.Where(x => x.cl.ViberStatus == v);
             }
 
             if (smsStatus.HasValue)
             {
                 CampaignLeadSMSStatus s = smsStatus.Value;
-                campaignLeadScope = campaignLeadScope.Where(cl => cl.SMSStatus == s);
-            }
-
-            bool needsLeadForCount =
-                !string.IsNullOrWhiteSpace(phoneSearch) || isUnsubscribed.HasValue;
-
-            int totalCount;
-            if (needsLeadForCount)
-            {
-                IQueryable<Lead> leadsForCount = _dbContext.Set<Lead>().AsNoTracking();
-
-                var qCount = from cl in campaignLeadScope
-                    join l in leadsForCount on cl.LeadId equals l.Id
-                    select new { cl, l };
-
-                if (!string.IsNullOrWhiteSpace(phoneSearch))
-                {
-                    string termLower = phoneSearch.Trim().ToLowerInvariant();
-                    qCount = qCount.Where(x => (x.l.PhoneNumber ?? string.Empty).ToLower().Contains(termLower));
-                }
-
-                if (isUnsubscribed.HasValue)
-                {
-                    bool u = isUnsubscribed.Value;
-                    qCount = qCount.Where(x => x.l.IsUnsubscribed == u);
-                }
-
-                totalCount = await qCount.CountAsync(cancellationToken);
-            }
-            else
-            {
-                totalCount = await campaignLeadScope.CountAsync(cancellationToken);
-            }
-
-            IQueryable<Lead> leadsForPage = _dbContext.Set<Lead>().AsNoTracking();
-
-            var qPage = from cl in campaignLeadScope
-                join l in leadsForPage on cl.LeadId equals l.Id
-                select new { cl, l };
-
-            if (!string.IsNullOrWhiteSpace(phoneSearch))
-            {
-                string termLower = phoneSearch.Trim().ToLowerInvariant();
-                qPage = qPage.Where(x => (x.l.PhoneNumber ?? string.Empty).ToLower().Contains(termLower));
+                q = q.Where(x => x.cl.SMSStatus == s);
             }
 
             if (isUnsubscribed.HasValue)
             {
                 bool u = isUnsubscribed.Value;
-                qPage = qPage.Where(x => x.l.IsUnsubscribed == u);
+                q = q.Where(x => x.l.IsUnsubscribed == u);
             }
 
-            List<CampaignLeadReportRow> items = await qPage
-                .OrderBy(x => x.cl.LeadId.Value)
+            int totalCount = await q.CountAsync(cancellationToken);
+
+            List<CampaignLeadReportRow> items = await q
+                .OrderBy(x => x.l.PhoneNumber ?? string.Empty)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => new CampaignLeadReportRow

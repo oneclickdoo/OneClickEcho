@@ -372,7 +372,7 @@
   },
   "CampaignLeadReport": {
     "title": "Lead report — {name}",
-    "subtitle": "Delivery status per lead for this campaign. Pages are ordered for fast loading (not alphabetically by phone).",
+    "subtitle": "Delivery status per lead for this campaign. Rows are ordered by phone number.",
     "backToCampaign": "Back to campaign",
     "searchPhone": "Search by phone",
     "searchPhonePlaceholder": "Phone contains…",
