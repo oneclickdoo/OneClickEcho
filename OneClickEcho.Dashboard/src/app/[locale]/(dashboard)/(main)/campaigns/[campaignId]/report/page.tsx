@@ -297,7 +297,12 @@ export default function CampaignLeadReportPage() {
             </Card>
 
             {reportQuery.isError ? (
-                <p className="text-red-600">{t("errorLoad")}</p>
+                <div className="space-y-1">
+                    <p className="text-red-600">{t("errorLoad")}</p>
+                    {reportQuery.error instanceof Error && reportQuery.error.message ? (
+                        <p className="text-sm text-red-600/90 dark:text-red-400">{reportQuery.error.message}</p>
+                    ) : null}
+                </div>
             ) : (
                 <>
                     {!reportQuery.isFetching && rowCount === 0 ? (

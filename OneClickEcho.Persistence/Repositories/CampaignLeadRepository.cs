@@ -120,56 +120,102 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         IPagedQuery paging,
         CancellationToken cancellationToken = default)
     {
-        var q = from cl in _dbContext.Set<CampaignLead>()
-                where cl.CampaignId == campaignId
+        // Lead report can run COUNT + JOIN + ORDER BY over large campaign sets; default ~30s often surfaces as HTTP 500.
+        int reportTimeoutSeconds = _configuration.GetValue("Persistence:CampaignLeadReportCommandTimeoutSeconds", 120);
+        if (reportTimeoutSeconds < 30)
+        {
+            reportTimeoutSeconds = 120;
+        }
+
+        int? previousTimeout = _dbContext.Database.GetCommandTimeout();
+        try
+        {
+            _dbContext.Database.SetCommandTimeout(reportTimeoutSeconds);
+
+            IQueryable<CampaignLead> campaignLeadScope = _dbContext.Set<CampaignLead>()
+                .Where(cl => cl.CampaignId == campaignId);
+
+            if (viberStatus.HasValue)
+            {
+                CampaignLeadViberStatus v = viberStatus.Value;
+                campaignLeadScope = campaignLeadScope.Where(cl => cl.ViberStatus == v);
+            }
+
+            if (smsStatus.HasValue)
+            {
+                CampaignLeadSMSStatus s = smsStatus.Value;
+                campaignLeadScope = campaignLeadScope.Where(cl => cl.SMSStatus == s);
+            }
+
+            bool needsLeadForCount =
+                !string.IsNullOrWhiteSpace(phoneSearch) || isUnsubscribed.HasValue;
+
+            int totalCount;
+            if (needsLeadForCount)
+            {
+                var qCount = from cl in campaignLeadScope
+                    join l in _dbContext.Leads on cl.LeadId equals l.Id
+                    select new { cl, l };
+
+                if (!string.IsNullOrWhiteSpace(phoneSearch))
+                {
+                    string term = phoneSearch.Trim();
+                    qCount = qCount.Where(x => x.l.PhoneNumber != null && x.l.PhoneNumber.Contains(term));
+                }
+
+                if (isUnsubscribed.HasValue)
+                {
+                    bool u = isUnsubscribed.Value;
+                    qCount = qCount.Where(x => x.l.IsUnsubscribed == u);
+                }
+
+                totalCount = await qCount.CountAsync(cancellationToken);
+            }
+            else
+            {
+                totalCount = await campaignLeadScope.CountAsync(cancellationToken);
+            }
+
+            var qPage = from cl in campaignLeadScope
                 join l in _dbContext.Leads on cl.LeadId equals l.Id
                 select new { cl, l };
 
-        if (!string.IsNullOrWhiteSpace(phoneSearch))
-        {
-            string term = phoneSearch.Trim();
-            q = q.Where(x => x.l.PhoneNumber.Contains(term));
-        }
-
-        if (viberStatus.HasValue)
-        {
-            CampaignLeadViberStatus v = viberStatus.Value;
-            q = q.Where(x => x.cl.ViberStatus == v);
-        }
-
-        if (smsStatus.HasValue)
-        {
-            CampaignLeadSMSStatus s = smsStatus.Value;
-            q = q.Where(x => x.cl.SMSStatus == s);
-        }
-
-        if (isUnsubscribed.HasValue)
-        {
-            bool u = isUnsubscribed.Value;
-            q = q.Where(x => x.l.IsUnsubscribed == u);
-        }
-
-        int totalCount = await q.CountAsync(cancellationToken);
-
-        int page = paging.Page;
-        int pageSize = paging.PageSize;
-
-        List<CampaignLeadReportRow> items = await q
-            .OrderBy(x => x.l.PhoneNumber)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(x => new CampaignLeadReportRow
+            if (!string.IsNullOrWhiteSpace(phoneSearch))
             {
-                PhoneNumber = x.l.PhoneNumber,
-                ViberStatus = (short)x.cl.ViberStatus,
-                ViberStatusDescription = x.cl.ViberStatusDescription,
-                SmsStatus = (short)x.cl.SMSStatus,
-                SmsStatusDescription = x.cl.SMSStatusDescription,
-                IsUnsubscribed = x.l.IsUnsubscribed
-            })
-            .ToListAsync(cancellationToken);
+                string term = phoneSearch.Trim();
+                qPage = qPage.Where(x => x.l.PhoneNumber != null && x.l.PhoneNumber.Contains(term));
+            }
 
-        return PagedList<CampaignLeadReportRow>.CreateFromParts(items, page, pageSize, totalCount);
+            if (isUnsubscribed.HasValue)
+            {
+                bool u = isUnsubscribed.Value;
+                qPage = qPage.Where(x => x.l.IsUnsubscribed == u);
+            }
+
+            int page = paging.Page;
+            int pageSize = paging.PageSize;
+
+            List<CampaignLeadReportRow> items = await qPage
+                .OrderBy(x => x.l.PhoneNumber)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(x => new CampaignLeadReportRow
+                {
+                    PhoneNumber = x.l.PhoneNumber ?? string.Empty,
+                    ViberStatus = (short)x.cl.ViberStatus,
+                    ViberStatusDescription = x.cl.ViberStatusDescription,
+                    SmsStatus = (short)x.cl.SMSStatus,
+                    SmsStatusDescription = x.cl.SMSStatusDescription,
+                    IsUnsubscribed = x.l.IsUnsubscribed
+                })
+                .ToListAsync(cancellationToken);
+
+            return PagedList<CampaignLeadReportRow>.CreateFromParts(items, page, pageSize, totalCount);
+        }
+        finally
+        {
+            _dbContext.Database.SetCommandTimeout(previousTimeout);
+        }
     }
 
     public Task<List<CampaignLead>> GetAllCampaignLeadsAsync(CampaignId campaignId, CancellationToken cancellationToken = default)

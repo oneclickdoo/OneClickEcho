@@ -301,6 +301,8 @@ export const fetchCampaignLeadReport = async (
         try {
             const body = await response.json();
             message =
+                (typeof body?.detail === "string" && body.detail) ||
+                (typeof body?.Detail === "string" && body.Detail) ||
                 (typeof body?.message === "string" && body.message) ||
                 (typeof body?.Message === "string" && body.Message) ||
                 (typeof body?.title === "string" && body.title) ||
