@@ -22,8 +22,6 @@ public static class PersistenceServiceRegistration
         services.Configure<CampaignLeadViberMessageIdOptions>(
             configuration.GetSection(CampaignLeadViberMessageIdOptions.SectionName));
 
-        services.AddMemoryCache();
-
         services
             .Scan(selector => selector
                 .FromAssemblies(Assembly.GetExecutingAssembly())
