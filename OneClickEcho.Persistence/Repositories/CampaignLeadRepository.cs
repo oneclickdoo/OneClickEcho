@@ -120,6 +120,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         IPagedQuery paging,
         CancellationToken cancellationToken = default)
     {
+        // Same implementation as when report was first added (68a00a0): join + filters on entities, order by phone, then project.
         int reportTimeoutSeconds = _configuration.GetValue("Persistence:CampaignLeadReportCommandTimeoutSeconds", 120);
         if (reportTimeoutSeconds < 30)
         {
@@ -131,47 +132,57 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         {
             _dbContext.Database.SetCommandTimeout(reportTimeoutSeconds);
 
-            int page = Math.Max(1, paging.Page);
-            int pageSize = Math.Clamp(paging.PageSize, 1, 100);
-            int skip = (page - 1) * pageSize;
-
-            IQueryable<CampaignLead> campaignLeads = _dbContext.Set<CampaignLead>().AsNoTracking()
+            IQueryable<CampaignLead> campaignLeadQuery = _dbContext.Set<CampaignLead>()
                 .Where(cl => cl.CampaignId == campaignId);
+
+            IQueryable<Lead> leadQuery = _dbContext.Set<Lead>();
+
+            var q = from cl in campaignLeadQuery
+                join l in leadQuery on cl.LeadId equals l.Id
+                select new { cl, l };
+
+            if (!string.IsNullOrWhiteSpace(phoneSearch))
+            {
+                string term = phoneSearch.Trim();
+                q = q.Where(x => x.l.PhoneNumber.Contains(term));
+            }
 
             if (viberStatus.HasValue)
             {
-                campaignLeads = campaignLeads.Where(cl => cl.ViberStatus == viberStatus.Value);
+                CampaignLeadViberStatus v = viberStatus.Value;
+                q = q.Where(x => x.cl.ViberStatus == v);
             }
 
             if (smsStatus.HasValue)
             {
-                campaignLeads = campaignLeads.Where(cl => cl.SMSStatus == smsStatus.Value);
+                CampaignLeadSMSStatus s = smsStatus.Value;
+                q = q.Where(x => x.cl.SMSStatus == s);
             }
 
-            IQueryable<Lead> leads = _dbContext.Set<Lead>().AsNoTracking();
+            if (isUnsubscribed.HasValue)
+            {
+                bool u = isUnsubscribed.Value;
+                q = q.Where(x => x.l.IsUnsubscribed == u);
+            }
 
-            IQueryable<CampaignLeadReportRow> orderedRows =
-                from cl in campaignLeads
-                join l in leads on cl.LeadId equals l.Id
-                where string.IsNullOrWhiteSpace(phoneSearch) ||
-                      (l.PhoneNumber ?? string.Empty).ToLower().Contains(phoneSearch.Trim().ToLower())
-                where !isUnsubscribed.HasValue || l.IsUnsubscribed == isUnsubscribed.Value
-                orderby cl.LeadId.Value
-                select new CampaignLeadReportRow
-                {
-                    PhoneNumber = l.PhoneNumber ?? string.Empty,
-                    ViberStatus = (short)cl.ViberStatus,
-                    ViberStatusDescription = cl.ViberStatusDescription,
-                    SmsStatus = (short)cl.SMSStatus,
-                    SmsStatusDescription = cl.SMSStatusDescription,
-                    IsUnsubscribed = l.IsUnsubscribed
-                };
+            int totalCount = await q.CountAsync(cancellationToken);
 
-            int totalCount = await orderedRows.CountAsync(cancellationToken);
+            int page = paging.Page;
+            int pageSize = paging.PageSize;
 
-            List<CampaignLeadReportRow> items = await orderedRows
-                .Skip(skip)
+            List<CampaignLeadReportRow> items = await q
+                .OrderBy(x => x.l.PhoneNumber)
+                .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(x => new CampaignLeadReportRow
+                {
+                    PhoneNumber = x.l.PhoneNumber,
+                    ViberStatus = (short)x.cl.ViberStatus,
+                    ViberStatusDescription = x.cl.ViberStatusDescription,
+                    SmsStatus = (short)x.cl.SMSStatus,
+                    SmsStatusDescription = x.cl.SMSStatusDescription,
+                    IsUnsubscribed = x.l.IsUnsubscribed
+                })
                 .ToListAsync(cancellationToken);
 
             return PagedList<CampaignLeadReportRow>.CreateFromParts(items, page, pageSize, totalCount);
