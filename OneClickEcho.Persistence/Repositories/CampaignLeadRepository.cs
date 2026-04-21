@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CampaignAggregate.Enums;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
@@ -17,6 +19,23 @@ using Microsoft.Extensions.Configuration;
 using OneClickEcho.Persistence.Common;
 
 namespace OneClickEcho.Persistence.Repositories;
+
+/// <summary>Maps by column ordinal to SqlQueryRaw result (see CompanyRepository / AnalyticsResults).</summary>
+file sealed class CampaignLeadReportWindowRow
+{
+    public string PhoneNumber { get; set; } = "";
+    public short ViberStatus { get; set; }
+    public string? ViberStatusDescription { get; set; }
+    public short SmsStatus { get; set; }
+    public string? SmsStatusDescription { get; set; }
+    public bool IsUnsubscribed { get; set; }
+    public long TotalCount { get; set; }
+}
+
+file sealed class CampaignLeadReportCountRow
+{
+    public long Cnt { get; set; }
+}
 
 public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfiguration configuration)
     : ICampaignLeadRepository
@@ -120,7 +139,6 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         IPagedQuery paging,
         CancellationToken cancellationToken = default)
     {
-        // Lead report can run COUNT + JOIN + ORDER BY over large campaign sets; default ~30s often surfaces as HTTP 500.
         int reportTimeoutSeconds = _configuration.GetValue("Persistence:CampaignLeadReportCommandTimeoutSeconds", 120);
         if (reportTimeoutSeconds < 30)
         {
@@ -132,87 +150,95 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         {
             _dbContext.Database.SetCommandTimeout(reportTimeoutSeconds);
 
-            // Read-only; avoids change-tracker cost on large scans.
-            IQueryable<CampaignLead> campaignLeadScope = _dbContext.Set<CampaignLead>()
-                .AsNoTracking()
-                .Where(cl => cl.CampaignId == campaignId);
+            Guid cid = campaignId.Value;
+            int page = Math.Max(1, paging.Page);
+            int pageSize = Math.Clamp(paging.PageSize, 1, 100);
+            int skip = (page - 1) * pageSize;
+
+            StringBuilder fromWhere = new StringBuilder();
+            fromWhere.AppendLine("FROM campaign_leads cl");
+            fromWhere.AppendLine("INNER JOIN leads l ON l.id = cl.lead_id");
+            fromWhere.Append("WHERE cl.campaign_id = @cid");
+
+            List<NpgsqlParameter> parameters = [new("cid", cid)];
 
             if (viberStatus.HasValue)
             {
-                CampaignLeadViberStatus v = viberStatus.Value;
-                campaignLeadScope = campaignLeadScope.Where(cl => cl.ViberStatus == v);
+                fromWhere.Append(" AND cl.viber_status = @viber");
+                parameters.Add(new NpgsqlParameter("viber", (short)viberStatus.Value));
             }
 
             if (smsStatus.HasValue)
             {
-                CampaignLeadSMSStatus s = smsStatus.Value;
-                campaignLeadScope = campaignLeadScope.Where(cl => cl.SMSStatus == s);
+                fromWhere.Append(" AND cl.sms_status = @sms");
+                parameters.Add(new NpgsqlParameter("sms", (short)smsStatus.Value));
             }
-
-            bool needsLeadForCount =
-                !string.IsNullOrWhiteSpace(phoneSearch) || isUnsubscribed.HasValue;
-
-            int totalCount;
-            if (needsLeadForCount)
-            {
-                var qCount = from cl in campaignLeadScope
-                    join l in _dbContext.Leads.AsNoTracking() on cl.LeadId equals l.Id
-                    select new { cl, l };
-
-                if (!string.IsNullOrWhiteSpace(phoneSearch))
-                {
-                    string term = phoneSearch.Trim();
-                    qCount = qCount.Where(x => x.l.PhoneNumber != null && x.l.PhoneNumber.Contains(term));
-                }
-
-                if (isUnsubscribed.HasValue)
-                {
-                    bool u = isUnsubscribed.Value;
-                    qCount = qCount.Where(x => x.l.IsUnsubscribed == u);
-                }
-
-                totalCount = await qCount.CountAsync(cancellationToken);
-            }
-            else
-            {
-                totalCount = await campaignLeadScope.CountAsync(cancellationToken);
-            }
-
-            var qPage = from cl in campaignLeadScope
-                join l in _dbContext.Leads.AsNoTracking() on cl.LeadId equals l.Id
-                select new { cl, l };
 
             if (!string.IsNullOrWhiteSpace(phoneSearch))
             {
-                string term = phoneSearch.Trim();
-                qPage = qPage.Where(x => x.l.PhoneNumber != null && x.l.PhoneNumber.Contains(term));
+                fromWhere.Append(" AND l.phone_number ILIKE @phone ESCAPE '\\'");
+                parameters.Add(new NpgsqlParameter("phone", "%" + EscapeForLikePattern(phoneSearch.Trim()) + "%"));
             }
 
             if (isUnsubscribed.HasValue)
             {
-                bool u = isUnsubscribed.Value;
-                qPage = qPage.Where(x => x.l.IsUnsubscribed == u);
+                fromWhere.Append(" AND l.is_unsubscribed = @unsub");
+                parameters.Add(new NpgsqlParameter("unsub", isUnsubscribed.Value));
             }
 
-            int page = paging.Page;
-            int pageSize = paging.PageSize;
+            const string selectList = """
+                SELECT
+                  COALESCE(l.phone_number, '') AS "PhoneNumber",
+                  cl.viber_status AS "ViberStatus",
+                  cl.viber_status_description AS "ViberStatusDescription",
+                  cl.sms_status AS "SmsStatus",
+                  cl.sms_status_description AS "SmsStatusDescription",
+                  l.is_unsubscribed AS "IsUnsubscribed",
+                  COUNT(*) OVER() AS "TotalCount"
+                """;
 
-            // Order by LeadId (matches ix_campaign_leads_campaign_id_lead_id_unique) so OFFSET pages stay fast.
-            // Ordering by phone required a full sort of the campaign join per request — very slow on high page numbers.
-            List<CampaignLeadReportRow> items = await qPage
-                .OrderBy(x => x.cl.LeadId)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(x => new CampaignLeadReportRow
-                {
-                    PhoneNumber = x.l.PhoneNumber ?? string.Empty,
-                    ViberStatus = (short)x.cl.ViberStatus,
-                    ViberStatusDescription = x.cl.ViberStatusDescription,
-                    SmsStatus = (short)x.cl.SMSStatus,
-                    SmsStatusDescription = x.cl.SMSStatusDescription,
-                    IsUnsubscribed = x.l.IsUnsubscribed
-                })
+            string pagedSql = $"{selectList}\n{fromWhere}\nORDER BY cl.lead_id\nOFFSET @skip LIMIT @take";
+            parameters.Add(new NpgsqlParameter("skip", skip));
+            parameters.Add(new NpgsqlParameter("take", pageSize));
+
+            object[] paramArray = [.. parameters];
+
+            List<CampaignLeadReportWindowRow> windowRows = await _dbContext.Database
+                .SqlQueryRaw<CampaignLeadReportWindowRow>(pagedSql, paramArray)
                 .ToListAsync(cancellationToken);
+
+            int totalCount;
+            List<CampaignLeadReportRow> items;
+
+            if (windowRows.Count > 0)
+            {
+                totalCount = (int)Math.Min(int.MaxValue, windowRows[0].TotalCount);
+                items = [];
+                foreach (CampaignLeadReportWindowRow r in windowRows)
+                {
+                    items.Add(new CampaignLeadReportRow
+                    {
+                        PhoneNumber = r.PhoneNumber,
+                        ViberStatus = r.ViberStatus,
+                        ViberStatusDescription = r.ViberStatusDescription,
+                        SmsStatus = r.SmsStatus,
+                        SmsStatusDescription = r.SmsStatusDescription,
+                        IsUnsubscribed = r.IsUnsubscribed
+                    });
+                }
+            }
+            else
+            {
+                string countSql = $"SELECT COUNT(*)::bigint AS \"Cnt\"\n{fromWhere}";
+                object[] countParams = paramArray[..^2];
+
+                CampaignLeadReportCountRow countRow = await _dbContext.Database
+                    .SqlQueryRaw<CampaignLeadReportCountRow>(countSql, countParams)
+                    .SingleAsync(cancellationToken);
+
+                totalCount = (int)Math.Min(int.MaxValue, countRow.Cnt);
+                items = [];
+            }
 
             return PagedList<CampaignLeadReportRow>.CreateFromParts(items, page, pageSize, totalCount);
         }
@@ -221,6 +247,11 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             _dbContext.Database.SetCommandTimeout(previousTimeout);
         }
     }
+
+    private static string EscapeForLikePattern(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 
     public Task<List<CampaignLead>> GetAllCampaignLeadsAsync(CampaignId campaignId, CancellationToken cancellationToken = default)
     {
