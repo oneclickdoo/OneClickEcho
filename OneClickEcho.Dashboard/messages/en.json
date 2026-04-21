@@ -346,7 +346,8 @@
     },
     "actions": {
       "duplicate": "Duplicate",
-      "delete": "Delete"
+      "delete": "Delete",
+      "report": "Report"
     },
     "deleteDialog": {
       "title": "Delete campaign",
@@ -367,6 +368,55 @@
     "leadGender": {
       "male": "Male",
       "female": "Female"
+    }
+  },
+  "CampaignLeadReport": {
+    "title": "Lead report — {name}",
+    "subtitle": "Delivery status per lead for this campaign.",
+    "backToCampaign": "Back to campaign",
+    "searchPhone": "Search by phone",
+    "searchPhonePlaceholder": "Phone contains…",
+    "applyFilters": "Apply filters",
+    "resetFilters": "Reset",
+    "filterViber": "Viber status",
+    "filterSms": "SMS status",
+    "filterUnsubscribed": "Unsubscribed",
+    "filterAll": "All",
+    "filterYes": "Yes",
+    "filterNo": "No",
+    "columns": {
+      "phoneNumber": "Phone",
+      "viberStatus": "Viber (code)",
+      "viberDescription": "Viber description",
+      "smsStatus": "SMS (code)",
+      "smsDescription": "SMS description",
+      "unsubscribed": "Unsubscribed"
+    },
+    "errorNotDone": "This report is only available when the campaign is completed (Done).",
+    "errorLoad": "Could not load the report.",
+    "empty": "No rows match the current filters.",
+    "viberFilterLabels": {
+      "0": "Not sent",
+      "1": "Received",
+      "2": "Pending",
+      "3": "Delivered",
+      "4": "Seen",
+      "5": "Undelivered",
+      "6": "Expired",
+      "7": "Clicked"
+    },
+    "smsFilterLabels": {
+      "-202": "Invalid username/password",
+      "-201": "Invalid reference",
+      "-200": "Error / description",
+      "-1": "Unknown",
+      "0": "None",
+      "1": "Delivered",
+      "2": "Undelivered",
+      "3": "Invalid phone",
+      "5": "Pending",
+      "6": "Sending error",
+      "8": "Blacklisted"
     }
   },
   "CampaignPage": {

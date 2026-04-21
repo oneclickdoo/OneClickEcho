@@ -59,4 +59,8 @@ public class PagedList<T> : IPagedList<T>
 
         return new PagedList<T>(items, query.Page, query.PageSize, totalCount);
     }
+
+    /// <summary>Builds a page when the query was executed manually (e.g. join + filters not expressible as <see cref="Filtering{TEntity}"/>).</summary>
+    public static PagedList<T> CreateFromParts(List<T> items, int pageNumber, int pageSize, int totalCount) =>
+        new(items, pageNumber, pageSize, totalCount);
 }

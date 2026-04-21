@@ -111,6 +111,67 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         return leads;
     }
 
+    public async Task<IPagedList<CampaignLeadReportRow>> GetCampaignLeadReportAsync(
+        CampaignId campaignId,
+        string? phoneSearch,
+        CampaignLeadViberStatus? viberStatus,
+        CampaignLeadSMSStatus? smsStatus,
+        bool? isUnsubscribed,
+        IPagedQuery paging,
+        CancellationToken cancellationToken = default)
+    {
+        var q = from cl in _dbContext.Set<CampaignLead>()
+                where cl.CampaignId == campaignId
+                join l in _dbContext.Leads on cl.LeadId equals l.Id
+                select new { cl, l };
+
+        if (!string.IsNullOrWhiteSpace(phoneSearch))
+        {
+            string term = phoneSearch.Trim();
+            q = q.Where(x => x.l.PhoneNumber.Contains(term));
+        }
+
+        if (viberStatus.HasValue)
+        {
+            CampaignLeadViberStatus v = viberStatus.Value;
+            q = q.Where(x => x.cl.ViberStatus == v);
+        }
+
+        if (smsStatus.HasValue)
+        {
+            CampaignLeadSMSStatus s = smsStatus.Value;
+            q = q.Where(x => x.cl.SMSStatus == s);
+        }
+
+        if (isUnsubscribed.HasValue)
+        {
+            bool u = isUnsubscribed.Value;
+            q = q.Where(x => x.l.IsUnsubscribed == u);
+        }
+
+        int totalCount = await q.CountAsync(cancellationToken);
+
+        int page = paging.Page;
+        int pageSize = paging.PageSize;
+
+        List<CampaignLeadReportRow> items = await q
+            .OrderBy(x => x.l.PhoneNumber)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new CampaignLeadReportRow
+            {
+                PhoneNumber = x.l.PhoneNumber,
+                ViberStatus = (short)x.cl.ViberStatus,
+                ViberStatusDescription = x.cl.ViberStatusDescription,
+                SmsStatus = (short)x.cl.SMSStatus,
+                SmsStatusDescription = x.cl.SMSStatusDescription,
+                IsUnsubscribed = x.l.IsUnsubscribed
+            })
+            .ToListAsync(cancellationToken);
+
+        return PagedList<CampaignLeadReportRow>.CreateFromParts(items, page, pageSize, totalCount);
+    }
+
     public Task<List<CampaignLead>> GetAllCampaignLeadsAsync(CampaignId campaignId, CancellationToken cancellationToken = default)
     {
         IQueryable<CampaignLead> campaignLeads = from cl in _dbContext.Set<CampaignLead>()
@@ -119,7 +180,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
         return campaignLeads.ToListAsync(cancellationToken);
     }
-    
+
     public Task<List<CampaignLead>> GetPendingCampaignLeadsAsync(CampaignId campaignId, CancellationToken cancellationToken = default)
     {
         IQueryable<CampaignLead> campaignLeads = from cl in _dbContext.Set<CampaignLead>()

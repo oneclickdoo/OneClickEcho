@@ -46,6 +46,18 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
     public Task<IPagedList<Lead>> GetPagedLeadsByCampaignIdAsync(CampaignId campaignId, IPagedQuery query,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Paged report rows for a single campaign (phone + viber/sms status + unsubscribe). Caller must ensure campaign status is Done.
+    /// </summary>
+    Task<IPagedList<CampaignLeadReportRow>> GetCampaignLeadReportAsync(
+        CampaignId campaignId,
+        string? phoneSearch,
+        CampaignLeadViberStatus? viberStatus,
+        CampaignLeadSMSStatus? smsStatus,
+        bool? isUnsubscribed,
+        IPagedQuery paging,
+        CancellationToken cancellationToken = default);
+
     Task<List<CampaignLead>> GetAllCampaignLeadsAsync(CampaignId campaignId, CancellationToken cancellationToken = default);
     
     Task<List<CampaignLead>> GetPendingCampaignLeadsAsync(CampaignId campaignId, CancellationToken cancellationToken = default);

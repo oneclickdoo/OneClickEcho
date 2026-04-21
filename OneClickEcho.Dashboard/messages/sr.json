@@ -346,7 +346,8 @@
     },
     "actions": {
       "duplicate": "Dupliraj",
-      "delete": "Obriši"
+      "delete": "Obriši",
+      "report": "Izveštaj"
     },
     "deleteDialog": {
       "title": "Brisanje kampanje",
@@ -367,6 +368,55 @@
     "leadGender": {
       "male": "Muški",
       "female": "Ženski"
+    }
+  },
+  "CampaignLeadReport": {
+    "title": "Izveštaj leadova — {name}",
+    "subtitle": "Status isporuke po leadu za ovu kampanju.",
+    "backToCampaign": "Nazad na kampanju",
+    "searchPhone": "Pretraga po telefonu",
+    "searchPhonePlaceholder": "Telefon sadrži…",
+    "applyFilters": "Primeni filtere",
+    "resetFilters": "Resetuj",
+    "filterViber": "Viber status",
+    "filterSms": "SMS status",
+    "filterUnsubscribed": "Odjava (unsubscribe)",
+    "filterAll": "Sve",
+    "filterYes": "Da",
+    "filterNo": "Ne",
+    "columns": {
+      "phoneNumber": "Telefon",
+      "viberStatus": "Viber (kod)",
+      "viberDescription": "Viber opis",
+      "smsStatus": "SMS (kod)",
+      "smsDescription": "SMS opis",
+      "unsubscribed": "Odjavljen"
+    },
+    "errorNotDone": "Izveštaj je dostupan samo kada je kampanja završena (Gotovo).",
+    "errorLoad": "Izveštaj nije mogao da se učita.",
+    "empty": "Nema redova za izabrane filtere.",
+    "viberFilterLabels": {
+      "0": "Nije poslato",
+      "1": "Primljeno",
+      "2": "Na čekanju",
+      "3": "Isporučeno",
+      "4": "Viđeno",
+      "5": "Nije isporučeno",
+      "6": "Isteklo",
+      "7": "Kliknuto"
+    },
+    "smsFilterLabels": {
+      "-202": "Neispravno korisničko ime / lozinka",
+      "-201": "Neispravna referenca",
+      "-200": "Greška / opis",
+      "-1": "Nepoznato",
+      "0": "Nije poslato",
+      "1": "Isporučeno",
+      "2": "Nije isporučeno",
+      "3": "Neispravan telefon",
+      "5": "Na čekanju",
+      "6": "Greška slanja",
+      "8": "Blacklist"
     }
   },
   "CampaignPage": {

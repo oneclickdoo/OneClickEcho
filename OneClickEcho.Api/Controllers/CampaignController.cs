@@ -22,6 +22,7 @@ using OneClickEcho.Application.Campaign.Queries.ExportCampaignLeads;
 using OneClickEcho.Application.Campaign.Queries.GetCampaignAnalytics;
 using OneClickEcho.Application.Campaign.Queries.GetCampaignById;
 using OneClickEcho.Application.Campaign.Queries.GetCampaignLeadCollections;
+using OneClickEcho.Application.Campaign.Queries.GetCampaignLeadReport;
 using OneClickEcho.Application.Campaign.Queries.GetCampaignLeads;
 using OneClickEcho.Application.Campaign.Queries.GetCampaigns;
 using OneClickEcho.Domain.Common.Shared;
@@ -247,6 +248,50 @@ public class CampaignController(IMediator mediator) : ApiController(mediator)
         Result<GetCampaignLeadsResponse> response = await Mediator.Send(query, cancellationToken);
 
         return response.IsSuccess ? Ok(response.Value) : NotFound(response.Error);
+    }
+
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
+    [HttpGet("{campaignId:guid}/lead-report")]
+    public async Task<IActionResult> GetCampaignLeadReport(
+        [FromRoute] Guid campaignId,
+        [FromQuery] PagedQueryParams pagedQueryParams,
+        [FromQuery] string? phoneSearch,
+        [FromQuery] short? viberStatus,
+        [FromQuery] short? smsStatus,
+        [FromQuery] bool? isUnsubscribed,
+        CancellationToken cancellationToken)
+    {
+        IActionResult? denied = await RequireCampaignAccessAsync(campaignId, cancellationToken);
+        if (denied != null)
+        {
+            return denied;
+        }
+
+        GetCampaignLeadReportQuery query = pagedQueryParams.ConvertToBasePagedQuery<GetCampaignLeadReportQuery>();
+        query.CampaignId = campaignId;
+        query.PhoneSearch = phoneSearch;
+        query.ViberStatus = viberStatus;
+        query.SmsStatus = smsStatus;
+        query.IsUnsubscribed = isUnsubscribed;
+
+        Result<GetCampaignLeadReportResponse> response = await Mediator.Send(query, cancellationToken);
+
+        if (!response.IsSuccess)
+        {
+            if (response.Error.Code == "Campaign.NotFound")
+            {
+                return NotFound(response.Error);
+            }
+
+            if (response.Error.Code == "Campaign.LeadReport.NotDone")
+            {
+                return BadRequest(response.Error);
+            }
+
+            return BadRequest(response.Error);
+        }
+
+        return Ok(response.Value);
     }
 
     [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]

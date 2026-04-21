@@ -255,6 +255,17 @@ export function CampaignsTable() {
                             {t("actions.duplicate")}
                         </DropdownMenuItem>
 
+                        {isDoneStatus(row.original.status) ? (
+                            <DropdownMenuItem asChild>
+                                <Link
+                                    href={withLocale(locale, `/campaigns/${row.original.campaignId}/report`)}
+                                    className="cursor-pointer"
+                                >
+                                    {t("actions.report")}
+                                </Link>
+                            </DropdownMenuItem>
+                        ) : null}
+
                         <DropdownMenuItem
                             onClick={() => handleDeleteCampaign(row.original)}
                             className="text-red-600 dark:text-red-500"

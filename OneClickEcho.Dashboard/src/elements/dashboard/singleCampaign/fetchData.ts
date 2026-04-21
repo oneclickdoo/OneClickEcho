@@ -250,6 +250,75 @@ export const fetchLeadsData = async (
     };
 };
 
+export type CampaignLeadReportRowDto = {
+    phoneNumber: string;
+    viberStatus: number;
+    viberStatusDescription: string | null;
+    smsStatus: number;
+    smsStatusDescription: string | null;
+    isUnsubscribed: boolean;
+};
+
+export const fetchCampaignLeadReport = async (
+    campaignId: string,
+    options: PaginationState,
+    phoneSearch: string,
+    viberStatus: number | null,
+    smsStatus: number | null,
+    isUnsubscribed: boolean | null,
+    authFetch: IFetch
+): Promise<IFetchResult<CampaignLeadReportRowDto>> => {
+    const url = new URL(`/api/Campaign/${campaignId}/lead-report`, window.location.origin);
+
+    url.searchParams.append("Page", String(options.pageIndex + 1));
+    url.searchParams.append("PageSize", String(options.pageSize));
+
+    const phone = phoneSearch.trim();
+    if (phone.length > 0) {
+        url.searchParams.append("phoneSearch", phone);
+    }
+
+    if (viberStatus !== null && Number.isFinite(viberStatus)) {
+        url.searchParams.append("viberStatus", String(viberStatus));
+    }
+
+    if (smsStatus !== null && Number.isFinite(smsStatus)) {
+        url.searchParams.append("smsStatus", String(smsStatus));
+    }
+
+    if (isUnsubscribed !== null) {
+        url.searchParams.append("isUnsubscribed", isUnsubscribed ? "true" : "false");
+    }
+
+    const response = await authFetch(url.toString(), {
+        headers: { Accept: "application/json" }
+    });
+
+    if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+            const body = await response.json();
+            message =
+                (typeof body?.message === "string" && body.message) ||
+                (typeof body?.Message === "string" && body.Message) ||
+                (typeof body?.title === "string" && body.title) ||
+                message;
+        } catch {
+            // ignore
+        }
+
+        throw new Error(message);
+    }
+
+    const data: PaginatedItems<CampaignLeadReportRowDto> = await response.json();
+
+    return {
+        rows: [...data.items],
+        pageCount: data.totalPages,
+        rowCount: data.totalCount
+    };
+};
+
 export const fetchCampaignLeadCollectionsData = async (
     campaignId: string,
     options: PaginationState,
