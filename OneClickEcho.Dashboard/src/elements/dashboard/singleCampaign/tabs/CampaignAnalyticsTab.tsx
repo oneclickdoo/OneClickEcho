@@ -48,6 +48,11 @@ interface ICampaignAnalyticsTab {
     isActive: boolean;
     /** ISO from campaign API; polling only while campaign is newer than 48h. */
     campaignCreatedAt?: string;
+    /**
+     * When false, hide SMS pie + per-SMS-status collection/export (Viber-only campaigns).
+     * API may still return an SMS payload with zeros; without this the same UI pattern repeats twice.
+     */
+    includeSmsChannel?: boolean;
 }
 
 interface IFunnelChartData {
@@ -70,6 +75,8 @@ const campaignStatCardClass =
     "flex h-full min-h-[11.5rem] w-full flex-col !p-5 shadow-md border-gray-200 dark:border-gray-800 dark:bg-gray-900";
 
 export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
+    const includeSmsChannel = props.includeSmsChannel ?? true;
+
     const t = useTranslations("SingleCampaign.Tabs.CampaignAnalytics");
     const tKpi = useTranslations("Kpi");
     const tPie = useTranslations("SingleCampaign.Tabs.CampaignAnalytics.pie");
@@ -585,7 +592,7 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
                         </>
                     ) : null}
 
-                    {campaignAnalytics.sms && smsStatuses.length > 0 ? (
+                    {includeSmsChannel && campaignAnalytics.sms && smsStatuses.length > 0 ? (
                         <div className="flex flex-col gap-5 md:flex-row md:items-stretch">
                             <div className="flex min-h-[22rem] w-full items-center md:w-1/2">
                                 <ReactEcharts className="h-[22rem] w-full" echarts={echarts} option={smsPieChartConfig} />

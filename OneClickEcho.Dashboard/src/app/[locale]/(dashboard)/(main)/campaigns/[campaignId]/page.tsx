@@ -313,6 +313,7 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
                                 status={campaign.status}
                                 isActive={currentTab === ANALYTICS_TAB}
                                 campaignCreatedAt={campaign.createdAt}
+                                includeSmsChannel={campaign.isSms || campaign.fallbackToSMS}
                             />
                         </TabsContent>
 
