@@ -55,6 +55,7 @@ function extractErrorMessage(response: any, fallback: string): string {
 
 const Overview = () => {
     const t = useTranslations("Overview");
+    const tCommon = useTranslations("Common");
 
     const params = useParams<{ locale: string }>();
     const locale = (params?.locale as string) || "en";
@@ -68,7 +69,13 @@ const Overview = () => {
     const router = useRouter();
     const { beginActionLoading } = useActionNavigationLoading();
 
-    if (!dashboardManager) return null;
+    if (!dashboardManager) {
+        return (
+            <div className="flex min-h-[12rem] items-center justify-center text-gray-600 dark:text-gray-400">
+                <p className="text-sm">{tCommon("loading")}</p>
+            </div>
+        );
+    }
 
     const handleSubmit = async () => {
         const companyId = dashboardManager?.currentCompany?.companyId;

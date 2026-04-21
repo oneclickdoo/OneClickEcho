@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using OneClickEcho.Domain.CampaignAggregate;
@@ -18,23 +17,6 @@ using Microsoft.Extensions.Configuration;
 using OneClickEcho.Persistence.Common;
 
 namespace OneClickEcho.Persistence.Repositories;
-
-/// <summary>Maps by column ordinal to SqlQueryRaw result (see CompanyRepository / AnalyticsResults).</summary>
-file sealed class CampaignLeadReportWindowRow
-{
-    public string PhoneNumber { get; set; } = "";
-    public short ViberStatus { get; set; }
-    public string? ViberStatusDescription { get; set; }
-    public short SmsStatus { get; set; }
-    public string? SmsStatusDescription { get; set; }
-    public bool IsUnsubscribed { get; set; }
-    public long TotalCount { get; set; }
-}
-
-file sealed class CampaignLeadReportCountRow
-{
-    public long Cnt { get; set; }
-}
 
 public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfiguration configuration)
     : ICampaignLeadRepository
@@ -149,107 +131,48 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         {
             _dbContext.Database.SetCommandTimeout(reportTimeoutSeconds);
 
-            Guid cid = campaignId.Value;
             int page = Math.Max(1, paging.Page);
             int pageSize = Math.Clamp(paging.PageSize, 1, 100);
             int skip = (page - 1) * pageSize;
 
-            StringBuilder fromWhere = new StringBuilder();
-            fromWhere.AppendLine("FROM campaign_leads cl");
-            fromWhere.AppendLine("INNER JOIN leads l ON l.id = cl.lead_id");
-
-            // EF Core SqlQueryRaw / ExecuteSqlRaw expect {0}, {1}, … — not @name (Postgres would error on @).
-            List<object> parameterValues = [];
-            int pi = 0;
-
-            fromWhere.Append($"WHERE cl.campaign_id = {{{pi}}}");
-            parameterValues.Add(cid);
-            pi++;
+            IQueryable<CampaignLead> campaignLeads = _dbContext.Set<CampaignLead>().AsNoTracking()
+                .Where(cl => cl.CampaignId == campaignId);
 
             if (viberStatus.HasValue)
             {
-                fromWhere.Append($" AND cl.viber_status = {{{pi}}}");
-                parameterValues.Add((short)viberStatus.Value);
-                pi++;
+                campaignLeads = campaignLeads.Where(cl => cl.ViberStatus == viberStatus.Value);
             }
 
             if (smsStatus.HasValue)
             {
-                fromWhere.Append($" AND cl.sms_status = {{{pi}}}");
-                parameterValues.Add((short)smsStatus.Value);
-                pi++;
+                campaignLeads = campaignLeads.Where(cl => cl.SMSStatus == smsStatus.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(phoneSearch))
-            {
-                fromWhere.Append($" AND l.phone_number ILIKE {{{pi}}} ESCAPE '\\'");
-                parameterValues.Add("%" + EscapeForLikePattern(phoneSearch.Trim()) + "%");
-                pi++;
-            }
+            IQueryable<Lead> leads = _dbContext.Set<Lead>().AsNoTracking();
 
-            if (isUnsubscribed.HasValue)
-            {
-                fromWhere.Append($" AND l.is_unsubscribed = {{{pi}}}");
-                parameterValues.Add(isUnsubscribed.Value);
-                pi++;
-            }
-
-            const string selectList = """
-                SELECT
-                  COALESCE(l.phone_number, '') AS "PhoneNumber",
-                  cl.viber_status AS "ViberStatus",
-                  cl.viber_status_description AS "ViberStatusDescription",
-                  cl.sms_status AS "SmsStatus",
-                  cl.sms_status_description AS "SmsStatusDescription",
-                  l.is_unsubscribed AS "IsUnsubscribed",
-                  COUNT(*) OVER() AS "TotalCount"
-                """;
-
-            string fromWhereSql = fromWhere.ToString();
-            int skipIndex = pi;
-            string pagedSql =
-                $"{selectList}\n{fromWhereSql}\nORDER BY cl.lead_id\nOFFSET {{{skipIndex}}} LIMIT {{{skipIndex + 1}}}";
-            parameterValues.Add(skip);
-            parameterValues.Add(pageSize);
-
-            object[] paramArray = [.. parameterValues];
-
-            List<CampaignLeadReportWindowRow> windowRows = await _dbContext.Database
-                .SqlQueryRaw<CampaignLeadReportWindowRow>(pagedSql, paramArray)
-                .ToListAsync(cancellationToken);
-
-            int totalCount;
-            List<CampaignLeadReportRow> items;
-
-            if (windowRows.Count > 0)
-            {
-                totalCount = (int)Math.Min(int.MaxValue, windowRows[0].TotalCount);
-                items = [];
-                foreach (CampaignLeadReportWindowRow r in windowRows)
+            IQueryable<CampaignLeadReportRow> orderedRows =
+                from cl in campaignLeads
+                join l in leads on cl.LeadId equals l.Id
+                where string.IsNullOrWhiteSpace(phoneSearch) ||
+                      (l.PhoneNumber ?? string.Empty).ToLower().Contains(phoneSearch.Trim().ToLower())
+                where !isUnsubscribed.HasValue || l.IsUnsubscribed == isUnsubscribed.Value
+                orderby cl.LeadId.Value
+                select new CampaignLeadReportRow
                 {
-                    items.Add(new CampaignLeadReportRow
-                    {
-                        PhoneNumber = r.PhoneNumber,
-                        ViberStatus = r.ViberStatus,
-                        ViberStatusDescription = r.ViberStatusDescription,
-                        SmsStatus = r.SmsStatus,
-                        SmsStatusDescription = r.SmsStatusDescription,
-                        IsUnsubscribed = r.IsUnsubscribed
-                    });
-                }
-            }
-            else
-            {
-                string countSql = $"SELECT COUNT(*)::bigint AS \"Cnt\"\n{fromWhereSql}";
-                object[] countParams = paramArray[..^2];
+                    PhoneNumber = l.PhoneNumber ?? string.Empty,
+                    ViberStatus = (short)cl.ViberStatus,
+                    ViberStatusDescription = cl.ViberStatusDescription,
+                    SmsStatus = (short)cl.SMSStatus,
+                    SmsStatusDescription = cl.SMSStatusDescription,
+                    IsUnsubscribed = l.IsUnsubscribed
+                };
 
-                CampaignLeadReportCountRow countRow = await _dbContext.Database
-                    .SqlQueryRaw<CampaignLeadReportCountRow>(countSql, countParams)
-                    .SingleAsync(cancellationToken);
+            int totalCount = await orderedRows.CountAsync(cancellationToken);
 
-                totalCount = (int)Math.Min(int.MaxValue, countRow.Cnt);
-                items = [];
-            }
+            List<CampaignLeadReportRow> items = await orderedRows
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
 
             return PagedList<CampaignLeadReportRow>.CreateFromParts(items, page, pageSize, totalCount);
         }
@@ -258,11 +181,6 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             _dbContext.Database.SetCommandTimeout(previousTimeout);
         }
     }
-
-    private static string EscapeForLikePattern(string value) =>
-        value.Replace("\\", "\\\\", StringComparison.Ordinal)
-            .Replace("%", "\\%", StringComparison.Ordinal)
-            .Replace("_", "\\_", StringComparison.Ordinal);
 
     public Task<List<CampaignLead>> GetAllCampaignLeadsAsync(CampaignId campaignId, CancellationToken cancellationToken = default)
     {

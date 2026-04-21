@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ProtectedRoute } from "@/context/AuthContext";
@@ -13,7 +14,18 @@ export default function Layout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const queryClient = new QueryClient();
+    // One client per layout mount — never `new QueryClient()` on every render (resets cache / races after setCurrentCompany).
+    const [queryClient] = useState(
+        () =>
+            new QueryClient({
+                defaultOptions: {
+                    queries: {
+                        staleTime: 30_000,
+                        retry: 1
+                    }
+                }
+            })
+    );
 
     return (
         <ProtectedRoute>
