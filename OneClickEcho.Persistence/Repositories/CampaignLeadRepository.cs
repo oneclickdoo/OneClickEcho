@@ -132,7 +132,9 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         {
             _dbContext.Database.SetCommandTimeout(reportTimeoutSeconds);
 
+            // Read-only; avoids change-tracker cost on large scans.
             IQueryable<CampaignLead> campaignLeadScope = _dbContext.Set<CampaignLead>()
+                .AsNoTracking()
                 .Where(cl => cl.CampaignId == campaignId);
 
             if (viberStatus.HasValue)
@@ -154,7 +156,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             if (needsLeadForCount)
             {
                 var qCount = from cl in campaignLeadScope
-                    join l in _dbContext.Leads on cl.LeadId equals l.Id
+                    join l in _dbContext.Leads.AsNoTracking() on cl.LeadId equals l.Id
                     select new { cl, l };
 
                 if (!string.IsNullOrWhiteSpace(phoneSearch))
@@ -177,7 +179,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             }
 
             var qPage = from cl in campaignLeadScope
-                join l in _dbContext.Leads on cl.LeadId equals l.Id
+                join l in _dbContext.Leads.AsNoTracking() on cl.LeadId equals l.Id
                 select new { cl, l };
 
             if (!string.IsNullOrWhiteSpace(phoneSearch))
@@ -195,8 +197,10 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             int page = paging.Page;
             int pageSize = paging.PageSize;
 
+            // Order by LeadId (matches ix_campaign_leads_campaign_id_lead_id_unique) so OFFSET pages stay fast.
+            // Ordering by phone required a full sort of the campaign join per request — very slow on high page numbers.
             List<CampaignLeadReportRow> items = await qPage
-                .OrderBy(x => x.l.PhoneNumber)
+                .OrderBy(x => x.cl.LeadId)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => new CampaignLeadReportRow
