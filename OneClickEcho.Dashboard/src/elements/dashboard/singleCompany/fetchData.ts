@@ -155,6 +155,31 @@ export const getCompanyById = async (companyId: string, authFetch: IFetch) => {
     return data;
 };
 
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryCompanyAnalyticsHttpStatus(status: number): boolean {
+    return status === 408 || status === 429 || (status >= 500 && status < 600);
+}
+
+function isLikelyTransientNetworkFailure(e: unknown): boolean {
+    if (e instanceof TypeError) return true;
+    if (!(e instanceof Error)) return false;
+    const m = e.message.toLowerCase();
+    return (
+        m.includes("failed to fetch") ||
+        m.includes("networkerror") ||
+        m.includes("network error") ||
+        m.includes("fetch failed") ||
+        m.includes("load failed")
+    );
+}
+
+/**
+ * Company analytics query can fail on first hit (cold API/DB, gateway) while a quick retry succeeds.
+ * Retries only server/transient statuses and network errors; does not retry 4xx except 408/429.
+ */
 export const getCompanyAnalytics = async (
     companyId: string,
     authFetch: IFetch,
@@ -172,19 +197,57 @@ export const getCompanyAnalytics = async (
         url.searchParams.append("EndDate", endDate);
     }
 
-    const response = await authFetch(url.toString(), {
-        headers: {
-            Accept: "application/json"
-        },
-        signal
-    });
+    const maxAttempts = 3;
+    /** Delay before attempt index 1 and 2 (ms). */
+    const backoffBeforeAttemptMs = [0, 450, 1200];
 
-    if (!response.ok) {
-        throw new Error("Network response was not ok");
+    let lastHttpStatus = 0;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        if (attempt > 0) {
+            await sleep(backoffBeforeAttemptMs[attempt]);
+            if (signal?.aborted) {
+                throw new DOMException("The operation was aborted.", "AbortError");
+            }
+        }
+
+        let response: Response;
+        try {
+            response = await authFetch(url.toString(), {
+                headers: {
+                    Accept: "application/json"
+                },
+                signal
+            });
+        } catch (e) {
+            if (e instanceof DOMException && e.name === "AbortError") {
+                throw e;
+            }
+            if (attempt < maxAttempts - 1 && isLikelyTransientNetworkFailure(e)) {
+                continue;
+            }
+            throw e instanceof Error ? e : new Error("Analytics request failed");
+        }
+
+        if (response.ok) {
+            const data: CompanyAnalyticsDto = await response.json();
+            return data;
+        }
+
+        lastHttpStatus = response.status;
+
+        if (attempt < maxAttempts - 1 && shouldRetryCompanyAnalyticsHttpStatus(response.status)) {
+            await response.text().catch(() => undefined);
+            continue;
+        }
+
+        await response.text().catch(() => undefined);
+        throw new Error(
+            lastHttpStatus
+                ? `Analytics request failed (HTTP ${lastHttpStatus})`
+                : "Network response was not ok"
+        );
     }
-
-    const data: CompanyAnalyticsDto = await response.json();
-    return data;
 };
 
 export const updateCompany = async (updatedData: Partial<CompanyDto>, authFetch: IFetch) => {
