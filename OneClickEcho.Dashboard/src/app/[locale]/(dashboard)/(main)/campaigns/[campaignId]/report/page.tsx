@@ -172,6 +172,9 @@ export default function CampaignLeadReportPage() {
 
     const rowCount = reportQuery.data?.rowCount ?? 0;
 
+    const showReportTableLoader =
+        (Boolean(campaignId) && campaignQuery.isLoading) || (reportEnabled && reportQuery.isFetching);
+
     const table = useReactTable({
         data: reportQuery.data?.rows ?? [],
         columns,
@@ -303,9 +306,32 @@ export default function CampaignLeadReportPage() {
                         <p className="text-sm text-red-600/90 dark:text-red-400">{reportQuery.error.message}</p>
                     ) : null}
                 </div>
+            ) : showReportTableLoader ? (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    aria-busy="true"
+                    className="flex items-center justify-center h-32 text-gray-700 dark:text-gray-300"
+                >
+                    <svg
+                        className="animate-spin h-5 w-5 mr-3 text-gray-700 dark:text-gray-300"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        aria-hidden
+                    >
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C3.58 0 0 5.82 0 12h4z"
+                        />
+                    </svg>
+                    <span className="text-lg font-medium">{t("loading")}</span>
+                </div>
             ) : (
                 <>
-                    {!reportQuery.isFetching && rowCount === 0 ? (
+                    {rowCount === 0 ? (
                         <p className="text-sm text-gray-600 dark:text-gray-400">{t("empty")}</p>
                     ) : null}
 
