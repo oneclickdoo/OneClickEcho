@@ -168,7 +168,7 @@ public class CompanyRepository(ApplicationDbContext dbContext) : ICompanyReposit
         catch (Exception ex)
         {
             Log.Error(ex, "An error occurred while retrieving analytics results for CompanyId: {CompanyId}", id.Value);
-            return new AnalyticsResults();
+            throw;
         }
     }
 

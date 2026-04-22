@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -48,11 +48,15 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
     const locale = (routeParams?.locale as string) || "en";
 
     const [analytics, setAnalytics] = useState<CompanyAnalyticsDto | undefined>(undefined);
-    const [selectedDate, setSelectedDate] = useState<DateRange | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<DateRange | undefined>(() => {
+        const now = new Date();
+        return { from: startOfMonth(now), to: endOfMonth(now) };
+    });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string>("");
 
     const { authFetch } = useAuth();
+    const latestFetchIdRef = useRef(0);
 
     const numberFmt = useMemo(
         () =>
@@ -81,47 +85,42 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
         [locale]
     );
 
-    const getAnalytics = useCallback(
-        async (dateFrom?: string, dateTo?: string, signal?: AbortSignal) => {
-            setIsLoading(true);
-            setError("");
-            try {
-                const data = await getCompanyAnalytics(props.companyId, authFetch, dateFrom, dateTo, signal);
-                if (signal?.aborted) return;
-                setAnalytics(data);
-            } catch (e: any) {
-                if (e instanceof DOMException && e.name === "AbortError") return;
-                console.error(e);
-                setAnalytics(undefined);
-                setError(e?.message ?? "Error");
-            } finally {
-                if (!signal?.aborted) {
-                    setIsLoading(false);
-                }
-            }
-        },
-        [props.companyId, authFetch]
-    );
-
     useEffect(() => {
-        const now = new Date();
-        setSelectedDate({
-            from: startOfMonth(now),
-            to: endOfMonth(now)
-        });
-    }, []);
+        if (!selectedDate?.from || !props.companyId) return;
 
-    useEffect(() => {
-        if (!selectedDate?.from) return;
-
+        let alive = true;
         const rangeTo = selectedDate.to ?? selectedDate.from;
         const { fromIso, endIso } = dateRangeToAnalyticsQueryBounds(selectedDate.from, rangeTo);
 
+        const fetchId = ++latestFetchIdRef.current;
         const ac = new AbortController();
-        void getAnalytics(fromIso, endIso, ac.signal);
 
-        return () => ac.abort();
-    }, [selectedDate, getAnalytics]);
+        setIsLoading(true);
+        setError("");
+
+        void (async () => {
+            try {
+                const data = await getCompanyAnalytics(props.companyId, authFetch, fromIso, endIso, ac.signal);
+                if (!alive || fetchId !== latestFetchIdRef.current) return;
+                setAnalytics(data);
+            } catch (e: unknown) {
+                if (!alive || fetchId !== latestFetchIdRef.current) return;
+                if (e instanceof DOMException && e.name === "AbortError") return;
+                console.error(e);
+                setAnalytics(undefined);
+                setError(e instanceof Error ? e.message : "Error");
+            } finally {
+                if (alive && fetchId === latestFetchIdRef.current) {
+                    setIsLoading(false);
+                }
+            }
+        })();
+
+        return () => {
+            alive = false;
+            ac.abort();
+        };
+    }, [selectedDate, props.companyId, authFetch]);
 
     const chartData1 = useMemo(() => {
         const viberLeads = safeNonNegativeInt(analytics?.analyticsResults?.viberTotalLeads);

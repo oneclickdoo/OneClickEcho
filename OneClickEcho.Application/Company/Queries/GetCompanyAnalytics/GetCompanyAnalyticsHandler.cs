@@ -24,8 +24,8 @@ namespace OneClickEcho.Application.Company.Queries.GetCompanyAnalytics
 
             if (company is null)
             {
-                Result.Failure<GetCompanyAnalyticsResponse>
-                    (new Error("Company.NotFound", $"The Company with Id:\"{query.CompanyId}\" does not exist."));
+                return Result.Failure<GetCompanyAnalyticsResponse>(
+                    new Error("Company.NotFound", $"The Company with Id:\"{query.CompanyId}\" does not exist."));
             }
 
             // parse date
