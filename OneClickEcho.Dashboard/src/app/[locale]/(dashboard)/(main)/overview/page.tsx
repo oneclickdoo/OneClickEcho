@@ -212,7 +212,10 @@ const Overview = () => {
                         </Dialog>
                     </div>
 
-                    <CompanyAnalytics companyId={dashboardManager.currentCompany.companyId} />
+                    <CompanyAnalytics
+                        key={dashboardManager.currentCompany.companyId}
+                        companyId={dashboardManager.currentCompany.companyId}
+                    />
                 </div>
             ) : null}
         </section>

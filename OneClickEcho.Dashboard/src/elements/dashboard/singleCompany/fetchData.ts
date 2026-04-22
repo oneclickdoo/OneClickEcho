@@ -155,7 +155,13 @@ export const getCompanyById = async (companyId: string, authFetch: IFetch) => {
     return data;
 };
 
-export const getCompanyAnalytics = async (companyId: string, authFetch: IFetch, startDate?: string, endDate?: string) => {
+export const getCompanyAnalytics = async (
+    companyId: string,
+    authFetch: IFetch,
+    startDate?: string,
+    endDate?: string,
+    signal?: AbortSignal
+) => {
     const url = new URL(`/api/Company/${companyId}/Analytics`, window.location.origin);
 
     if (startDate) {
@@ -169,7 +175,8 @@ export const getCompanyAnalytics = async (companyId: string, authFetch: IFetch, 
     const response = await authFetch(url.toString(), {
         headers: {
             Accept: "application/json"
-        }
+        },
+        signal
     });
 
     if (!response.ok) {

@@ -21,10 +21,12 @@ function startOfMonth(d: Date) {
 function endOfMonth(d: Date) {
     return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
 }
-function addDays(d: Date, days: number) {
-    const x = new Date(d);
-    x.setDate(x.getDate() + days);
-    return x;
+
+/** Local calendar bounds; API filters `sending_datetime >= StartDate AND <= EndDate` (both inclusive). */
+function dateRangeToAnalyticsQueryBounds(from: Date, to: Date): { fromIso: string; endIso: string } {
+    const startLocal = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 0, 0, 0, 0);
+    const endDayLocal = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+    return { fromIso: startLocal.toISOString(), endIso: endDayLocal.toISOString() };
 }
 
 /** API / legacy payloads may send non-numeric values; keeps charts and rates free of NaN. */
@@ -80,18 +82,22 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
     );
 
     const getAnalytics = useCallback(
-        async (dateFrom?: string, dateTo?: string) => {
+        async (dateFrom?: string, dateTo?: string, signal?: AbortSignal) => {
             setIsLoading(true);
             setError("");
             try {
-                const data = await getCompanyAnalytics(props.companyId, authFetch, dateFrom, dateTo);
+                const data = await getCompanyAnalytics(props.companyId, authFetch, dateFrom, dateTo, signal);
+                if (signal?.aborted) return;
                 setAnalytics(data);
             } catch (e: any) {
+                if (e instanceof DOMException && e.name === "AbortError") return;
                 console.error(e);
                 setAnalytics(undefined);
                 setError(e?.message ?? "Error");
             } finally {
-                setIsLoading(false);
+                if (!signal?.aborted) {
+                    setIsLoading(false);
+                }
             }
         },
         [props.companyId, authFetch]
@@ -108,10 +114,13 @@ export const CompanyAnalytics = (props: ICompanyAnalytics) => {
     useEffect(() => {
         if (!selectedDate?.from) return;
 
-        const fromIso = selectedDate.from.toISOString();
-        const toIso = selectedDate.to ? addDays(selectedDate.to, 1).toISOString() : addDays(selectedDate.from, 1).toISOString();
+        const rangeTo = selectedDate.to ?? selectedDate.from;
+        const { fromIso, endIso } = dateRangeToAnalyticsQueryBounds(selectedDate.from, rangeTo);
 
-        getAnalytics(fromIso, toIso);
+        const ac = new AbortController();
+        void getAnalytics(fromIso, endIso, ac.signal);
+
+        return () => ac.abort();
     }, [selectedDate, getAnalytics]);
 
     const chartData1 = useMemo(() => {

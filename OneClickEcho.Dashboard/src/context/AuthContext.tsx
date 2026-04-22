@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useContext, createContext, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useContext, createContext, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
     /** Abort stale session probes so a late 401 cannot run /auth/logout after a successful login (wiping fresh cookies). */
     const sessionProbeAbortRef = useRef<AbortController | null>(null);
 
-    const { run: runWithSlowOverlay, wrapFetch, visible: slowNetworkVisible } = useSlowOperationOverlay(3000);
+    const { run: runWithSlowOverlay, visible: slowNetworkVisible } = useSlowOperationOverlay(3000);
 
     const logout = useCallback(async () => {
         try {
@@ -83,13 +83,17 @@ export const AuthProvider = ({ children }: { children: JSX.Element | JSX.Element
 
                 return response;
             } catch (e) {
-                throw new Error("Authorization failed");
+                if (e instanceof DOMException && e.name === "AbortError") {
+                    throw e;
+                }
+                throw e instanceof Error ? e : new Error("Authorization failed");
             }
         },
         [logout]
     );
 
-    const authFetch = useMemo(() => wrapFetch(authFetchImpl), [wrapFetch, authFetchImpl]);
+    /** No slow-operation overlay here — long requests (e.g. analytics) use local loading UI instead of stacking a full-screen modal. */
+    const authFetch = authFetchImpl;
 
     /** Session probe: 401 without cookies is normal (e.g. login page). Never call /auth/logout here — a slow 401 after login would delete fresh session cookies. */
     const getUser: () => Promise<IUser | null> = async () => {
