@@ -66,7 +66,8 @@ public static class CampaignTenantFilter
 
             string? rest = StripCompanyIdClauses(clientFilter);
             string tenant = $"CompanyId eq {scope}";
-            return string.IsNullOrWhiteSpace(rest) ? tenant : $"({tenant}) and ({rest})";
+            // Do not wrap in parentheses: FilterLexer treats "(" as part of the first property name and throws.
+            return string.IsNullOrWhiteSpace(rest) ? tenant : $"{tenant} and {rest}";
         }
 
         IReadOnlyList<Guid> allowed = GetUserCompanyIds(user);
@@ -85,7 +86,7 @@ public static class CampaignTenantFilter
         {
             tenantClause = allowed.Count == 1
                 ? $"CompanyId eq {allowed[0]}"
-                : "(" + string.Join(" or ", allowed.Select(g => $"CompanyId eq {g}")) + ")";
+                : string.Join(" or ", allowed.Select(g => $"CompanyId eq {g}"));
         }
 
         string? restNonAdmin = StripCompanyIdClauses(clientFilter);
@@ -94,7 +95,7 @@ public static class CampaignTenantFilter
             return tenantClause;
         }
 
-        return $"({tenantClause}) and ({restNonAdmin})";
+        return $"{tenantClause} and {restNonAdmin}";
     }
 
     private static string? StripCompanyIdClauses(string? filter)
