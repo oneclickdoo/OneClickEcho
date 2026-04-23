@@ -339,6 +339,7 @@
     "filters": {
       "status": "Status",
       "createdAt": "Created",
+      "createdYear": "Created in year",
       "sentAt": "Sent"
     },
     "search": {

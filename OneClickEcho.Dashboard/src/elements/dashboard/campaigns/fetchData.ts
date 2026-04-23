@@ -1,8 +1,20 @@
+import moment from "moment";
 import { PaginationState, SortingState } from "@tanstack/react-table";
 import { IFetchResult } from "@/components/table/TableGeneric";
 import { convertDateOnlyToDate } from "@/lib/utils";
 import { IFetch, PaginatedItems } from "@/lib/networking";
 import { CampaignSendingType } from "@/lib/enums";
+
+/** First calendar year shown in the campaigns year filter (inclusive). */
+export const CAMPAIGNS_FILTER_MIN_YEAR = 2025;
+
+/** OData fragment: campaigns created within the given calendar year (matches FilterManager date style). */
+export function buildCreatedYearFilter(year: number): string {
+    const from = new Date(year, 0, 1, 0, 0, 0, 0);
+    const to = new Date(year, 11, 31, 23, 59, 59, 999);
+    const upperExclusive = moment(to).add(1, "days").toISOString();
+    return `CreatedAt ge ${from.toISOString()} and CreatedAt le ${upperExclusive}`;
+}
 
 export type CampaignsDto = {
     campaignId: string;
@@ -23,7 +35,8 @@ export const fetchCampaignsData = async (
     filtering: string,
     companyId: string,
     authFetch: IFetch,
-    t: (key: string) => string
+    t: (key: string) => string,
+    createdInYear?: number
 ): Promise<IFetchResult<CampaignsDto>> => {
     if (!companyId) {
         throw new Error("CompanyId is required.");
@@ -42,11 +55,18 @@ export const fetchCampaignsData = async (
         );
     }
 
+    const filterParts: string[] = [];
     if (filtering && filtering.trim().length > 0) {
-        url.searchParams.append("Filter", filtering);
+        filterParts.push(filtering.trim());
     }
-
-    console.log("FINAL CAMPAIGN URL", url.toString());
+    if (createdInYear != null) {
+        const maxY = new Date().getFullYear();
+        const y = Math.min(Math.max(createdInYear, CAMPAIGNS_FILTER_MIN_YEAR), maxY);
+        filterParts.push(buildCreatedYearFilter(y));
+    }
+    if (filterParts.length > 0) {
+        url.searchParams.append("Filter", filterParts.join(" and "));
+    }
 
     const response = await authFetch(url.toString(), {
         headers: {

@@ -339,6 +339,7 @@
     "filters": {
       "status": "Status",
       "createdAt": "Kreirano",
+      "createdYear": "Godina kreiranja",
       "sentAt": "Poslato"
     },
     "search": {

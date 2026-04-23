@@ -22,7 +22,11 @@ import { DropdownMenuItem } from "@/components/tremor/Dropdown";
 
 import { useAuth } from "@/context/AuthContext";
 
-import { CampaignsDto, fetchCampaignsData } from "@/elements/dashboard/campaigns/fetchData";
+import {
+    CAMPAIGNS_FILTER_MIN_YEAR,
+    CampaignsDto,
+    fetchCampaignsData
+} from "@/elements/dashboard/campaigns/fetchData";
 
 import { CampaignStatus } from "@/lib/enums";
 
@@ -118,6 +122,7 @@ export function CampaignsTable() {
 
     const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+    const [campaignYear, setCampaignYear] = useState(() => new Date().getFullYear());
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const searchbarRef = useRef<{ resetInput: () => void }>(null);
 
@@ -127,8 +132,24 @@ export function CampaignsTable() {
 
     const filterManager = useMemo(() => new FilterManager(companyId), [companyId]);
 
+    useEffect(() => {
+        setCampaignYear(new Date().getFullYear());
+        setPagination((p) => ({ ...p, pageIndex: 0 }));
+    }, [companyId]);
+
+    useEffect(() => {
+        setPagination((p) => ({ ...p, pageIndex: 0 }));
+    }, [campaignYear]);
+
+    const maxCalendarYear = new Date().getFullYear();
+    const effectiveCampaignYear = Math.min(Math.max(campaignYear, CAMPAIGNS_FILTER_MIN_YEAR), maxCalendarYear);
+    const campaignYearOptions: number[] = [];
+    for (let y = CAMPAIGNS_FILTER_MIN_YEAR; y <= maxCalendarYear; y++) {
+        campaignYearOptions.push(y);
+    }
+
     const dataQuery = useQuery({
-        queryKey: ["data", pagination, sorting, filterManager.filters, companyId],
+        queryKey: ["data", pagination, sorting, filterManager.filters, companyId, effectiveCampaignYear],
         queryFn: () => {
             if (!companyId) {
                 throw new Error("CompanyId is required.");
@@ -140,7 +161,8 @@ export function CampaignsTable() {
                 filterManager.generate(),
                 companyId,
                 authFetch,
-                tCommon
+                tCommon,
+                effectiveCampaignYear
             );
         },
         placeholderData: keepPreviousData
@@ -306,6 +328,25 @@ export function CampaignsTable() {
 
     return (
         <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                <div className="min-w-[140px]">
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("filters.createdYear")}
+                    </label>
+                    <select
+                        value={effectiveCampaignYear}
+                        onChange={(e) => setCampaignYear(Number(e.target.value))}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-indigo-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-50"
+                    >
+                        {campaignYearOptions.map((y) => (
+                            <option key={y} value={y}>
+                                {y}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             <Filterbar table={table} isFiltered={Object.keys(filterManager.filters).length > 0}>
                 {table.getColumn("status")?.getIsVisible() && (
                     <DataTableFilter
@@ -313,19 +354,6 @@ export function CampaignsTable() {
                         title={t("filters.status")}
                         options={statusFilterOptions}
                         type="checkbox"
-                        onFilter={(filter, column, type) => {
-                            if (filter) filterManager.setFilter(column, { type, value: filter });
-                            else filterManager.removeFilter(column);
-                            dataQuery.refetch();
-                        }}
-                    />
-                )}
-
-                {table.getColumn("createdAt")?.getIsVisible() && (
-                    <DataTableFilter
-                        column={table.getColumn("createdAt")}
-                        title={t("filters.createdAt")}
-                        type="date"
                         onFilter={(filter, column, type) => {
                             if (filter) filterManager.setFilter(column, { type, value: filter });
                             else filterManager.removeFilter(column);
