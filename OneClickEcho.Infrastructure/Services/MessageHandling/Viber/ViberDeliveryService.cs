@@ -130,11 +130,17 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         // check if message is undelivered
                         if ((CampaignLeadViberStatus)item.MessageStatus.Status == CampaignLeadViberStatus.Undelivered)
                         {
+                            // SMS fallback already attempted (or in flight): do not queue again every minute while Viber stays Undelivered.
+                            if (campaignLead.SMSStatus != CampaignLeadSMSStatus.None)
+                            {
+                                continue;
+                            }
+
                             if (!undeliveredCampaignLeads.ContainsKey(campaignLead.CampaignId))
                             {
                                 undeliveredCampaignLeads.Add(campaignLead.CampaignId, new List<LeadId>());
                             }
-                            
+
                             undeliveredCampaignLeads[campaignLead.CampaignId].Add(campaignLead.LeadId);
                         }
 

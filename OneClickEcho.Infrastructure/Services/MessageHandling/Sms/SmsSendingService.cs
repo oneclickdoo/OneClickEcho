@@ -59,6 +59,12 @@ public class SmsSendingService
                 continue;
             }
 
+            // Reserve outbound slot before the HTTP call so the next ViberDeliveryJob cycle cannot enqueue the same lead again
+            // while Comtrade still reports Viber Undelivered (runs every minute).
+            campaignLead.SMSStatus = CampaignLeadSMSStatus.Pending;
+            campaignLead.SMSStatusDescription = "SMS dispatch in progress.";
+            await unitOfWork.SaveChangesAsync();
+
             // message personalization
             string message = stringTemplatingService.SubstituteLeadInfo(campaign.SmsMessage!, lead);
 
@@ -70,32 +76,53 @@ public class SmsSendingService
                 Phone = PhoneNumberHelper.ForSmsGateway(lead.PhoneNumber)
             };
 
-            SendSmsResponseDto? response = await smsService.Send(
-                request,
-                company.SmsUsername ?? string.Empty,
-                company.SmsPassword ?? string.Empty);
-
-            // handle response
-            if (response is not null)
+            SendSmsResponseDto? response;
+            try
             {
-                // @TODO: handle more cases
-                switch (response.Status)
-                {
-                    case SmsStatus.Success:
-                        {
-                            campaignLead.SMSStatus = CampaignLeadSMSStatus.Pending;
-                            break;
-                        }
-                    case SmsStatus.InvalidPhoneNumber:
-                        {
-                            campaignLead.SMSStatus = CampaignLeadSMSStatus.InvalidPhone;
-                            break;
-                        }
-                }
-
-                campaignLead.SMSReferenceId = response.Reference;
-                await unitOfWork.SaveChangesAsync();
+                response = await smsService.Send(
+                    request,
+                    company.SmsUsername ?? string.Empty,
+                    company.SmsPassword ?? string.Empty);
             }
+            catch (Exception)
+            {
+                campaignLead.SMSStatus = CampaignLeadSMSStatus.SendingError;
+                campaignLead.SMSStatusDescription = "SMS gateway request failed.";
+                await unitOfWork.SaveChangesAsync();
+                await Task.Delay(200);
+                continue;
+            }
+
+            if (response is null)
+            {
+                // Leave Pending: gateway may have accepted the message; avoids repeated fallback sends on transient errors.
+                campaignLead.SMSStatusDescription = "SMS gateway returned no parseable response.";
+                await unitOfWork.SaveChangesAsync();
+                await Task.Delay(200);
+                continue;
+            }
+
+            campaignLead.SMSReferenceId = response.Reference;
+
+            switch (response.Status)
+            {
+                case SmsStatus.Success:
+                    campaignLead.SMSStatus = CampaignLeadSMSStatus.Pending;
+                    campaignLead.SMSStatusDescription = null;
+                    break;
+                case SmsStatus.InvalidPhoneNumber:
+                    campaignLead.SMSStatus = CampaignLeadSMSStatus.InvalidPhone;
+                    campaignLead.SMSStatusDescription = response.Message;
+                    break;
+                default:
+                    campaignLead.SMSStatus = CampaignLeadSMSStatus.SendingError;
+                    campaignLead.SMSStatusDescription = string.IsNullOrWhiteSpace(response.Message)
+                        ? $"SMS status {(int)response.Status}"
+                        : response.Message;
+                    break;
+            }
+
+            await unitOfWork.SaveChangesAsync();
 
             // pause for 200 ms before another API call
             await Task.Delay(200);
