@@ -18,6 +18,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/tremor/Badge";
+import { Button } from "@/components/tremor/Button";
 import { DropdownMenuItem } from "@/components/tremor/Dropdown";
 
 import { useAuth } from "@/context/AuthContext";
@@ -129,6 +130,7 @@ export function CampaignsTable() {
     const { dashboardManager, authFetch } = useAuth();
 
     const companyId = dashboardManager?.currentCompany?.companyId ?? null;
+    const campaignsQueryEnabled = Boolean(companyId);
 
     const filterManager = useMemo(() => new FilterManager(companyId), [companyId]);
 
@@ -150,23 +152,22 @@ export function CampaignsTable() {
 
     const dataQuery = useQuery({
         queryKey: ["data", pagination, sorting, filterManager.filters, companyId, effectiveCampaignYear],
-        queryFn: () => {
-            if (!companyId) {
-                throw new Error("CompanyId is required.");
-            }
-
-            return fetchCampaignsData(
+        enabled: campaignsQueryEnabled,
+        queryFn: () =>
+            fetchCampaignsData(
                 pagination,
                 sorting,
                 filterManager.generate(),
-                companyId,
+                companyId!,
                 authFetch,
                 tCommon,
                 effectiveCampaignYear
-            );
-        },
+            ),
         placeholderData: keepPreviousData
     });
+
+    const showCampaignsTableLoader =
+        campaignsQueryEnabled && (dataQuery.isPending || dataQuery.isFetching);
 
     const duplicateCampaign = useCallback(async (campaignId: string) => {
         try {
@@ -318,13 +319,22 @@ export function CampaignsTable() {
     });
 
     useEffect(() => {
+        if (!campaignsQueryEnabled) return;
         if (columnFilters.length === 0 && Object.keys(filterManager.filters).length > 0) {
             filterManager.clearFilters();
             void searchbarRef.current?.resetInput();
-            dataQuery.refetch();
+            void dataQuery.refetch();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [columnFilters]);
+    }, [columnFilters, campaignsQueryEnabled]);
+
+    if (!campaignsQueryEnabled) {
+        return (
+            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50/80 px-4 py-8 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+                {t("selectCompanyPrompt")}
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-3">
@@ -357,7 +367,7 @@ export function CampaignsTable() {
                         onFilter={(filter, column, type) => {
                             if (filter) filterManager.setFilter(column, { type, value: filter });
                             else filterManager.removeFilter(column);
-                            dataQuery.refetch();
+                            void dataQuery.refetch();
                         }}
                     />
                 )}
@@ -370,7 +380,7 @@ export function CampaignsTable() {
                         onFilter={(filter, column, type) => {
                             if (filter) filterManager.setFilter(column, { type, value: filter });
                             else filterManager.removeFilter(column);
-                            dataQuery.refetch();
+                            void dataQuery.refetch();
                         }}
                     />
                 )}
@@ -382,17 +392,54 @@ export function CampaignsTable() {
                         onSearchChange={(value) => {
                             if (value !== "") filterManager.setFilter("name", { type: "search", value });
                             else filterManager.removeFilter("name");
-                            dataQuery.refetch();
+                            void dataQuery.refetch();
                         }}
                     />
                 )}
             </Filterbar>
 
-            <div className="relative overflow-hidden overflow-x-auto">
-                <GenericTable table={table} tableColumns={tableColumns} />
-            </div>
+            {dataQuery.isError ? (
+                <div className="space-y-3">
+                    <p className="text-red-600 dark:text-red-400">{t("loadFailed")}</p>
+                    {dataQuery.error instanceof Error && dataQuery.error.message ? (
+                        <p className="text-sm text-red-600/90 dark:text-red-400/90">{dataQuery.error.message}</p>
+                    ) : null}
+                    <Button type="button" variant="secondary" onClick={() => void dataQuery.refetch()}>
+                        {t("retry")}
+                    </Button>
+                </div>
+            ) : showCampaignsTableLoader ? (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    aria-busy="true"
+                    className="flex h-32 items-center justify-center text-gray-700 dark:text-gray-300"
+                >
+                    <svg
+                        className="mr-3 h-5 w-5 animate-spin text-gray-700 dark:text-gray-300"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        aria-hidden
+                    >
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C3.58 0 0 5.82 0 12h4z"
+                        />
+                    </svg>
+                    <span className="text-lg font-medium">{tCommon("loading")}</span>
+                </div>
+            ) : (
+                <>
+                    <div className="relative overflow-hidden overflow-x-auto">
+                        <GenericTable table={table} tableColumns={tableColumns} />
+                    </div>
 
-            <DataTablePagination table={table} pagination={pagination} />
+                    <DataTablePagination table={table} pagination={pagination} />
+                </>
+            )}
         </div>
     );
 }

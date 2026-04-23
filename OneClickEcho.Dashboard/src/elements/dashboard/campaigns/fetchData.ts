@@ -75,7 +75,7 @@ export const fetchCampaignsData = async (
     });
 
     if (!response.ok) {
-        throw new Error(t("Errors.networkResponseNotOk"));
+        throw new Error(t("errors.networkResponseNotOk"));
     }
 
     const data: PaginatedItems<CampaignsDto> = await response.json();

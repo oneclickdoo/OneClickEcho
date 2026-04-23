@@ -231,7 +231,8 @@
       "userCreated": "Korisnik je kreiran."
     },
     "errors": {
-      "unexpected": "Došlo je do neočekivane greške."
+      "unexpected": "Došlo je do neočekivane greške.",
+      "networkResponseNotOk": "Mrežni odgovor nije bio ispravan."
     },
     "collectionSettings": {
       "mainInformationTitle": "Glavne informacije",
@@ -329,6 +330,9 @@
     "errors": {
       "unexpected": "Došlo je do neočekivane greške."
     },
+    "selectCompanyPrompt": "Izaberi kompaniju u zaglavlju da učitaš kampanje.",
+    "loadFailed": "Kampanje nisu mogle da se učitaju.",
+    "retry": "Pokušaj ponovo",
     "columns": {
       "name": "Naziv",
       "status": "Status",

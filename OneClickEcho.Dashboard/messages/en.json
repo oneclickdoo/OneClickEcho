@@ -231,7 +231,8 @@
       "userCreated": "User has been created."
     },
     "errors": {
-      "unexpected": "An unexpected error occurred."
+      "unexpected": "An unexpected error occurred.",
+      "networkResponseNotOk": "Network response was not ok."
     },
     "collectionSettings": {
       "mainInformationTitle": "Main information",
@@ -329,6 +330,9 @@
     "errors": {
       "unexpected": "An unexpected error occurred."
     },
+    "selectCompanyPrompt": "Select a company in the header to load campaigns.",
+    "loadFailed": "Could not load campaigns.",
+    "retry": "Try again",
     "columns": {
       "name": "Name",
       "status": "Status",
