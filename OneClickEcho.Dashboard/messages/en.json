@@ -172,6 +172,8 @@
     "export": "Export",
     "campaignStatus": {
       "draft": "Draft",
+      "preparingLaunch": "Preparing launch",
+      "preparingLaunchTooltip": "The server is building the contact list from your collections. You can leave this page; when ready, the campaign will move to queued and sending will run in the background.",
       "queued": "Queued",
       "inProgress": "In progress",
       "done": "Done",
@@ -444,7 +446,8 @@
     "toasts": {
       "errorTitle": "Error",
       "successTitle": "Success",
-      "launchSuccess": "Campaign has been launched.",
+      "launchSuccess": "Campaign launch started.",
+      "launchSuccessBackground": "You can leave this page. Contacts are prepared and sending continues on the server.",
       "pauseSuccess": "Campaign has been paused.",
       "endSuccess": "Campaign has been ended.",
       "viberOutOfHours": "Viber campaigns cannot be launched between 20:00 and 09:00."
@@ -1081,6 +1084,7 @@
     },
     "campaignStatus": {
       "draft": "Draft",
+      "preparingLaunch": "Preparing launch",
       "queued": "Queued",
       "inProgress": "In progress",
       "done": "Done"

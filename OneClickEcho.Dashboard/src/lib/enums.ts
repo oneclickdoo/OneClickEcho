@@ -15,7 +15,9 @@ export enum CampaignStatus {
     Draft = 1,
     Queued = 2,
     InProgress = 3,
-    Done = 4
+    Done = 4,
+    /** Launch accepted; server is building the lead snapshot before the campaign is queued. */
+    PreparingLaunch = 5
 }
 
 export enum CampaignLeadViberStatus {

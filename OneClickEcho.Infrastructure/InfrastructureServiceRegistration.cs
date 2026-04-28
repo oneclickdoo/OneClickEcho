@@ -43,6 +43,8 @@ public static class InfrastructureServiceRegistration
         // register Scheduling services
         services.AddSchedulingService();
 
+        services.AddSingleton<ICampaignLaunchScheduler, QuartzCampaignLaunchScheduler>();
+
         // add Viber configuration
         ViberSettings viberSettings = new();
 
@@ -110,7 +112,8 @@ public static class InfrastructureServiceRegistration
                         Assembly.GetExecutingAssembly())
                     .AddClasses(
                         classes => classes.Where(type =>
-                            type.Namespace != "OneClickEcho.Infrastructure.Services.GptService"),
+                            type.Namespace != "OneClickEcho.Infrastructure.Services.GptService" &&
+                            type.Name != "QuartzCampaignLaunchScheduler"),
                         publicOnly: false)
                     .AsImplementedInterfaces()
                     .WithScopedLifetime());

@@ -17,9 +17,13 @@ import {
 } from "@tanstack/react-table";
 import { useLocale, useTranslations } from "next-intl";
 
+import { CampaignPreparingLaunchIndicator } from "@/components/campaign/CampaignPreparingLaunchIndicator";
 import { Badge } from "@/components/tremor/Badge";
+import { Tooltip } from "@/components/tremor/Tooltip";
 import { Button } from "@/components/tremor/Button";
 import { DropdownMenuItem } from "@/components/tremor/Dropdown";
+
+import { cx } from "@/lib/utils";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -47,6 +51,7 @@ type BadgeVariant = "default" | "neutral" | "success" | "error" | "warning";
 
 const numericStatusToCommonKey: Record<number, string> = {
     [CampaignStatus.Draft]: "Common.campaignStatus.draft",
+    [CampaignStatus.PreparingLaunch]: "Common.campaignStatus.preparingLaunch",
     [CampaignStatus.Queued]: "Common.campaignStatus.queued",
     [CampaignStatus.InProgress]: "Common.campaignStatus.inProgress",
     [CampaignStatus.Done]: "Common.campaignStatus.done"
@@ -111,6 +116,7 @@ export function CampaignsTable() {
 
         if (subKey.endsWith(".done")) return "success";
         if (subKey.endsWith(".failed") || subKey.endsWith(".error")) return "error";
+        if (subKey.endsWith(".preparingLaunch")) return "default";
         if (subKey.endsWith(".inProgress") || subKey.endsWith(".queued")) return "warning";
         if (subKey.endsWith(".draft")) return "neutral";
         return "default";
@@ -207,6 +213,7 @@ export function CampaignsTable() {
     const statusFilterOptions = useMemo(
         () => [
             { value: "Common.campaignStatus.draft", label: tEnums("campaignStatus.draft") },
+            { value: "Common.campaignStatus.preparingLaunch", label: tEnums("campaignStatus.preparingLaunch") },
             { value: "Common.campaignStatus.queued", label: tEnums("campaignStatus.queued") },
             { value: "Common.campaignStatus.inProgress", label: tEnums("campaignStatus.inProgress") },
             { value: "Common.campaignStatus.done", label: tEnums("campaignStatus.done") }
@@ -241,11 +248,35 @@ export function CampaignsTable() {
                 cell: ({ row }: { row: { original: CampaignsDto } }) => {
                     const variant = getStatusVariant(row.original.status);
                     const label = translateStatus(row.original.status);
+                    const isPreparing = row.original.status === CampaignStatus.PreparingLaunch;
 
-                    return (
-                        <Badge variant={variant} className="rounded-full text-xs">
-                            {label}
+                    const badge = (
+                        <Badge
+                            variant={variant}
+                            className={cx(
+                                "rounded-full text-xs",
+                                isPreparing && "animate-pulse shadow-sm ring-2 ring-violet-400/35 dark:ring-violet-500/40"
+                            )}
+                        >
+                            <span className="inline-flex items-center gap-1.5">
+                                {isPreparing ? <CampaignPreparingLaunchIndicator /> : null}
+                                {label}
+                            </span>
                         </Badge>
+                    );
+
+                    return isPreparing ? (
+                        <Tooltip
+                            triggerAsChild
+                            side="top"
+                            delayDuration={250}
+                            content={tCommon("campaignStatus.preparingLaunchTooltip")}
+                            className="max-w-[min(22rem,calc(100vw-2rem))] text-left text-xs leading-snug"
+                        >
+                            {badge}
+                        </Tooltip>
+                    ) : (
+                        badge
                     );
                 }
             }),
@@ -300,7 +331,7 @@ export function CampaignsTable() {
                 )
             })
         ],
-        [t, locale, tEnums, duplicateCampaign, handleDeleteCampaign]
+        [t, locale, tEnums, tCommon, duplicateCampaign, handleDeleteCampaign]
     );
 
     const table = useReactTable({

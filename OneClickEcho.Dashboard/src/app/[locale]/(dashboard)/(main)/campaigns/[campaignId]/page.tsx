@@ -8,8 +8,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { makeShortcut, ShortcutHeader } from "@/context/ShortcutsContext";
 
+import { CampaignPreparingLaunchIndicator } from "@/components/campaign/CampaignPreparingLaunchIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/tremor/Tabs";
 import { Badge } from "@/components/tremor/Badge";
+import { Tooltip } from "@/components/tremor/Tooltip";
 import { Button } from "@/components/tremor/Button";
 
 import { CampaignMessagingTab } from "@/elements/dashboard/singleCampaign/tabs/CampaignMessagingTab";
@@ -29,7 +31,7 @@ import {
 
 import { getCampaignStatusOptions } from "@/lib/selects";
 import { useToast } from "@/lib/useToast";
-import { isOutOfWorkingHours, validateCampaignChannels } from "@/lib/utils";
+import { cx, isOutOfWorkingHours, validateCampaignChannels } from "@/lib/utils";
 import { migrateLegacyViberHtmlToMarkdown } from "@/lib/viberTextFormat";
 
 import { CampaignSendingType, CampaignStatus, CampaignViberContentKind } from "@/lib/enums";
@@ -70,7 +72,9 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
     const { data: fetchCampaign, refetch } = useQuery({
         queryKey: ["data", params.campaignId],
         queryFn: () => getCampaignById(params.campaignId, authFetch),
-        enabled: Boolean(params.campaignId)
+        enabled: Boolean(params.campaignId),
+        refetchInterval: (query) =>
+            query.state.data?.status === CampaignStatus.PreparingLaunch ? 2_000 : false
     });
 
     // ✅ next-intl aware options (labels translated from Common.campaignStatus.*)
@@ -137,9 +141,9 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
 
             toast({
                 title: t("toasts.successTitle"),
-                description: t("toasts.launchSuccess"),
+                description: `${t("toasts.launchSuccess")}\n\n${t("toasts.launchSuccessBackground")}`,
                 variant: "success",
-                duration: 2000
+                duration: 6500
             });
         } catch (e: any) {
             toast({
@@ -237,9 +241,32 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
 
                 <div className="flex justify-between items-center max-md:flex-col gap-3">
                     {/* ✅ Use Badge variant prop (not CSS class) */}
-                    <Badge variant={badgeVariant} className="rounded-full px-2.5 text-sm">
-                        {currentStatusOption?.label ?? t("statusUnknown")}
-                    </Badge>
+                    {campaign.status === CampaignStatus.PreparingLaunch ? (
+                        <Tooltip
+                            triggerAsChild
+                            side="bottom"
+                            delayDuration={250}
+                            content={tCommon("campaignStatus.preparingLaunchTooltip")}
+                            className="max-w-[min(22rem,calc(100vw-2rem))] text-left text-xs leading-snug"
+                        >
+                            <Badge
+                                variant={badgeVariant}
+                                className={cx(
+                                    "rounded-full px-2.5 text-sm",
+                                    "animate-pulse shadow-sm ring-2 ring-violet-400/35 dark:ring-violet-500/40"
+                                )}
+                            >
+                                <span className="inline-flex items-center gap-2">
+                                    <CampaignPreparingLaunchIndicator />
+                                    <span>{currentStatusOption?.label ?? t("statusUnknown")}</span>
+                                </span>
+                            </Badge>
+                        </Tooltip>
+                    ) : (
+                        <Badge variant={badgeVariant} className="rounded-full px-2.5 text-sm">
+                            {currentStatusOption?.label ?? t("statusUnknown")}
+                        </Badge>
+                    )}
 
                     {campaign.status === CampaignStatus.InProgress &&
                         campaign.sendingType === CampaignSendingType.ByDateOfBirth ? (
@@ -253,7 +280,9 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
                         </Button>
                     ) : null}
 
-                    {campaign.status === CampaignStatus.Queued && campaign.sendingType !== CampaignSendingType.Immediate ? (
+                    {(campaign.status === CampaignStatus.Queued &&
+                        campaign.sendingType !== CampaignSendingType.Immediate) ||
+                    campaign.status === CampaignStatus.PreparingLaunch ? (
                         <Button
                             type="button"
                             variant="secondary"

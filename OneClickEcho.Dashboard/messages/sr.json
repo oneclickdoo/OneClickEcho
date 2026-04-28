@@ -172,6 +172,8 @@
     "export": "Izvoz",
     "campaignStatus": {
       "draft": "Nacrt",
+      "preparingLaunch": "Priprema pokretanja",
+      "preparingLaunchTooltip": "Server sa liste prikuplja kontakte iz dodeljenih kolekcija. Možete napustiti stranicu; kada bude gotovo, kampanja prelazi na čekanje, a slanje nastavlja u pozadini.",
       "queued": "Na čekanju",
       "inProgress": "U toku",
       "done": "Završeno",
@@ -444,7 +446,8 @@
     "toasts": {
       "errorTitle": "Greška",
       "successTitle": "Uspešno",
-      "launchSuccess": "Kampanja je pokrenuta.",
+      "launchSuccess": "Pokretanje kampanje je započeto.",
+      "launchSuccessBackground": "Možete napustiti stranicu. Kontakti se pripremaju na serveru, a slanje nastavlja u pozadini.",
       "pauseSuccess": "Kampanja je pauzirana.",
       "endSuccess": "Kampanja je završena.",
       "viberOutOfHours": "Nije moguće pokrenuti Viber kampanju između 20:00 i 09:00."
@@ -1081,6 +1084,7 @@
     },
     "campaignStatus": {
       "draft": "Nacrt",
+      "preparingLaunch": "Priprema pokretanja",
       "queued": "Na čekanju",
       "inProgress": "U toku",
       "done": "Završeno"

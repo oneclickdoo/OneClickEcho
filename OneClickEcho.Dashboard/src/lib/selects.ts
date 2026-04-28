@@ -45,6 +45,11 @@ export const getCampaignStatusOptions = (t: (key: string) => string): Array<Camp
         variant: badgeVariants.variants.variant.neutral
     },
     {
+        value: CampaignStatus.PreparingLaunch,
+        label: t("campaignStatus.preparingLaunch"),
+        variant: badgeVariants.variants.variant.default
+    },
+    {
         value: CampaignStatus.Queued,
         label: t("campaignStatus.queued"),
         variant: badgeVariants.variants.variant.warning

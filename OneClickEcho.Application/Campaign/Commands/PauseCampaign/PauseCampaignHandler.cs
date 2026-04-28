@@ -27,12 +27,11 @@ namespace OneClickEcho.Application.Campaign.Commands.PauseCampaign
                 ));
             }
 
-            // check if campaign is queued
-            if (campaign.Status != CampaignStatus.Queued)
+            if (campaign.Status != CampaignStatus.Queued && campaign.Status != CampaignStatus.PreparingLaunch)
             {
                 return Result.Failure<PauseCampaignResponse>(new Error(
                     "Campaign.BadRequest",
-                    $"The Campaign with Id:\"{request.CampaignId}\" is not queued."
+                    $"The Campaign with Id:\"{request.CampaignId}\" cannot be paused (not queued or preparing)."
                 ));
             }
 

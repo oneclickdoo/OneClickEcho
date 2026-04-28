@@ -162,7 +162,8 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
     const { data: fetchedAnalytics } = useQuery({
         queryKey: ["campaign-analytics", props.campaignId, props.status],
         queryFn: () => getCampaignAnalytics(props.campaignId, authFetch),
-        enabled: props.status !== CampaignStatus.Draft,
+        enabled:
+            props.status !== CampaignStatus.Draft && props.status !== CampaignStatus.PreparingLaunch,
         refetchInterval: analyticsPollIntervalMs
     });
 
@@ -412,7 +413,8 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
     ];
 
     const isNotLaunched =
-        !props.status || [CampaignStatus.Draft, CampaignStatus.Queued].includes(props.status);
+        !props.status ||
+        [CampaignStatus.Draft, CampaignStatus.PreparingLaunch, CampaignStatus.Queued].includes(props.status);
 
     return (
         <section className="mt-2" aria-labelledby="current-billing-cycle">
