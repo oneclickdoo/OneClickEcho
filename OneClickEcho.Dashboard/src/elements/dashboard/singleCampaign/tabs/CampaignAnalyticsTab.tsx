@@ -57,16 +57,16 @@ interface ICampaignAnalyticsTab {
 
 interface IFunnelChartData {
     total: number;
-    /** Status 1 — primljeno od provajdera. */
-    received: number;
-    /** Status 2 — na čekanju. */
-    pending: number;
-    /** Status 3 — isporučeno na uređaj. */
+    /** Dostavljeno + viđeno + klik (zbir isporuke na uređaju). */
+    funnelDelivered: number;
+    /** Status 3 — isporučeno na uređaj (strogo). */
     delivered: number;
-    notSent: number;
-    undelivered: number;
     seen: number;
     clicked: number;
+    /** Status 2 — na čekanju. */
+    pending: number;
+    undelivered: number;
+    notSent: number;
 }
 
 type PieDatum = { name: string; value: number };
@@ -281,13 +281,13 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
 
             setFunnelChartData({
                 total: analytics.total,
-                received: analytics.received,
-                pending: analytics.pending,
+                funnelDelivered: analytics.funnelDelivered,
                 delivered: analytics.delivered,
-                notSent: analytics.notSent,
-                undelivered: analytics.undelivered,
                 seen: analytics.seen,
-                clicked: analytics.clicked
+                clicked: analytics.clicked,
+                pending: analytics.pending,
+                undelivered: analytics.undelivered,
+                notSent: analytics.notSent
             });
 
             // Pie: one slice per mutually exclusive Viber status (short legend labels).
@@ -447,7 +447,7 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
                                             ) : null}
                                             <div>
                                                 {t("cards.messagesSent.deliveredDevice", {
-                                                    count: numberFmt.format(campaignAnalytics.viber.delivered)
+                                                    count: numberFmt.format(campaignAnalytics.viber.funnelDelivered)
                                                 })}
                                             </div>
                                             <div>
@@ -480,71 +480,80 @@ export function CampaignAnalyticsTab(props: ICampaignAnalyticsTab) {
                             </div>
 
                             <div className="mt-10 flex flex-col gap-y-10 md:flex-row md:items-stretch">
-                                <div className="flex min-h-[38rem] w-full flex-col items-center justify-center gap-2 text-white md:w-1/2">
+                                <div
+                                    className={`flex w-full flex-col items-center justify-center gap-2 text-white md:w-1/2 ${
+                                        (funnelChartData?.notSent ?? 0) > 0 ? "min-h-[44rem]" : "min-h-[40rem]"
+                                    }`}
+                                >
                                     {(() => {
                                         const base = Math.max(funnelChartData?.total ?? 0, 1);
                                         const pct = (n: number) =>
                                             Math.round((n / base) * 10000) / 100;
                                         const barClip = "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)";
-                                        const showReceived = (funnelChartData?.received ?? 0) > 0;
-                                        const showPending = (funnelChartData?.pending ?? 0) > 0;
+                                        const notSentCount = funnelChartData?.notSent ?? 0;
+                                        const showNotSentRow = notSentCount > 0;
                                         const rows: Array<{
+                                            id: string;
                                             label: string;
                                             value: number;
                                             className: string;
                                         }> = [
                                             {
+                                                id: "total",
                                                 label: t("funnel.totalMessages"),
                                                 value: funnelChartData?.total ?? 0,
                                                 className: "bg-sky-600 dark:bg-sky-500"
                                             },
-                                            ...(showReceived
-                                                ? [
-                                                      {
-                                                          label: t("funnel.receivedMessages"),
-                                                          value: funnelChartData?.received ?? 0,
-                                                          className: "bg-cyan-600 dark:bg-cyan-500"
-                                                      }
-                                                  ]
-                                                : []),
-                                            ...(showPending
-                                                ? [
-                                                      {
-                                                          label: t("funnel.pendingMessages"),
-                                                          value: funnelChartData?.pending ?? 0,
-                                                          className: "bg-blue-600 dark:bg-blue-500"
-                                                      }
-                                                  ]
-                                                : []),
                                             {
-                                                label: t("funnel.deliveredDeviceMessages"),
+                                                id: "totalDelivered",
+                                                label: t("funnel.totalDelivered"),
+                                                value: funnelChartData?.funnelDelivered ?? 0,
+                                                className: "bg-teal-600 dark:bg-teal-500"
+                                            },
+                                            {
+                                                id: "delivered",
+                                                label: t("funnel.deliveredOnly"),
                                                 value: funnelChartData?.delivered ?? 0,
                                                 className: "bg-green-600 dark:bg-green-500"
                                             },
                                             {
-                                                label: t("funnel.notSentMessages"),
-                                                value: funnelChartData?.notSent ?? 0,
-                                                className: "bg-zinc-500 dark:bg-zinc-400"
-                                            },
-                                            {
-                                                label: t("funnel.undeliveredMessages"),
-                                                value: funnelChartData?.undelivered ?? 0,
-                                                className: "bg-red-600 dark:bg-red-500"
-                                            },
-                                            {
+                                                id: "seen",
                                                 label: t("funnel.seenMessages"),
                                                 value: funnelChartData?.seen ?? 0,
                                                 className: "bg-emerald-600 dark:bg-emerald-500"
                                             },
                                             {
+                                                id: "clicked",
                                                 label: t("funnel.clickedMessages"),
                                                 value: funnelChartData?.clicked ?? 0,
                                                 className: "bg-orange-600 dark:bg-orange-500"
-                                            }
+                                            },
+                                            {
+                                                id: "pending",
+                                                label: t("funnel.pendingMessages"),
+                                                value: funnelChartData?.pending ?? 0,
+                                                className: "bg-blue-600 dark:bg-blue-500"
+                                            },
+                                            {
+                                                id: "undelivered",
+                                                label: t("funnel.undeliveredMessages"),
+                                                value: funnelChartData?.undelivered ?? 0,
+                                                className: "bg-red-600 dark:bg-red-500"
+                                            },
+                                            ...(showNotSentRow
+                                                ? [
+                                                      {
+                                                          id: "notSent",
+                                                          label: t("funnel.notSentMessages"),
+                                                          value: notSentCount,
+                                                          className: "bg-zinc-500 dark:bg-zinc-400"
+                                                      }
+                                                  ]
+                                                : [])
                                         ];
                                         return rows.map((row) => (
                                             <div
-                                                key={row.label}
+                                                key={row.id}
                                                 className={`flex h-20 w-[95%] max-w-xl shrink-0 items-center justify-center ${row.className}`}
                                                 style={{ clipPath: barClip }}
                                             >

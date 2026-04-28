@@ -721,7 +721,7 @@
             "title": "Viber recipients (campaign)",
             "subtitle": "Delivery overview per contact",
             "received": "Accepted by gateway (status 1 — not yet a final on-device delivery status): {count}",
-            "deliveredDevice": "Delivered: {count}",
+            "deliveredDevice": "Delivered / seen / clicked (total): {count}",
             "undelivered": "Undelivered: {count}",
             "notSent": "Not sent: {count}"
           },
@@ -734,9 +734,10 @@
         "funnel": {
           "total": "Total",
           "totalMessages": "Total messages",
+          "totalDelivered": "Delivered / seen / clicked (total)",
+          "deliveredOnly": "Delivered",
           "receivedMessages": "Received (status 1)",
-          "pendingMessages": "Pending (status 2)",
-          "deliveredDeviceMessages": "Delivered",
+          "pendingMessages": "Pending",
           "notSentMessages": "Not sent",
           "undeliveredMessages": "Undelivered",
           "seenMessages": "Seen",

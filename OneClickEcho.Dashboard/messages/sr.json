@@ -721,7 +721,7 @@
             "title": "Viber primaoci (kampanja)",
             "subtitle": "Pregled isporuke po kontaktima",
             "received": "Primljeno kod provajdera (status 1 — još nema konačan status isporuke na uređaju): {count}",
-            "deliveredDevice": "Isporučeno: {count}",
+            "deliveredDevice": "Dostavljeno / viđeno / klik (ukupno): {count}",
             "undelivered": "Neisporučeno: {count}",
             "notSent": "Neposlate poruke: {count}"
           },
@@ -734,13 +734,14 @@
         "funnel": {
           "total": "Ukupno",
           "totalMessages": "Ukupno poruka",
+          "totalDelivered": "Ukupno isporučeno",
+          "deliveredOnly": "Isporučeno",
           "receivedMessages": "Primljeno (status 1)",
-          "pendingMessages": "Na čekanju (status 2)",
-          "deliveredDeviceMessages": "Isporučeno",
+          "pendingMessages": "Na čekanju",
           "notSentMessages": "Neposlate poruke",
           "undeliveredMessages": "Neisporučeno",
-          "seenMessages": "Viđene poruke",
-          "clickedMessages": "Kliknute poruke"
+          "seenMessages": "Viđeno",
+          "clickedMessages": "Kliknuto"
         },
         "pie": {
           "notSent": "Neposlato",
