@@ -2,6 +2,8 @@
 
 Source repository: [github.com/oneclickdoo/OneClickEcho](https://github.com/oneclickdoo/OneClickEcho)
 
+**Operativna dokumentacija** (Docker, Next.js, nginx, Git, server): [docs/PROJECT-HANDBOOK.md](docs/PROJECT-HANDBOOK.md)
+
 ```bash
 git clone https://github.com/oneclickdoo/OneClickEcho.git
 cd OneClickEcho
