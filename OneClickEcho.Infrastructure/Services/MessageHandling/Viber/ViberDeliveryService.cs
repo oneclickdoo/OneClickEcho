@@ -60,6 +60,17 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     last49HoursViberCampaigns.Select(x => x.Id).ToList()
                 );
 
+            Dictionary<long, CampaignLead> campaignLeadByViberMessageId = new();
+            foreach (CampaignLead cl in campaignLeads)
+            {
+                if (cl.ViberMessageId <= 0)
+                {
+                    continue;
+                }
+
+                campaignLeadByViberMessageId.TryAdd(cl.ViberMessageId, cl);
+            }
+
             // divide campaign leads into chunks
             List<List<CampaignLead>> dividedCampaignLeads = [];
 
@@ -103,8 +114,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 // check responses
                 foreach (DeliveryViberMessageResponse item in mergedResponses)
                 {
-                    // get campaign lead
-                    CampaignLead? campaignLead = campaignLeads.FirstOrDefault(x => x.ViberMessageId == item.MessageId);
+                    campaignLeadByViberMessageId.TryGetValue(item.MessageId, out CampaignLead? campaignLead);
 
                     // update campaign lead status
                     if (campaignLead != null)
@@ -159,6 +169,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         // Console.WriteLine(DateTime.Now + $" - Lead ViberMessageId [{item.MessageId}] not found during delivery update.");
                     }
                 }
+
+                await unitOfWork.SaveChangesAsync();
             }
 
             // send fallback SMS messages to undelivered campaign leads

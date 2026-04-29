@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OneClickEcho.Infrastructure.Services.Scheduling.Jobs;
 using Quartz;
@@ -34,9 +35,20 @@ public class ConsoleLogProvider : ILogProvider
 
 public static class SchedulingServiceConfiguration
 {
-    public static IServiceCollection AddSchedulingService(this IServiceCollection services)
+    public static IServiceCollection AddSchedulingService(this IServiceCollection services, IConfiguration configuration)
     {
         LogProvider.SetCurrentLogProvider(new ConsoleLogProvider());
+
+        int viberDeliveryPollMinutes = configuration.GetValue("Scheduling:ViberDeliveryPollIntervalMinutes", 1);
+        if (viberDeliveryPollMinutes < 1)
+        {
+            viberDeliveryPollMinutes = 1;
+        }
+
+        if (viberDeliveryPollMinutes > 120)
+        {
+            viberDeliveryPollMinutes = 120;
+        }
 
         services.AddQuartz(q =>
         {
@@ -86,7 +98,7 @@ public static class SchedulingServiceConfiguration
                     .WithIdentity("viber-campaigns-last-48h-delivery-trigger")
                     .ForJob("viber-campaigns-last-48h-delivery-job")
                     .WithSimpleSchedule(x => x
-                        .WithIntervalInMinutes(1)
+                        .WithIntervalInMinutes(viberDeliveryPollMinutes)
                         .RepeatForever()),
                 jobConfigurator => jobConfigurator
                     .WithIdentity("viber-campaigns-last-48h-delivery-job")

@@ -41,7 +41,7 @@ public static class InfrastructureServiceRegistration
         services.AddSingleton<IRedisCacheService, RedisCacheService>();
 
         // register Scheduling services
-        services.AddSchedulingService();
+        services.AddSchedulingService(configuration);
 
         services.AddSingleton<ICampaignLaunchScheduler, QuartzCampaignLaunchScheduler>();
 
