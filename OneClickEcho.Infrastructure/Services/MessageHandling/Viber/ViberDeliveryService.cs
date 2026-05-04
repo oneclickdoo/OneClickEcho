@@ -103,6 +103,27 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 // Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
 
+                List<ViberDeliveryEvent> rawDeliveryEvents = [];
+                foreach (DeliveryViberMessageResponse rawItem in response.ViberMessageResponses)
+                {
+                    if (!campaignLeadByViberMessageId.TryGetValue(rawItem.MessageId, out CampaignLead? rawCampaignLead))
+                    {
+                        continue;
+                    }
+
+                    rawDeliveryEvents.Add(new ViberDeliveryEvent(
+                        rawCampaignLead.Id,
+                        rawItem.MessageId,
+                        (short)rawItem.MessageStatus.Status,
+                        (int)rawItem.MessageStatus.SubStatus,
+                        rawItem.ClickInfo.ClickCount));
+                }
+
+                if (rawDeliveryEvents.Count > 0)
+                {
+                    await campaignLeadRepository.AddViberDeliveryEvents(rawDeliveryEvents);
+                }
+
                 List<DeliveryViberMessageResponse> mergedResponses =
                     DeliveryViberResponseDeduplicator.Deduplicate(response.ViberMessageResponses);
                 if (mergedResponses.Count < response.ViberMessageResponses.Count)

@@ -1,0 +1,13 @@
+---
+description: Recent workspace changes — read session changelog before larger tasks
+alwaysApply: true
+---
+
+# Kontekst sesije (OneClickEcho)
+
+Na početku **većih** zadataka (više fajlova, ponašanje kampanje/Viber/Quartz, dashboard analitika):
+
+1. Pročitaj **`docs/WORKSPACE-SESSION-CHANGELOG.md`** — sumarizuje šta je menjano u nedavnim sesijama (nije zamena za `git log`).
+2. Za Docker, nginx, deploy i arhitekturu repoa koristi i **`docs/PROJECT-HANDBOOK.md`**.
+
+Ako changelog zastare, ažuriraj ga kratkim bulletima posle značajnih izmena.

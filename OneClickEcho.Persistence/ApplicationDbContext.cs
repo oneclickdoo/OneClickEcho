@@ -46,6 +46,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<NounCase> NounCases { get; set; }
 
     public DbSet<ReceivedMessage> ReceivedMessages { get; set; }
+    public DbSet<ViberDeliveryEvent> ViberDeliveryEvents { get; set; }
 
     public DbSet<Sender> Senders { get; set; }
     
@@ -70,6 +71,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         new LeadConfiguration().Configure(modelBuilder.Entity<Lead>());
         new NounCaseConfiguration().Configure(modelBuilder.Entity<NounCase>());
         new ReceivedMessageConfiguration().Configure(modelBuilder.Entity<ReceivedMessage>());
+        new ViberDeliveryEventConfiguration().Configure(modelBuilder.Entity<ViberDeliveryEvent>());
         new SenderConfiguration().Configure(modelBuilder.Entity<Sender>());
         new TestMessageConfiguration().Configure(modelBuilder.Entity<TestMessage>());
         new ApiMessageConfiguration().Configure(modelBuilder.Entity<ApiMessage>());

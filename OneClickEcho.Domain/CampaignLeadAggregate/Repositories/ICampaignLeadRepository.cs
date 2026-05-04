@@ -84,6 +84,7 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
     void Delete(CampaignLead campaignLead);
 
     Task AddReceivedMessages(List<ReceivedMessage> receivedMessages);
+    Task AddViberDeliveryEvents(List<ViberDeliveryEvent> viberDeliveryEvents);
 
     /// <summary>
     /// Sets <see cref="CampaignLead.ViberMessageId"/> on each lead to consecutive values starting at global max + 1.

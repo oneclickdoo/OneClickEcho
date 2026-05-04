@@ -62,6 +62,7 @@ public sealed class CampaignLead : AggregateRoot<CampaignLeadId>
     public string? SMSReferenceId { get; set; }
 
     public ICollection<ReceivedMessage> ReceivedMessages { get; } = [];
+    public ICollection<ViberDeliveryEvent> ViberDeliveryEvents { get; } = [];
 
     // Used for EFCore
     public CampaignLead() : base(CampaignLeadId.CreateUnique()) { }

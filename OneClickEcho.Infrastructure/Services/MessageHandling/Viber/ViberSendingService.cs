@@ -437,8 +437,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             {
                 List<ViberMessage> viberMessages = [];
                 Dictionary<long, CampaignLead> campaignLeadsByViberMessageId = [];
+                List<(Lead Lead, CampaignLead CampaignLead)> reservedBatchLeads = [];
 
-                List<Lead> batchLeads = [];
                 foreach (Lead lead in dividedLeads[i])
                 {
                     CampaignLead? refreshed = await campaignLeadRepository.GetByCampaignAndLeadId(campaign.Id, lead.Id);
@@ -454,26 +454,30 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         continue;
                     }
 
-                    batchLeads.Add(lead);
+                    refreshed.ViberStatus = CampaignLeadViberStatus.Pending;
+                    refreshed.ViberStatusDescription = CampaignLeadViberStatusDescriptions.ForDelivery(
+                        CampaignLeadViberStatus.Pending,
+                        DeliveryViberSubstatus.SRVC_SUCCESS,
+                        treatAsClicked: false);
+
+                    reservedBatchLeads.Add((lead, refreshed));
                 }
 
-                if (batchLeads.Count == 0)
+                if (reservedBatchLeads.Count == 0)
                 {
                     continue;
                 }
 
-                // Aggregate viber messages for every lead in this batch (still None in DB)
-                foreach (Lead lead in batchLeads)
-                {
-                    // Get campaign lead
-                    CampaignLead campaignLead = await campaignLeadRepository
-                        .GetByCampaignAndLeadId(campaign.Id, lead.Id)
-                        ?? throw new Exception($"CampaignLead for Lead [{lead.Id}] is not found.");
+                // Reserve as Pending before outbound send so retry jobs cannot pick the same rows while HTTP is in-flight.
+                await unitOfWork.SaveChangesAsync();
 
-                    if (campaignLead.ViberStatus != CampaignLeadViberStatus.None)
+                // Aggregate viber messages for every lead in this batch (already reserved as Pending)
+                foreach ((Lead lead, CampaignLead campaignLead) in reservedBatchLeads)
+                {
+                    if (campaignLead.ViberStatus != CampaignLeadViberStatus.Pending)
                     {
                         // Console.WriteLine(
-                        //     $"{DateTime.UtcNow:O} - Skip Viber send campaign {campaign.Id.Value} lead {lead.Id.Value}: race — status now {campaignLead.ViberStatus}.");
+                        //     $"{DateTime.UtcNow:O} - Skip Viber send campaign {campaign.Id.Value} lead {lead.Id.Value}: race — status now {campaignLead.ViberStatus} (expected Pending).");
                         continue;
                     }
 

@@ -362,6 +362,11 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         return _dbContext.ReceivedMessages.AddRangeAsync(receivedMessages);
     }
 
+    public Task AddViberDeliveryEvents(List<ViberDeliveryEvent> viberDeliveryEvents)
+    {
+        return _dbContext.ViberDeliveryEvents.AddRangeAsync(viberDeliveryEvents);
+    }
+
     /// <summary>Serializes global Viber message id assignment with concurrent launches / lead imports.</summary>
     private const int GlobalViberMessageIdAllocationLockKey = 834291117;
 

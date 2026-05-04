@@ -208,6 +208,7 @@ sudo nginx -t && sudo systemctl reload nginx
 - **Tenant filter kampanja:** `OneClickEcho.Api/Infrastructure/Utils/CampaignTenantFilter.cs`
 - **Dashboard stranice:** `OneClickEcho.Dashboard/src/app/`
 - **i18n poruke:** `OneClickEcho.Dashboard/messages/*.json`
+- **Zabeleške iz Cursor sesija (šta je menjano van kratkog git opisa):** [WORKSPACE-SESSION-CHANGELOG.md](WORKSPACE-SESSION-CHANGELOG.md)
 
 ---
 
