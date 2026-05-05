@@ -140,7 +140,21 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 if (duplicateDeliveryEvents.Count > 0)
                 {
+                    string sampleDuplicateIds = string.Join(
+                        ",",
+                        duplicateDeliveryEvents
+                            .Select(x => x.ViberMessageId)
+                            .Distinct()
+                            .Take(10));
+                    Console.WriteLine(
+                        $"{DateTime.UtcNow:O} - ViberDelivery duplicates detected: raw={response.ViberMessageResponses.Count}, " +
+                        $"duplicates={duplicateDeliveryEvents.Count}, sampleMessageIds=[{sampleDuplicateIds}]");
                     await campaignLeadRepository.AddViberDeliveryEvents(duplicateDeliveryEvents);
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"{DateTime.UtcNow:O} - ViberDelivery no duplicates in chunk: raw={response.ViberMessageResponses.Count}.");
                 }
 
                 List<DeliveryViberMessageResponse> mergedResponses =
