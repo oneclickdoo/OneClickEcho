@@ -364,7 +364,48 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
     public Task AddViberDeliveryEvents(List<ViberDeliveryEvent> viberDeliveryEvents)
     {
-        return _dbContext.ViberDeliveryEvents.AddRangeAsync(viberDeliveryEvents);
+        if (viberDeliveryEvents.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return AddViberDeliveryEventsInternalAsync(viberDeliveryEvents);
+    }
+
+    private async Task AddViberDeliveryEventsInternalAsync(List<ViberDeliveryEvent> viberDeliveryEvents)
+    {
+        var incomingByKey = viberDeliveryEvents
+            .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        HashSet<CampaignLeadId> campaignLeadIds = viberDeliveryEvents
+            .Select(x => x.CampaignLeadId)
+            .ToHashSet();
+
+        HashSet<long> messageIds = viberDeliveryEvents
+            .Select(x => x.ViberMessageId)
+            .ToHashSet();
+
+        List<ViberDeliveryEvent> existingCandidates = await _dbContext.ViberDeliveryEvents
+            .Where(x => campaignLeadIds.Contains(x.CampaignLeadId) && messageIds.Contains(x.ViberMessageId))
+            .ToListAsync();
+
+        HashSet<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount)> existingKeys =
+            existingCandidates
+                .Select(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
+                .ToHashSet();
+
+        List<ViberDeliveryEvent> toInsert = incomingByKey
+            .Where(kvp => !existingKeys.Contains(kvp.Key))
+            .Select(kvp => kvp.Value)
+            .ToList();
+
+        if (toInsert.Count == 0)
+        {
+            return;
+        }
+
+        await _dbContext.ViberDeliveryEvents.AddRangeAsync(toInsert);
     }
 
     public async Task<bool> TryMarkViberPendingIfNoneAsync(
