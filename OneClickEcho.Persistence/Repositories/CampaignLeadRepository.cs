@@ -372,8 +372,15 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         return AddViberDeliveryEventsInternalAsync(viberDeliveryEvents);
     }
 
+    /// <summary>Serializes duplicate-delivery event inserts across concurrent jobs/processes.</summary>
+    private const int ViberDeliveryEventsInsertLockKey = 246813579;
+
     private async Task AddViberDeliveryEventsInternalAsync(List<ViberDeliveryEvent> viberDeliveryEvents)
     {
+        await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
+        await _dbContext.Database.ExecuteSqlRawAsync(
+            $"SELECT pg_advisory_xact_lock({ViberDeliveryEventsInsertLockKey})");
+
         var incomingGroups = viberDeliveryEvents
             .GroupBy(x => (x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
             .ToList();
@@ -416,10 +423,13 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
         if (toInsert.Count == 0)
         {
+            await tx.CommitAsync();
             return;
         }
 
         await _dbContext.ViberDeliveryEvents.AddRangeAsync(toInsert);
+        await _dbContext.SaveChangesAsync();
+        await tx.CommitAsync();
     }
 
     public async Task<bool> TryMarkViberPendingIfNoneAsync(
