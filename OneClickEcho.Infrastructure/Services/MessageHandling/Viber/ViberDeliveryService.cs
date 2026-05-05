@@ -103,13 +103,18 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 // Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
 
-                // Keep only "extra" duplicate rows per MessageId (skip the first/original row).
-                // This table is for duplicate diagnostics, not full delivery history.
+                // Keep only "extra" duplicate rows where MessageId + Status + SubStatus + ClickCount are the same
+                // (skip the first/original row in each such group).
+                // Different statuses for the same MessageId are delivery progression, not duplicates.
                 List<ViberDeliveryEvent> duplicateDeliveryEvents = [];
-                foreach (IGrouping<long, DeliveryViberMessageResponse> groupedByMessageId in
-                         response.ViberMessageResponses.GroupBy(x => x.MessageId))
+                foreach (IGrouping<(long MessageId, int Status, int SubStatus, int ClickCount), DeliveryViberMessageResponse> groupedByKey in
+                         response.ViberMessageResponses.GroupBy(x => (
+                             x.MessageId,
+                             x.MessageStatus.Status,
+                             (int)x.MessageStatus.SubStatus,
+                             x.ClickInfo.ClickCount)))
                 {
-                    using IEnumerator<DeliveryViberMessageResponse> it = groupedByMessageId.GetEnumerator();
+                    using IEnumerator<DeliveryViberMessageResponse> it = groupedByKey.GetEnumerator();
                     if (!it.MoveNext())
                     {
                         continue;
