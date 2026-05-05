@@ -103,25 +103,39 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                 // Console.WriteLine(DateTime.Now + $" - Matched [{response.ViberMessageResponses.Count}] leads during delivery.");
 
-                List<ViberDeliveryEvent> rawDeliveryEvents = [];
-                foreach (DeliveryViberMessageResponse rawItem in response.ViberMessageResponses)
+                // Keep only "extra" duplicate rows per MessageId (skip the first/original row).
+                // This table is for duplicate diagnostics, not full delivery history.
+                List<ViberDeliveryEvent> duplicateDeliveryEvents = [];
+                foreach (IGrouping<long, DeliveryViberMessageResponse> groupedByMessageId in
+                         response.ViberMessageResponses.GroupBy(x => x.MessageId))
                 {
-                    if (!campaignLeadByViberMessageId.TryGetValue(rawItem.MessageId, out CampaignLead? rawCampaignLead))
+                    using IEnumerator<DeliveryViberMessageResponse> it = groupedByMessageId.GetEnumerator();
+                    if (!it.MoveNext())
                     {
                         continue;
                     }
 
-                    rawDeliveryEvents.Add(new ViberDeliveryEvent(
-                        rawCampaignLead.Id,
-                        rawItem.MessageId,
-                        (short)rawItem.MessageStatus.Status,
-                        (int)rawItem.MessageStatus.SubStatus,
-                        rawItem.ClickInfo.ClickCount));
+                    // Skip first row; record only duplicates.
+                    while (it.MoveNext())
+                    {
+                        DeliveryViberMessageResponse duplicateItem = it.Current;
+                        if (!campaignLeadByViberMessageId.TryGetValue(duplicateItem.MessageId, out CampaignLead? rawCampaignLead))
+                        {
+                            continue;
+                        }
+
+                        duplicateDeliveryEvents.Add(new ViberDeliveryEvent(
+                            rawCampaignLead.Id,
+                            duplicateItem.MessageId,
+                            (short)duplicateItem.MessageStatus.Status,
+                            (int)duplicateItem.MessageStatus.SubStatus,
+                            duplicateItem.ClickInfo.ClickCount));
+                    }
                 }
 
-                if (rawDeliveryEvents.Count > 0)
+                if (duplicateDeliveryEvents.Count > 0)
                 {
-                    await campaignLeadRepository.AddViberDeliveryEvents(rawDeliveryEvents);
+                    await campaignLeadRepository.AddViberDeliveryEvents(duplicateDeliveryEvents);
                 }
 
                 List<DeliveryViberMessageResponse> mergedResponses =

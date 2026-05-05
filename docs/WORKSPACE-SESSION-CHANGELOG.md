@@ -70,6 +70,13 @@
 
 ---
 
+## 8. Ograničenje unosa u `viber_delivery_events` (2026-05-05)
+
+- U `ViberDeliveryService.GetViberDeliveryForLast49Hours` tabela `viber_delivery_events` sada čuva samo **višak duplikata** po istom `message_id` (drugi, treći… red), ne i prvi/originalni delivery red.
+- Time se broj redova u tabeli približava realnom broju duplih delivery zapisa umesto da raste sa svim regularnim polling rezultatima.
+
+---
+
 **Cursor:** pravilo [`.cursor/rules/workspace-session-context.mdc`](../.cursor/rules/workspace-session-context.mdc) (`alwaysApply: true`) podsjeće agenta da pročita ovaj fajl pri većim zadacima.
 
 *Ažuriraj ovaj fajl ili dodaj novu sekciju kada uradiš veće izmene van git commit poruka.*
