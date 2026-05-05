@@ -438,6 +438,10 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 List<ViberMessage> viberMessages = [];
                 Dictionary<long, CampaignLead> campaignLeadsByViberMessageId = [];
                 List<(Lead Lead, CampaignLead CampaignLead)> reservedBatchLeads = [];
+                string pendingDescription = CampaignLeadViberStatusDescriptions.ForDelivery(
+                    CampaignLeadViberStatus.Pending,
+                    DeliveryViberSubstatus.SRVC_SUCCESS,
+                    treatAsClicked: false);
 
                 foreach (Lead lead in dividedLeads[i])
                 {
@@ -447,18 +451,20 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         throw new Exception($"CampaignLead for Lead [{lead.Id}] is not found.");
                     }
 
-                    if (refreshed.ViberStatus != CampaignLeadViberStatus.None)
+                    bool claimed = await campaignLeadRepository.TryMarkViberPendingIfNoneAsync(
+                        campaign.Id,
+                        lead.Id,
+                        pendingDescription);
+
+                    if (!claimed)
                     {
                         // Console.WriteLine(
-                        //     $"{DateTime.UtcNow:O} - Skip Viber send campaign {campaign.Id.Value} lead {lead.Id.Value}: ViberStatus={refreshed.ViberStatus} (not None; avoids duplicate send).");
+                        //     $"{DateTime.UtcNow:O} - Skip Viber send campaign {campaign.Id.Value} lead {lead.Id.Value}: another worker already claimed or status is not None.");
                         continue;
                     }
 
                     refreshed.ViberStatus = CampaignLeadViberStatus.Pending;
-                    refreshed.ViberStatusDescription = CampaignLeadViberStatusDescriptions.ForDelivery(
-                        CampaignLeadViberStatus.Pending,
-                        DeliveryViberSubstatus.SRVC_SUCCESS,
-                        treatAsClicked: false);
+                    refreshed.ViberStatusDescription = pendingDescription;
 
                     reservedBatchLeads.Add((lead, refreshed));
                 }
@@ -468,10 +474,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     continue;
                 }
 
-                // Reserve as Pending before outbound send so retry jobs cannot pick the same rows while HTTP is in-flight.
-                await unitOfWork.SaveChangesAsync();
-
-                // Aggregate viber messages for every lead in this batch (already reserved as Pending)
+                // Aggregate viber messages for every lead in this batch (already atomically reserved as Pending)
                 foreach ((Lead lead, CampaignLead campaignLead) in reservedBatchLeads)
                 {
                     if (campaignLead.ViberStatus != CampaignLeadViberStatus.Pending)

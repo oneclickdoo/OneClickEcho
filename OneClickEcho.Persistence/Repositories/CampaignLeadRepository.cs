@@ -367,6 +367,25 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         return _dbContext.ViberDeliveryEvents.AddRangeAsync(viberDeliveryEvents);
     }
 
+    public async Task<bool> TryMarkViberPendingIfNoneAsync(
+        CampaignId campaignId,
+        LeadId leadId,
+        string pendingStatusDescription,
+        CancellationToken cancellationToken = default)
+    {
+        int affectedRows = await _dbContext.Set<CampaignLead>()
+            .Where(x =>
+                x.CampaignId == campaignId &&
+                x.LeadId == leadId &&
+                x.ViberStatus == CampaignLeadViberStatus.None)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.ViberStatus, CampaignLeadViberStatus.Pending)
+                .SetProperty(x => x.ViberStatusDescription, pendingStatusDescription),
+                cancellationToken);
+
+        return affectedRows > 0;
+    }
+
     /// <summary>Serializes global Viber message id assignment with concurrent launches / lead imports.</summary>
     private const int GlobalViberMessageIdAllocationLockKey = 834291117;
 
