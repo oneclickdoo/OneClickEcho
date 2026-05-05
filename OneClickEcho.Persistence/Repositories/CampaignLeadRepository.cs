@@ -374,9 +374,9 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
     private async Task AddViberDeliveryEventsInternalAsync(List<ViberDeliveryEvent> viberDeliveryEvents)
     {
-        var incomingByKey = viberDeliveryEvents
+        var incomingGroups = viberDeliveryEvents
             .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
-            .ToDictionary(g => g.Key, g => g.First());
+            .ToList();
 
         HashSet<CampaignLeadId> campaignLeadIds = viberDeliveryEvents
             .Select(x => x.CampaignLeadId)
@@ -390,15 +390,33 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             .Where(x => campaignLeadIds.Contains(x.CampaignLeadId) && messageIds.Contains(x.ViberMessageId))
             .ToListAsync();
 
-        HashSet<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount)> existingKeys =
+        Dictionary<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount), int> existingCounts =
             existingCandidates
-                .Select(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
-                .ToHashSet();
+                .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
+                .ToDictionary(g => g.Key, g => g.Count());
 
-        List<ViberDeliveryEvent> toInsert = incomingByKey
-            .Where(kvp => !existingKeys.Contains(kvp.Key))
-            .Select(kvp => kvp.Value)
-            .ToList();
+        List<ViberDeliveryEvent> toInsert = [];
+        foreach (IGrouping<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount), ViberDeliveryEvent> incomingGroup in incomingGroups)
+        {
+            int incomingCount = incomingGroup.Count();
+            existingCounts.TryGetValue(incomingGroup.Key, out int alreadyStoredCount);
+            int missingCount = incomingCount - alreadyStoredCount;
+            if (missingCount <= 0)
+            {
+                continue;
+            }
+
+            ViberDeliveryEvent seed = incomingGroup.First();
+            for (int i = 0; i < missingCount; i++)
+            {
+                toInsert.Add(new ViberDeliveryEvent(
+                    seed.CampaignLeadId,
+                    seed.ViberMessageId,
+                    seed.Status,
+                    seed.SubStatus,
+                    seed.ClickCount));
+            }
+        }
 
         if (toInsert.Count == 0)
         {
