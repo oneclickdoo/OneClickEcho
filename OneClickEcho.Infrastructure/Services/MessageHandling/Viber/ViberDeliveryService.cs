@@ -107,7 +107,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 // (skip the first/original row in each such group).
                 // Different statuses for the same MessageId are delivery progression, not duplicates.
                 List<ViberDeliveryEvent> duplicateDeliveryEvents = [];
-                foreach (IGrouping<(long MessageId, int Status, int SubStatus, int ClickCount), DeliveryViberMessageResponse> groupedByKey in
+                foreach (IGrouping<(long MessageId, DeliveryViberStatus Status, int SubStatus, int ClickCount), DeliveryViberMessageResponse> groupedByKey in
                          response.ViberMessageResponses.GroupBy(x => (
                              x.MessageId,
                              x.MessageStatus.Status,
