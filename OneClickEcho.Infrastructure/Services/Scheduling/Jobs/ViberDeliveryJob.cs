@@ -3,6 +3,7 @@ using Quartz;
 
 namespace OneClickEcho.Infrastructure.Services.Scheduling.Jobs;
 
+[DisallowConcurrentExecution]
 public class ViberDeliveryJob(IMessageDeliveryService messageDeliveryService) : IJob
 {
     private readonly IMessageDeliveryService _messageDeliveryService = messageDeliveryService;
