@@ -375,28 +375,24 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
     private async Task AddViberDeliveryEventsInternalAsync(List<ViberDeliveryEvent> viberDeliveryEvents)
     {
         var incomingGroups = viberDeliveryEvents
-            .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
+            .GroupBy(x => (x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
             .ToList();
-
-        HashSet<CampaignLeadId> campaignLeadIds = viberDeliveryEvents
-            .Select(x => x.CampaignLeadId)
-            .ToHashSet();
 
         HashSet<long> messageIds = viberDeliveryEvents
             .Select(x => x.ViberMessageId)
             .ToHashSet();
 
         List<ViberDeliveryEvent> existingCandidates = await _dbContext.ViberDeliveryEvents
-            .Where(x => campaignLeadIds.Contains(x.CampaignLeadId) && messageIds.Contains(x.ViberMessageId))
+            .Where(x => messageIds.Contains(x.ViberMessageId))
             .ToListAsync();
 
-        Dictionary<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount), int> existingCounts =
+        Dictionary<(long ViberMessageId, short Status, int SubStatus, int ClickCount), int> existingCounts =
             existingCandidates
-                .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
+                .GroupBy(x => (x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
                 .ToDictionary(g => g.Key, g => g.Count());
 
         List<ViberDeliveryEvent> toInsert = [];
-        foreach (IGrouping<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount), ViberDeliveryEvent> incomingGroup in incomingGroups)
+        foreach (IGrouping<(long ViberMessageId, short Status, int SubStatus, int ClickCount), ViberDeliveryEvent> incomingGroup in incomingGroups)
         {
             int incomingCount = incomingGroup.Count();
             existingCounts.TryGetValue(incomingGroup.Key, out int alreadyStoredCount);
