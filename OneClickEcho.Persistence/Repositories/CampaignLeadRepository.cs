@@ -382,7 +382,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             $"SELECT pg_advisory_xact_lock({ViberDeliveryEventsInsertLockKey})");
 
         var incomingGroups = viberDeliveryEvents
-            .GroupBy(x => (x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
+            .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
             .ToList();
 
         HashSet<long> messageIds = viberDeliveryEvents
@@ -393,13 +393,13 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             .Where(x => messageIds.Contains(x.ViberMessageId))
             .ToListAsync();
 
-        Dictionary<(long ViberMessageId, short Status, int SubStatus, int ClickCount), int> existingCounts =
+        Dictionary<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount), int> existingCounts =
             existingCandidates
-                .GroupBy(x => (x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
+                .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
                 .ToDictionary(g => g.Key, g => g.Count());
 
         List<ViberDeliveryEvent> toInsert = [];
-        foreach (IGrouping<(long ViberMessageId, short Status, int SubStatus, int ClickCount), ViberDeliveryEvent> incomingGroup in incomingGroups)
+        foreach (IGrouping<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount), ViberDeliveryEvent> incomingGroup in incomingGroups)
         {
             int incomingCount = incomingGroup.Count();
             existingCounts.TryGetValue(incomingGroup.Key, out int alreadyStoredCount);
