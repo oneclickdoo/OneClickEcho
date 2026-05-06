@@ -50,6 +50,81 @@ Ovaj dokument sumira arhitekturu repozitorijuma, kritične tačke ponašanja sis
 
 - `docker builder prune` brzo oslobađa desetine GB ako se često radi `docker compose build` na serveru.
 
+### 2.7 Viber — sprečavanje duplog slanja i evidencija duplih delivery redova (Comtrade)
+
+Ovaj projekat ima **dva odvojena cilja**:
+
+- **Sprečiti duplo slanje** iste kampanje ka istom telefonu (naš bug / race condition).
+- Ako Comtrade u delivery odgovoru vrati **duple redove**, to treba evidentirati u bazi radi audita (provajder/transport duplikati).
+
+#### 2.7.1 Sprečavanje duplog slanja (outbound)
+
+- Slanje kampanje (Viber) radi kroz `MessageSendingService` → `ViberSendingService.SendViberMessagesToLeads`.
+- Da bi se sprečilo duplo slanje pri paralelnom izvršavanju job-ova, outbound ima **atomsku DB rezervaciju**:
+  - `ICampaignLeadRepository.TryMarkViberPendingIfNoneAsync(...)`
+  - radi `UPDATE ... WHERE viber_status = None` i postavlja `Pending` pre HTTP poziva ka Comtrade-u.
+- `ViberDeliveryJob` je označen sa `[DisallowConcurrentExecution]` da Quartz ne pokreće isti job paralelno u istom scheduleru.
+
+#### 2.7.2 `viber_delivery_events` — tabela za duple delivery redove
+
+Tabela `viber_delivery_events` služi **samo** za evidentiranje duplih delivery redova koje Comtrade vrati u `DeliveryById` JSON-u.
+Ne služi za kompletan “history” svih delivery polling odgovora.
+
+- Popunjava se u `ViberDeliveryService.GetViberDeliveryForLast49Hours`.
+- Upis je **serijalizovan** u bazi (repo koristi `pg_advisory_xact_lock` u transakciji) da bi se izbegli dupli upisi pri concurrency/race.
+
+#### 2.7.3 Pravilo šta se upisuje (ključ “isti izraz”)
+
+Posmatra se “isti izraz” iz Comtrade JSON-a po ključu:
+
+- `MessageId` (naš `CampaignLead.ViberMessageId`)
+- `Status`
+- `SubStatus`
+- `ClickCount`
+
+Ignoriše se `Delivered` timestamp (može da se razlikuje a da je poruka realno ista).
+
+Upis u `viber_delivery_events` se radi **samo ako u istom JSON-u** postoji više identičnih redova po tom ključu:
+
+- Ako je identičan red prisutan \(N\) puta u `ViberMessageResponses`, upisuje se \(N - 1\) redova u `viber_delivery_events`.
+- Ako se bilo šta od ključa razlikuje (npr. `Status` 3 pa 4, ili `ClickCount` 0 pa 1), to je progresija i **ne upisuje se**.
+
+#### 2.7.4 Operativa — SQL provere i čišćenje
+
+Broj duplikata po `message_id/status/substatus/click_count`:
+
+```sql
+SELECT viber_message_id, status, sub_status, click_count, COUNT(*) AS cnt
+FROM public.viber_delivery_events
+GROUP BY viber_message_id, status, sub_status, click_count
+HAVING COUNT(*) > 1
+ORDER BY cnt DESC;
+```
+
+Brisanje viškova (ostavi po 1 red po ključu):
+
+```sql
+WITH ranked AS (
+    SELECT
+        id,
+        ROW_NUMBER() OVER (
+            PARTITION BY campaign_lead_id, viber_message_id, status, sub_status, click_count
+            ORDER BY created_at ASC, id ASC
+        ) AS rn
+    FROM public.viber_delivery_events
+)
+DELETE FROM public.viber_delivery_events v
+USING ranked r
+WHERE v.id = r.id
+  AND r.rn > 1;
+```
+
+#### 2.7.5 Troubleshooting
+
+- Ako `viber_delivery_events` ostaje prazna iako očekujete duplikate:
+  - proveriti API logove za `ViberDeliveryJob` exception (Quartz job može da “pada” i tada nema upisa),
+  - proveriti da li API kontejner zaista radi na poslednjem commitu (rebuild bez keša po potrebi).
+
 ---
 
 ## 3. Git

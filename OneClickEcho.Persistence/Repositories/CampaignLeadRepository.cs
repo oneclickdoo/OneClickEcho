@@ -385,12 +385,16 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             .GroupBy(x => (x.CampaignLeadId, x.ViberMessageId, x.Status, x.SubStatus, x.ClickCount))
             .ToList();
 
+        HashSet<CampaignLeadId> campaignLeadIds = viberDeliveryEvents
+            .Select(x => x.CampaignLeadId)
+            .ToHashSet();
+
         HashSet<long> messageIds = viberDeliveryEvents
             .Select(x => x.ViberMessageId)
             .ToHashSet();
 
         List<ViberDeliveryEvent> existingCandidates = await _dbContext.ViberDeliveryEvents
-            .Where(x => messageIds.Contains(x.ViberMessageId))
+            .Where(x => campaignLeadIds.Contains(x.CampaignLeadId) && messageIds.Contains(x.ViberMessageId))
             .ToListAsync();
 
         Dictionary<(CampaignLeadId CampaignLeadId, long ViberMessageId, short Status, int SubStatus, int ClickCount), int> existingCounts =
