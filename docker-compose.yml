@@ -45,14 +45,16 @@ services:
     profiles: ["full"]
 
   postgres:
-    image: postgres:16
+    image: postgres:17
     container_name: oneclick_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: oneclickecho_admin
-      POSTGRES_PASSWORD: sfrgtCEH22
+      # Must match Password= in ConnectionStrings__Database (.env). Set POSTGRES_PASSWORD in .env (do not commit real secrets).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_set_in_dot_env}
       POSTGRES_DB: oneclickecho
     ports:
+      # Bind to loopback only (avoid exposing Postgres on all interfaces).
       - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data

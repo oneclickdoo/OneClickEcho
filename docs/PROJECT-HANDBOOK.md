@@ -222,7 +222,7 @@ Kontekst builda je koren repoa (bitno za zajedničke fajlove / analitiku u dashb
 |----------|------|
 | API      | **3901** |
 | Dashboard | **3800** |
-| Postgres | **5432** (mapiran na 127.0.0.1 u compose primeru) |
+| Postgres | **17**, port **5432** (u compose primeru mapiran na **127.0.0.1** — ne na `0.0.0.0`) |
 | Redis    | **6379** |
 | Seq      | **5341**, UI **8081** |
 

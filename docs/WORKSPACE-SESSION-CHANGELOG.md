@@ -83,6 +83,13 @@
 
 ---
 
+## 10. Docker — Postgres 17 + lozinka iz `.env` (2026-05-21)
+
+- U `docker-compose.yml` slika **`postgres:17`** (ranije 16). `POSTGRES_PASSWORD` se čita iz **`.env`** (`${POSTGRES_PASSWORD:-changeme_set_in_dot_env}`) da `ConnectionStrings__Database` i Postgres budu usklađeni bez hardkoda u gitu.
+- **Nadogradnja 16→17 na postojećem `pgdata`:** samo promena taga **ne radi** — potreban je `pg_dump` / restore ili novi volume. Za svež deploy prazan volume + migracije je OK.
+
+---
+
 **Cursor:** pravilo [`.cursor/rules/workspace-session-context.mdc`](../.cursor/rules/workspace-session-context.mdc) (`alwaysApply: true`) podsjeće agenta da pročita ovaj fajl pri većim zadacima.
 
 *Ažuriraj ovaj fajl ili dodaj novu sekciju kada uradiš veće izmene van git commit poruka.*
