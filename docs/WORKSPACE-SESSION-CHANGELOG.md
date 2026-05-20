@@ -77,6 +77,12 @@
 
 ---
 
+## 9. Docker — API port na hostu (2026-05-20)
+
+- U `docker-compose.yml` za servis `api` dodato mapiranje **`127.0.0.1:3901:3901`** da `curl`/nginx na hostu mogu da gađaju API; bez toga API sluša samo unutar Docker mreže (`dashboard` → `http://api:3901` i dalje radi).
+
+---
+
 **Cursor:** pravilo [`.cursor/rules/workspace-session-context.mdc`](../.cursor/rules/workspace-session-context.mdc) (`alwaysApply: true`) podsjeće agenta da pročita ovaj fajl pri većim zadacima.
 
 *Ažuriraj ovaj fajl ili dodaj novu sekciju kada uradiš veće izmene van git commit poruka.*
