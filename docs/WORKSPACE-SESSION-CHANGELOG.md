@@ -90,6 +90,12 @@
 
 ---
 
+## 11. Dashboard — `/auth/access_token` log na API 500 (2026-05-21)
+
+- API na grešci vraća **ProblemDetails** (`detail`), ne OAuth `error_description`. Rute `src/app/auth/access_token/route.ts` i `[locale]/auth/access_token/route.ts` sada čitaju i **`detail`**, da `docker compose logs dashboard` i JSON klijentu pokažu npr. „A database error occurred…“ umesto generičkog „Internal Server Error“.
+
+---
+
 **Cursor:** pravilo [`.cursor/rules/workspace-session-context.mdc`](../.cursor/rules/workspace-session-context.mdc) (`alwaysApply: true`) podsjeće agenta da pročita ovaj fajl pri većim zadacima.
 
 *Ažuriraj ovaj fajl ili dodaj novu sekciju kada uradiš veće izmene van git commit poruka.*

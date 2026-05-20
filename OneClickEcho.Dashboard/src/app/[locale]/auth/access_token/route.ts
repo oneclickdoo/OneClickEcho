@@ -49,9 +49,18 @@ export async function POST(request: Request) {
         let errorMessage = "Authentication failed";
         if (errorText) {
             try {
-                const errBody = JSON.parse(errorText) as { error_description?: string; error?: string };
+                const errBody = JSON.parse(errorText) as {
+                    error_description?: string;
+                    error?: string;
+                    /** ASP.NET ProblemDetails (GlobalExceptionHandler) */
+                    detail?: string;
+                };
                 errorMessage =
-                    errBody.error_description ?? errBody.error ?? responseBackend.statusText ?? errorMessage;
+                    errBody.error_description ??
+                    errBody.detail ??
+                    errBody.error ??
+                    responseBackend.statusText ??
+                    errorMessage;
             } catch {
                 errorMessage = errorText.length > 500 ? `${errorText.slice(0, 500)}…` : errorText;
             }
