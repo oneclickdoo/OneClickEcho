@@ -16,14 +16,14 @@ services:
         required: false
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
-      # OpenIddict 5+: RSA PKCS#8 DER as one-line base64 (required in Docker). Symmetric keys are encryption-only.
-      # Generate: openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A
-      OpenIddict__RsaPrivateKeyPkcs8: ${OPENIDDICT_RSA_PRIVATE_KEY_PKCS8:-}
-      # Public issuer must match browser origin or validation returns ID2088 (invalid issuer). No trailing slash required.
-      OpenIddict__Issuer: ${OPENIDDICT_ISSUER:-}
-      # Same base64 32+ byte secret on every replica (optional if omitted, encryption key is derived from RSA PKCS#8).
-      OpenIddict__SigningKey: ${OPENIDDICT_SIGNING_KEY:-}
-      OpenIddict__EncryptionKey: ${OPENIDDICT_ENCRYPTION_KEY:-}
+      # OpenIddict (RSA + Issuer): set in repo-root .env as OpenIddict__RsaPrivateKeyPkcs8 / OpenIddict__Issuer
+      # (loaded via env_file above). Do NOT map ${OPENIDDICT_*:-} here — empty substitution overrides env_file and breaks login (ID2088).
+      # Generate RSA: openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A
+      # Optional aliases for compose interpolation only (if you prefer OPENIDDICT_* names, uncomment and remove duplicates from env_file keys):
+      # OpenIddict__RsaPrivateKeyPkcs8: ${OPENIDDICT_RSA_PRIVATE_KEY_PKCS8:-}
+      # OpenIddict__Issuer: ${OPENIDDICT_ISSUER:-}
+      # OpenIddict__SigningKey: ${OPENIDDICT_SIGNING_KEY:-}
+      # OpenIddict__EncryptionKey: ${OPENIDDICT_ENCRYPTION_KEY:-}
       # Required for Viber video/image: absolute HTTPS URL where /uploads is reachable (same host as browser or CDN). Example: https://viber.oneclick.rs/uploads — NOT http://api:3901. Empty = wrong legacy default and Comtrade often returns substatus 28.
       PublicUploads__BaseUrl: ${PUBLIC_UPLOADS_BASE_URL:-}
       # Passed into the container (root .env alone is NOT enough — list here or use env_file). Next id = max(MAX(viber_message_id), Floor)+1 on campaign launch.
