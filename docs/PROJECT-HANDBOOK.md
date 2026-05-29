@@ -125,6 +125,83 @@ WHERE v.id = r.id
   - proveriti API logove za `ViberDeliveryJob` exception (Quartz job može da “pada” i tada nema upisa),
   - proveriti da li API kontejner zaista radi na poslednjem commitu (rebuild bez keša po potrebi).
 
+### 2.8 Migracije EF i provera šeme baze (produkcija)
+
+Izvor istine za šemu je **`OneClickEcho.Persistence/Migrations/`** + **`ApplicationDbContextModelSnapshot.cs`**. Pri startu API-ja `SeederRunner` poziva `Database.MigrateAsync()` i primenjuje sve migracije koje **nedostaju** u `__EFMigrationsHistory`.
+
+**Ne raditi** samo ručni `INSERT` u `__EFMigrationsHistory` bez odgovarajućeg `Up()` — baza ostaje bez kolona, a EF misli da je migracija primenjena (greške tipa `42703 column ... does not exist`).
+
+#### 2.8.1 Ručne izmene na serveru → migracija u repou
+
+Sve kolone/tabele koje su na produkciji dodavane SQL-om tokom deploya **već postoje** u migracijama:
+
+| Šema (kolona / indeks / tabela) | Tabela | `migration_id` |
+|--------------------------------|--------|----------------|
+| `viber_file_size`, `viber_video_thumbnail`, `viber_video_duration` | `api_messages` | `20260402120100_ApiMessageViberVideoMetadata` |
+| `sms_message`, `sms_sender`, `viber_validity` | `api_messages` | `20251102011826_AddSmsMessageSenderAndViberValidity` |
+| `viber_content_kind`, `viber_survey_options_json` | `campaigns` | `20260402140000_AddCampaignViberContentKindSurvey` |
+| unique index `ix_campaign_leads_campaign_id_lead_id_unique` | `campaign_leads` | `20260402120000_UniqueCampaignLeadCampaignAndLead` |
+| tabela `viber_delivery_events` | nova tabela | `20260504115724_AddViberDeliveryEvents` |
+
+**Napomena:** `CampaignStatus.PreparingLaunch = 5` u kodu **ne zahteva** novu migraciju — koristi postojeću kolonu `campaigns.status` (`smallint`).
+
+#### 2.8.2 Provera istorije migracija
+
+```bash
+docker exec -it oneclick_postgres psql -U oneclickecho_admin -d oneclickecho -c \
+  "SELECT migration_id FROM \"__EFMigrationsHistory\" ORDER BY migration_id;"
+```
+
+Za poslednje izmene (april–maj 2026) moraju postojati bar:
+
+- `20251102011826_AddSmsMessageSenderAndViberValidity`
+- `20260402120000_UniqueCampaignLeadCampaignAndLead`
+- `20260402120100_ApiMessageViberVideoMetadata`
+- `20260402140000_AddCampaignViberContentKindSurvey`
+- `20260504115724_AddViberDeliveryEvents`
+
+#### 2.8.3 Provera kolona i tabele (jedan upit)
+
+```bash
+docker exec -it oneclick_postgres psql -U oneclickecho_admin -d oneclickecho -c "
+SELECT
+  EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='api_messages' AND column_name='viber_file_size') AS api_viber_file_size,
+  EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='api_messages' AND column_name='sms_message') AS api_sms_message,
+  EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='campaigns' AND column_name='viber_content_kind') AS camp_content_kind,
+  EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='campaigns' AND column_name='viber_survey_options_json') AS camp_survey_json,
+  EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='viber_delivery_events') AS viber_delivery_events_tbl,
+  EXISTS (SELECT 1 FROM pg_indexes WHERE indexname='ix_campaign_leads_campaign_id_lead_id_unique') AS cl_unique_idx;
+"
+```
+
+Sve kolone `t` → šema se slaže sa repoom. Ako nešto `f` → pokrenuti `dotnet ef database update` lokalno protiv kopije baze, ili na serveru **restart API** posle deploya poslednjeg image-a i proveriti log (`Migration started` / greška migrate), ili primeniti odgovarajući `Up()` iz fajla migracije u `Migrations/`.
+
+#### 2.8.4 Novi server (preporuka)
+
+1. Prazan volume za Postgres (ili svesno restore iz `pg_dump` iste verzije šeme).
+2. `docker compose --profile full up -d api` — migracije pri startu.
+3. Provera iz **2.8.2** i **2.8.3** pre puštanja saobraćaja.
+
+Primer `.env` za OpenIddict u Dockeru: vidi [docs/.env.txt](.env.txt) (`OpenIddict__Issuer`, `OpenIddict__RsaPrivateKeyPkcs8` — učitavaju se preko `env_file`; ne pregaziti praznim `${OPENIDDICT_*:-}` u compose-u).
+
+#### 2.8.5 Selektivni restore jedne kompanije (npr. Biosvet)
+
+Kad je baza prazna / seedovana, a treba samo **jedna kompanija** iz starog dump-a (kampanje, leadovi, `sms_username` / `sms_password` / `api_password`), **ne** raditi pun `dropdb` + restore celog dump-a.
+
+Skripta: [`scripts/restore-company-from-dump.sh`](../scripts/restore-company-from-dump.sh) (server) ili [`scripts/restore-company-from-dump.ps1`](../scripts/restore-company-from-dump.ps1) (Windows).
+
+Server (`/root/oneclickecho.dump`):
+
+```bash
+cd /var/www/OneClickEcho
+docker compose --profile full stop api dashboard
+COMPANY_ID=075fe381-fda7-4d94-aaf1-5d72ec07a2eb DUMP_PATH=/root/oneclickecho.dump ./scripts/restore-company-from-dump.sh
+docker compose --profile full up -d api dashboard
+```
+
+- Ostale kompanije i globalni login **`itocs@oneclick.rs`** se ne diraju.
+- Kredencijali kompanije dolaze iz dump-a (`companies`); OpenIddict / `Viber__*` u `.env` ostaju.
+
 ---
 
 ## 3. Git
@@ -257,8 +334,9 @@ sudo nginx -t && sudo systemctl reload nginx
 3. **Build:** `docker compose build api dashboard` (ili samo onaj servis koji se menja).
 4. **Up:** `docker compose --profile full up -d api dashboard log-rotator` (+ `docker start oneclick_postgres` ako je baza van compose-a i stoji Exited).
 5. **Provera:** `curl -I http://127.0.0.1:3800/`, `curl -I http://127.0.0.1:3901/` (ili health endpoint ako postoji), `docker compose --profile full ps`.
-6. **Disk:** `df -h /`, po potrebi `docker builder prune -af`.
-7. **nginx:** ako su portovi isti, samo reload nije potreban; ako se menjao upstream, `nginx -t` i reload.
+6. **Šema baze:** provera iz odeljka **2.8** (`__EFMigrationsHistory` + SQL za ključne kolone).
+7. **Disk:** `df -h /`, po potrebi `docker builder prune -af`.
+8. **nginx:** ako su portovi isti, samo reload nije potreban; ako se menjao upstream, `nginx -t` i reload.
 
 ---
 
@@ -269,6 +347,8 @@ sudo nginx -t && sudo systemctl reload nginx
 | 502 na domen | Ništa na `127.0.0.1:3800` | `docker compose ... up -d dashboard`, `docker ps` |
 | Conflict `oneclick_postgres` | Isti `container_name` već postoji | `up -d` samo za `api dashboard log-rotator` ili ukloniti duplikat kontejnera uz oprez za volume |
 | API 500 na listi kampanja sa filterom | Stari filter sa zagradama / deploy | Noviji API sa ispravnim `CampaignTenantFilter` |
+| API 500 `column ... does not exist` (42703) | Migracije nisu primenjene; samo red u `__EFMigrationsHistory` | Odeljak **2.8** — `MigrateAsync` / `Up()` iz migracije, ne samo INSERT u history |
+| Overview `/api/Admin/Analytics` 500 | Npr. nedostaje `campaigns.viber_content_kind` | Migracija `20260402140000_AddCampaignViberContentKindSurvey` |
 | Disk pun | Docker build cache / stare slike | `docker builder prune -af`, zatim `docker image prune` po potrebi |
 | CPU alarm | Kratak šilj ili konstantan opterećenje | `docker stats`, `top`; prag alarma ili više vCPU |
 
