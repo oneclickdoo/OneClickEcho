@@ -31,9 +31,9 @@ public class AssignLeadCollectionHandler(ICampaignRepository campaignRepository,
             ));
         }
 
-        // get lead collection
+        // Existence check only — do not Include(LeadAssignments); large collections (100k+) time out.
         Domain.LeadCollectionAggregate.LeadCollection? leadCollection = await _leadCollectionRepository
-            .GetByIdAsync(LeadCollectionId.Create(request.LeadCollectionId), cancellationToken);
+            .GetByIdNoIncludeAsync(LeadCollectionId.Create(request.LeadCollectionId), cancellationToken);
 
         if (leadCollection is null)
         {

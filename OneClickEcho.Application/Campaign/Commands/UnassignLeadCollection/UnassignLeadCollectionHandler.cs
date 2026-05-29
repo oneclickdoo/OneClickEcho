@@ -30,9 +30,8 @@ public class UnassignLeadCollectionHandler(ICampaignRepository campaignRepositor
             ));
         }
 
-        // get lead collection
         Domain.LeadCollectionAggregate.LeadCollection? leadCollection = await _leadCollectionRepository
-            .GetByIdAsync(LeadCollectionId.Create(request.LeadCollectionId), cancellationToken);
+            .GetByIdNoIncludeAsync(LeadCollectionId.Create(request.LeadCollectionId), cancellationToken);
 
         if (leadCollection is null)
         {
