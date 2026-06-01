@@ -65,11 +65,11 @@ table_exists() {
   [[ -n "$(psql_scalar "${db}" "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}' LIMIT 1;")" ]]
 }
 
-# INSERT ... SELECT across databases (connected to postgres), only rows whose id is not already on target.
+# Export from SRC, stage on TARGET in one session, INSERT only ids that do not exist yet.
 merge_rows() {
   local table="$1"
   local src_where="$2"
-  local cols inserted
+  local cols inserted tmp="/tmp/merge_${table}.csv"
   if ! table_exists "${SRC_DB}" "${table}"; then
     echo "  skip ${table} (not in ${SRC_DB})"
     return 0
@@ -80,18 +80,20 @@ merge_rows() {
     return 0
   fi
   echo "  merge ${table} ..."
-  inserted="$(psql_scalar postgres "
-    WITH ins AS (
-      INSERT INTO ${TARGET_DB}.public.${table} (${cols})
-      SELECT ${cols} FROM ${SRC_DB}.public.${table} s
-      WHERE ${src_where}
-        AND NOT EXISTS (
-          SELECT 1 FROM ${TARGET_DB}.public.${table} t WHERE t.id = s.id
-        )
-      RETURNING 1
-    )
-    SELECT COUNT(*)::text FROM ins;
-  ")"
+  docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$SRC_DB" -c "\\copy (SELECT ${cols} FROM ${table} WHERE ${src_where}) TO '${tmp}' WITH (FORMAT csv, HEADER true)"
+  inserted="$(docker exec -i "$PG_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$TARGET_DB" -tA <<EOSQL | tail -1
+CREATE TEMP TABLE merge_stage ON COMMIT DROP AS SELECT ${cols} FROM ${table} WHERE false;
+\\copy merge_stage FROM '${tmp}' WITH (FORMAT csv, HEADER true)
+WITH ins AS (
+  INSERT INTO ${table} (${cols})
+  SELECT ${cols} FROM merge_stage s
+  WHERE NOT EXISTS (SELECT 1 FROM ${table} t WHERE t.id = s.id)
+  RETURNING 1
+)
+SELECT COUNT(*)::text FROM ins;
+EOSQL
+)"
+  docker exec "$PG_CONTAINER" rm -f "$tmp"
   echo "    inserted: ${inserted:-0}"
 }
 
@@ -123,23 +125,23 @@ echo "==> Target: ${TARGET_DB} (existing rows are kept; only missing ids are ins
 TGT_HAS_COMPANY="$(psql_scalar "$TARGET_DB" "SELECT 1 FROM companies WHERE id = '${SRC_CID}'::uuid;")"
 if [[ -z "${TGT_HAS_COMPANY}" ]]; then
   echo "==> Company row missing on target; inserting company first"
-  merge_rows companies "s.id = '${SRC_CID}'::uuid"
+  merge_rows companies "id = '${SRC_CID}'::uuid"
 fi
 
 CID="'${SRC_CID}'::uuid"
-CAMP_IN="s.campaign_id IN (SELECT id FROM ${SRC_DB}.public.campaigns WHERE company_id = ${CID})"
-CL_IN="s.campaign_lead_id IN (
-  SELECT cl.id FROM ${SRC_DB}.public.campaign_leads cl
-  JOIN ${SRC_DB}.public.campaigns c ON c.id = cl.campaign_id
+CAMP_IN="campaign_id IN (SELECT id FROM campaigns WHERE company_id = ${CID})"
+CL_IN="campaign_lead_id IN (
+  SELECT cl.id FROM campaign_leads cl
+  JOIN campaigns c ON c.id = cl.campaign_id
   WHERE c.company_id = ${CID}
 )"
 
 echo "==> Merge rows (no deletes)"
-merge_rows senders "s.company_id = ${CID}"
-merge_rows leads "s.company_id = ${CID}"
-merge_rows lead_collections "s.company_id = ${CID}"
-merge_rows lead_assignments "s.lead_collection_id IN (SELECT id FROM ${SRC_DB}.public.lead_collections WHERE company_id = ${CID})"
-merge_rows campaigns "s.company_id = ${CID}"
+merge_rows senders "company_id = ${CID}"
+merge_rows leads "company_id = ${CID}"
+merge_rows lead_collections "company_id = ${CID}"
+merge_rows lead_assignments "lead_collection_id IN (SELECT id FROM lead_collections WHERE company_id = ${CID})"
+merge_rows campaigns "company_id = ${CID}"
 merge_rows campaign_lead_collections "${CAMP_IN}"
 merge_rows campaign_leads "${CAMP_IN}"
 merge_rows received_messages "${CL_IN}"
@@ -147,28 +149,19 @@ if table_exists "${SRC_DB}" "viber_delivery_events"; then
   merge_rows viber_delivery_events "${CL_IN}"
 fi
 if table_exists "${SRC_DB}" "gpt_requests"; then
-  merge_rows gpt_requests "s.campaign_id IN (SELECT id FROM ${SRC_DB}.public.campaigns WHERE company_id = ${CID})"
+  merge_rows gpt_requests "campaign_id IN (SELECT id FROM campaigns WHERE company_id = ${CID})"
 fi
-merge_rows api_messages "s.company_id = ${CID}"
-merge_rows test_messages "s.company_id = ${CID}"
+merge_rows api_messages "company_id = ${CID}"
+merge_rows test_messages "company_id = ${CID}"
 
 echo "  merge application_user_companies ..."
 AUC_COLS="$(get_common_columns application_user_companies)"
-if [[ -n "${AUC_COLS}" ]]; then
-  AUC_INSERTED="$(psql_scalar postgres "
-    WITH ins AS (
-      INSERT INTO ${TARGET_DB}.public.application_user_companies (${AUC_COLS})
-      SELECT ${AUC_COLS} FROM ${SRC_DB}.public.application_user_companies s
-      WHERE s.company_id = ${CID}
-        AND s.application_user_id IN (SELECT id FROM ${TARGET_DB}.public.\"AspNetUsers\")
-        AND NOT EXISTS (
-          SELECT 1 FROM ${TARGET_DB}.public.application_user_companies t WHERE t.id = s.id
-        )
-      RETURNING 1
-    )
-    SELECT COUNT(*)::text FROM ins;
-  ")"
-  echo "    inserted: ${AUC_INSERTED:-0} (links only for users that exist on target)"
+TGT_USER_IN="$(psql_cmd "$TARGET_DB" -tAc "SELECT coalesce(string_agg(quote_literal(id::text), ', '), '') FROM \"AspNetUsers\"" | tr -d '\r')"
+if [[ -n "${AUC_COLS}" && -n "${TGT_USER_IN}" && "${TGT_USER_IN}" != "NULL" ]]; then
+  merge_rows application_user_companies "company_id = ${CID} AND application_user_id IN (${TGT_USER_IN})"
+  echo "    (only users that already exist on target)"
+elif [[ -z "${TGT_USER_IN}" || "${TGT_USER_IN}" == "NULL" ]]; then
+  echo "    skip application_user_companies (no AspNetUsers on target)"
 else
   echo "    skip application_user_companies (no shared columns)"
 fi
