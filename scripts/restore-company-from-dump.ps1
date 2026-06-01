@@ -23,27 +23,38 @@ function Invoke-PsqlScalar([string]$Db, [string]$Sql) {
 }
 
 function Get-CommonColumns([string]$Table) {
-    $sql = @"
-SELECT string_agg(format('%I', t.column_name), ', ' ORDER BY t.ordinal_position)
-FROM information_schema.columns t
-WHERE t.table_schema = 'public'
-  AND t.table_name = '$Table'
-  AND t.table_catalog = '$TargetDb'
-  AND EXISTS (
-    SELECT 1 FROM information_schema.columns s
-    WHERE s.table_schema = 'public'
-      AND s.table_name = '$Table'
-      AND s.column_name = t.column_name
-      AND s.table_catalog = '$SrcDb'
-  );
-"@
-    $cols = Invoke-PsqlScalar "postgres" $sql
-    if (-not $cols) { throw "No common columns for table $Table between $SrcDb and $TargetDb." }
-    return $cols
+    $tgtCols = @(docker exec -i $PgContainer psql -U $PgUser -d $TargetDb -tAc "
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = '$Table'
+        ORDER BY ordinal_position" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $srcSet = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]](docker exec -i $PgContainer psql -U $PgUser -d $SrcDb -tAc "
+            SELECT column_name FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = '$Table'
+            ORDER BY ordinal_position" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    )
+    $common = [System.Collections.Generic.List[string]]::new()
+    foreach ($col in $tgtCols) {
+        if ($srcSet.Contains($col)) { $common.Add($col) }
+    }
+    if ($common.Count -eq 0) { return $null }
+    return ($common -join ", ")
+}
+
+function Test-TableExists([string]$Db, [string]$Table) {
+    return [bool](Invoke-PsqlScalar $Db "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '$Table' LIMIT 1;")
 }
 
 function Copy-TableRows([string]$Table, [string]$Where) {
+    if (-not (Test-TableExists $SrcDb $Table)) {
+        Write-Host "  skip $Table (table not in dump / $SrcDb)"
+        return
+    }
     $cols = Get-CommonColumns $Table
+    if (-not $cols) {
+        Write-Host "  skip $Table (no shared columns between $SrcDb and $TargetDb)"
+        return
+    }
     $tmp = "/tmp/restore_$Table.csv"
     Write-Host "  copy $Table (shared columns only) ..."
     docker exec $PgContainer psql -U $PgUser -d $SrcDb -c "\copy (SELECT $cols FROM ${Table} WHERE ${Where}) TO '${tmp}' WITH (FORMAT csv, HEADER true)"
@@ -125,7 +136,18 @@ Copy-TableRows "received_messages" "campaign_lead_id IN (SELECT cl.id FROM campa
 Copy-TableRows "viber_delivery_events" "campaign_lead_id IN (SELECT cl.id FROM campaign_leads cl JOIN campaigns c ON c.id = cl.campaign_id WHERE c.company_id = '$srcCid'::uuid)"
 Copy-TableRows "api_messages" "company_id = '$srcCid'::uuid"
 Copy-TableRows "test_messages" "company_id = '$srcCid'::uuid"
-Copy-TableRows "application_user_companies" "company_id = '$srcCid'::uuid"
+$inList = Invoke-PsqlScalar $TargetDb "SELECT string_agg(quote_literal(id::text), ', ') FROM ""AspNetUsers"";"
+if (-not $inList) {
+    Write-Host "  skip application_user_companies (no AspNetUsers on $TargetDb)"
+    docker exec $PgContainer psql -U $PgUser -d $TargetDb -c "DELETE FROM application_user_companies WHERE company_id = '$srcCid'::uuid;" | Out-Null
+} else {
+    $srcCount = [int](Invoke-PsqlScalar $SrcDb "SELECT COUNT(*) FROM application_user_companies WHERE company_id = '$srcCid'::uuid;")
+    $copyCount = [int](Invoke-PsqlScalar $SrcDb "SELECT COUNT(*) FROM application_user_companies WHERE company_id = '$srcCid'::uuid AND application_user_id IN ($inList);")
+    if ($srcCount -gt $copyCount) {
+        Write-Host "  note: $($srcCount - $copyCount) user link(s) skipped (user not on this server)."
+    }
+    Copy-TableRows "application_user_companies" "company_id = '$srcCid'::uuid AND application_user_id IN ($inList)"
+}
 
 docker exec $PgContainer psql -U $PgUser -d $TargetDb -c "SELECT setval(pg_get_serial_sequence('campaign_leads', 'viber_message_id'), COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 1));"
 docker exec $PgContainer psql -U $PgUser -d $TargetDb -c "SELECT name, sms_username FROM companies WHERE id = '$srcCid'::uuid; SELECT COUNT(*) AS campaigns FROM campaigns WHERE company_id = '$srcCid'::uuid; SELECT COUNT(*) AS leads FROM leads WHERE company_id = '$srcCid'::uuid;"

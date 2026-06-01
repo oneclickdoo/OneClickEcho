@@ -36,30 +36,54 @@ psql_scalar() {
 
 get_common_columns() {
   local table="$1"
-  psql_cmd postgres -tAc "
-    SELECT string_agg(format('%I', t.column_name), ', ' ORDER BY t.ordinal_position)
-    FROM information_schema.columns t
-    WHERE t.table_schema = 'public'
-      AND t.table_name = '${table}'
-      AND t.table_catalog = '${TARGET_DB}'
-      AND EXISTS (
-        SELECT 1 FROM information_schema.columns s
-        WHERE s.table_schema = 'public'
-          AND s.table_name = '${table}'
-          AND s.column_name = t.column_name
-          AND s.table_catalog = '${SRC_DB}'
-      );
-  "
+  local tgt_cols src_cols col result first=1
+  tgt_cols="$(psql_cmd "$TARGET_DB" -tAc "
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = '${table}'
+    ORDER BY ordinal_position" | tr -d '\r')"
+  src_cols="$(psql_cmd "$SRC_DB" -tAc "
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = '${table}'
+    ORDER BY ordinal_position" | tr -d '\r')"
+  result=""
+  while IFS= read -r col; do
+    col="${col//$'\r'/}"
+    [[ -z "${col}" ]] && continue
+    if echo "${src_cols}" | grep -Fxq "${col}"; then
+      if [[ "${first}" -eq 0 ]]; then
+        result+=", "
+      fi
+      result+="${col}"
+      first=0
+    fi
+  done <<< "${tgt_cols}"
+  if [[ -z "${result}" ]]; then
+    echo "DEBUG: target columns for ${table}:" >&2
+    echo "${tgt_cols}" >&2
+    echo "DEBUG: source columns for ${table}:" >&2
+    echo "${src_cols}" >&2
+  fi
+  echo "${result}"
+}
+
+table_exists() {
+  local db="$1"
+  local table="$2"
+  [[ -n "$(psql_scalar "${db}" "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}' LIMIT 1;")" ]]
 }
 
 copy_rows() {
   local table="$1"
   local where="$2"
   local cols
+  if ! table_exists "${SRC_DB}" "${table}"; then
+    echo "  skip ${table} (table not in dump / ${SRC_DB})"
+    return 0
+  fi
   cols="$(get_common_columns "${table}")"
   if [[ -z "${cols}" ]]; then
-    echo "ERROR: no common columns for table ${table} between ${SRC_DB} and ${TARGET_DB}"
-    exit 1
+    echo "  skip ${table} (no shared columns between ${SRC_DB} and ${TARGET_DB})"
+    return 0
   fi
   local tmp="/tmp/restore_${table}.csv"
   echo "  copy ${table} (shared columns only) ..."
@@ -67,6 +91,23 @@ copy_rows() {
   docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$TARGET_DB" -c "DELETE FROM ${table} WHERE ${where}"
   docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$TARGET_DB" -c "\\copy ${table} (${cols}) FROM '${tmp}' WITH (FORMAT csv, HEADER true)"
   docker exec "$PG_CONTAINER" rm -f "$tmp"
+}
+
+# Only link users that already exist on target (do not import old AspNetUsers — avoids FK errors).
+copy_application_user_companies() {
+  local in_list src_count copy_count
+  in_list="$(psql_cmd "$TARGET_DB" -tAc "SELECT string_agg(quote_literal(id::text), ', ') FROM \"AspNetUsers\"" | tr -d '\r')"
+  if [[ -z "${in_list}" || "${in_list}" == "NULL" ]]; then
+    echo "  skip application_user_companies (no AspNetUsers on ${TARGET_DB})"
+    psql_cmd "$TARGET_DB" -c "DELETE FROM application_user_companies WHERE company_id = '${SRC_CID}'::uuid;" >/dev/null
+    return 0
+  fi
+  src_count="$(psql_scalar "$SRC_DB" "SELECT COUNT(*)::text FROM application_user_companies WHERE company_id = '${SRC_CID}'::uuid;")"
+  copy_count="$(psql_scalar "$SRC_DB" "SELECT COUNT(*)::text FROM application_user_companies WHERE company_id = '${SRC_CID}'::uuid AND application_user_id IN (${in_list});")"
+  if [[ "${src_count}" -gt "${copy_count}" ]]; then
+    echo "  note: $((src_count - copy_count)) Kotex user link(s) skipped — those logins are not on this server (re-create user or assign in dashboard)."
+  fi
+  copy_rows application_user_companies "company_id = '${SRC_CID}'::uuid AND application_user_id IN (${in_list})"
 }
 
 echo "==> Restore dump into temporary database ${SRC_DB}"
@@ -197,7 +238,7 @@ copy_rows received_messages "campaign_lead_id IN (SELECT cl.id FROM campaign_lea
 copy_rows viber_delivery_events "campaign_lead_id IN (SELECT cl.id FROM campaign_leads cl JOIN campaigns c ON c.id = cl.campaign_id WHERE c.company_id = '${SRC_CID}'::uuid)"
 copy_rows api_messages "company_id = '${SRC_CID}'::uuid"
 copy_rows test_messages "company_id = '${SRC_CID}'::uuid"
-copy_rows application_user_companies "company_id = '${SRC_CID}'::uuid"
+copy_application_user_companies
 
 echo "==> Fix viber_message_id sequence"
 psql_cmd "$TARGET_DB" -c "SELECT setval(pg_get_serial_sequence('campaign_leads', 'viber_message_id'), COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 1));"
