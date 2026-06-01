@@ -82,7 +82,8 @@ merge_rows() {
   echo "  merge ${table} ..."
   docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$SRC_DB" -c "\\copy (SELECT ${cols} FROM ${table} WHERE ${src_where}) TO '${tmp}' WITH (FORMAT csv, HEADER true)"
   inserted="$(docker exec -i "$PG_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$TARGET_DB" -tA <<EOSQL | tail -1
-CREATE TEMP TABLE merge_stage ON COMMIT DROP AS SELECT ${cols} FROM ${table} WHERE false;
+BEGIN;
+CREATE TEMP TABLE merge_stage AS SELECT ${cols} FROM ${table} WHERE false;
 COPY merge_stage FROM '${tmp}' WITH (FORMAT csv, HEADER true);
 WITH ins AS (
   INSERT INTO ${table} (${cols})
@@ -91,6 +92,7 @@ WITH ins AS (
   RETURNING 1
 )
 SELECT COUNT(*)::text FROM ins;
+COMMIT;
 EOSQL
 )"
   docker exec "$PG_CONTAINER" rm -f "$tmp"
