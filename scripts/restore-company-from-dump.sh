@@ -34,14 +34,38 @@ psql_scalar() {
   psql_cmd "$db" -tAc "$sql" | tr -d '\r' | sed '/^$/d' | head -1
 }
 
+get_common_columns() {
+  local table="$1"
+  psql_cmd postgres -tAc "
+    SELECT string_agg(format('%I', t.column_name), ', ' ORDER BY t.ordinal_position)
+    FROM information_schema.columns t
+    WHERE t.table_schema = 'public'
+      AND t.table_name = '${table}'
+      AND t.table_catalog = '${TARGET_DB}'
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns s
+        WHERE s.table_schema = 'public'
+          AND s.table_name = '${table}'
+          AND s.column_name = t.column_name
+          AND s.table_catalog = '${SRC_DB}'
+      );
+  "
+}
+
 copy_rows() {
   local table="$1"
   local where="$2"
+  local cols
+  cols="$(get_common_columns "${table}")"
+  if [[ -z "${cols}" ]]; then
+    echo "ERROR: no common columns for table ${table} between ${SRC_DB} and ${TARGET_DB}"
+    exit 1
+  fi
   local tmp="/tmp/restore_${table}.csv"
-  echo "  copy $table ..."
-  docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$SRC_DB" -c "\\copy (SELECT * FROM ${table} WHERE ${where}) TO '${tmp}' WITH (FORMAT csv, HEADER true)"
+  echo "  copy ${table} (shared columns only) ..."
+  docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$SRC_DB" -c "\\copy (SELECT ${cols} FROM ${table} WHERE ${where}) TO '${tmp}' WITH (FORMAT csv, HEADER true)"
   docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$TARGET_DB" -c "DELETE FROM ${table} WHERE ${where}"
-  docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$TARGET_DB" -c "\\copy ${table} FROM '${tmp}' WITH (FORMAT csv, HEADER true)"
+  docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$TARGET_DB" -c "\\copy ${table} (${cols}) FROM '${tmp}' WITH (FORMAT csv, HEADER true)"
   docker exec "$PG_CONTAINER" rm -f "$tmp"
 }
 

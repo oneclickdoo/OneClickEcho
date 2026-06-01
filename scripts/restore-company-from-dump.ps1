@@ -22,12 +22,33 @@ function Invoke-PsqlScalar([string]$Db, [string]$Sql) {
     return ($out -replace "`r", "").Trim()
 }
 
+function Get-CommonColumns([string]$Table) {
+    $sql = @"
+SELECT string_agg(format('%I', t.column_name), ', ' ORDER BY t.ordinal_position)
+FROM information_schema.columns t
+WHERE t.table_schema = 'public'
+  AND t.table_name = '$Table'
+  AND t.table_catalog = '$TargetDb'
+  AND EXISTS (
+    SELECT 1 FROM information_schema.columns s
+    WHERE s.table_schema = 'public'
+      AND s.table_name = '$Table'
+      AND s.column_name = t.column_name
+      AND s.table_catalog = '$SrcDb'
+  );
+"@
+    $cols = Invoke-PsqlScalar "postgres" $sql
+    if (-not $cols) { throw "No common columns for table $Table between $SrcDb and $TargetDb." }
+    return $cols
+}
+
 function Copy-TableRows([string]$Table, [string]$Where) {
+    $cols = Get-CommonColumns $Table
     $tmp = "/tmp/restore_$Table.csv"
-    Write-Host "  copy $Table ..."
-    docker exec $PgContainer psql -U $PgUser -d $SrcDb -c "\copy (SELECT * FROM ${Table} WHERE ${Where}) TO '${tmp}' WITH (FORMAT csv, HEADER true)"
+    Write-Host "  copy $Table (shared columns only) ..."
+    docker exec $PgContainer psql -U $PgUser -d $SrcDb -c "\copy (SELECT $cols FROM ${Table} WHERE ${Where}) TO '${tmp}' WITH (FORMAT csv, HEADER true)"
     docker exec $PgContainer psql -U $PgUser -d $TargetDb -c "DELETE FROM ${Table} WHERE ${Where}"
-    docker exec $PgContainer psql -U $PgUser -d $TargetDb -c "\copy ${Table} FROM '${tmp}' WITH (FORMAT csv, HEADER true)"
+    docker exec $PgContainer psql -U $PgUser -d $TargetDb -c "\copy ${Table} ($cols) FROM '${tmp}' WITH (FORMAT csv, HEADER true)"
     docker exec $PgContainer rm -f $tmp
 }
 
