@@ -9,6 +9,14 @@
 #
 # Reuse an already-loaded check DB (skip 700MB pg_restore):
 #   SKIP_SRC_RESTORE=1 SRC_DB=oneclickecho_check COMPANY_NAME=biosvet bash ./scripts/merge-company-from-dump.sh
+#
+# Merge only up to a campaign date (old server dump), e.g. Immunoo Flex copies through 2026-01-23:
+#   COMPANY_NAME=biosvet DUMP_PATH=/root/oneclickecho.dump \
+#   CAMPAIGN_CREATED_BEFORE='2026-01-23 08:45:51' \
+#   bash ./scripts/merge-company-from-dump.sh
+#
+# Or resolve cutoff from campaign name in the dump:
+#   CAMPAIGN_UNTIL_NAME='Immunoo Flex - Copy - Copy - Copy - Copy - Copy - Copy' ...
 
 set -euo pipefail
 
@@ -20,6 +28,10 @@ TARGET_DB="${TARGET_DB:-oneclickecho}"
 SRC_DB="${SRC_DB:-oneclickecho_src}"
 DUMP_PATH="${DUMP_PATH:-/root/oneclickecho.dump}"
 SKIP_SRC_RESTORE="${SKIP_SRC_RESTORE:-0}"
+# Inclusive upper bound on campaigns.created_at (and leads / lead_collections with same cutoff).
+CAMPAIGN_CREATED_BEFORE="${CAMPAIGN_CREATED_BEFORE:-}"
+# If set without CAMPAIGN_CREATED_BEFORE, cutoff = created_at of this campaign name in the dump.
+CAMPAIGN_UNTIL_NAME="${CAMPAIGN_UNTIL_NAME:-}"
 
 psql_cmd() {
   local db="$1"
@@ -124,26 +136,57 @@ SRC_NAME="$(psql_scalar "$SRC_DB" "SELECT name FROM companies WHERE id = '${SRC_
 echo "==> Merge company: ${SRC_NAME} (${SRC_CID})"
 echo "==> Target: ${TARGET_DB} (existing rows are kept; only missing ids are inserted)"
 
+if [[ -n "${CAMPAIGN_UNTIL_NAME}" && -z "${CAMPAIGN_CREATED_BEFORE}" ]]; then
+  CAMPAIGN_CREATED_BEFORE="$(psql_scalar "$SRC_DB" "
+    SELECT created_at::text FROM campaigns
+    WHERE company_id = '${SRC_CID}'::uuid AND name = '${CAMPAIGN_UNTIL_NAME//\'/''}'
+    ORDER BY created_at DESC LIMIT 1;")"
+  if [[ -z "${CAMPAIGN_CREATED_BEFORE}" ]]; then
+    echo "ERROR: Campaign '${CAMPAIGN_UNTIL_NAME}' not found in ${SRC_DB}."
+    psql_cmd "$SRC_DB" -c "SELECT name, created_at FROM campaigns WHERE company_id = '${SRC_CID}'::uuid AND name ILIKE '%Immunoo%' ORDER BY created_at;"
+    exit 1
+  fi
+  echo "==> Cutoff from campaign name: ${CAMPAIGN_CREATED_BEFORE}"
+fi
+
+CID="'${SRC_CID}'::uuid"
+CUTOFF_SQL=""
+if [[ -n "${CAMPAIGN_CREATED_BEFORE}" ]]; then
+  CUTOFF_SQL=" AND created_at <= TIMESTAMP '${CAMPAIGN_CREATED_BEFORE}'"
+  echo "==> Campaign filter: created_at <= ${CAMPAIGN_CREATED_BEFORE} (inclusive)"
+  psql_cmd "$SRC_DB" -c "
+    SELECT COUNT(*) AS campaigns_in_dump_in_range FROM campaigns
+    WHERE company_id = '${SRC_CID}'::uuid${CUTOFF_SQL};
+    SELECT name, created_at FROM campaigns
+    WHERE company_id = '${SRC_CID}'::uuid${CUTOFF_SQL}
+    ORDER BY created_at DESC LIMIT 5;
+  "
+fi
+
 TGT_HAS_COMPANY="$(psql_scalar "$TARGET_DB" "SELECT 1 FROM companies WHERE id = '${SRC_CID}'::uuid;")"
 if [[ -z "${TGT_HAS_COMPANY}" ]]; then
   echo "==> Company row missing on target; inserting company first"
   merge_rows companies "id = '${SRC_CID}'::uuid"
 fi
 
-CID="'${SRC_CID}'::uuid"
-CAMP_IN="campaign_id IN (SELECT id FROM campaigns WHERE company_id = ${CID})"
+CAMP_WHERE="company_id = ${CID}${CUTOFF_SQL}"
+CAMP_IN="campaign_id IN (SELECT id FROM campaigns WHERE ${CAMP_WHERE})"
 CL_IN="campaign_lead_id IN (
   SELECT cl.id FROM campaign_leads cl
   JOIN campaigns c ON c.id = cl.campaign_id
-  WHERE c.company_id = ${CID}
+  WHERE ${CAMP_WHERE}
 )"
+ENTITY_CUTOFF=""
+if [[ -n "${CAMPAIGN_CREATED_BEFORE}" ]]; then
+  ENTITY_CUTOFF=" AND created_at <= TIMESTAMP '${CAMPAIGN_CREATED_BEFORE}'"
+fi
 
 echo "==> Merge rows (no deletes)"
 merge_rows senders "company_id = ${CID}"
-merge_rows leads "company_id = ${CID}"
-merge_rows lead_collections "company_id = ${CID}"
-merge_rows lead_assignments "lead_collection_id IN (SELECT id FROM lead_collections WHERE company_id = ${CID})"
-merge_rows campaigns "company_id = ${CID}"
+merge_rows leads "company_id = ${CID}${ENTITY_CUTOFF}"
+merge_rows lead_collections "company_id = ${CID}${ENTITY_CUTOFF}"
+merge_rows lead_assignments "lead_collection_id IN (SELECT id FROM lead_collections WHERE company_id = ${CID}${ENTITY_CUTOFF})"
+merge_rows campaigns "${CAMP_WHERE}"
 merge_rows campaign_lead_collections "${CAMP_IN}"
 merge_rows campaign_leads "${CAMP_IN}"
 merge_rows received_messages "${CL_IN}"
@@ -151,7 +194,7 @@ if table_exists "${SRC_DB}" "viber_delivery_events"; then
   merge_rows viber_delivery_events "${CL_IN}"
 fi
 if table_exists "${SRC_DB}" "gpt_requests"; then
-  merge_rows gpt_requests "campaign_id IN (SELECT id FROM campaigns WHERE company_id = ${CID})"
+  merge_rows gpt_requests "${CAMP_IN}"
 fi
 merge_rows api_messages "company_id = ${CID}"
 merge_rows test_messages "company_id = ${CID}"
@@ -172,8 +215,13 @@ echo "==> Fix viber_message_id sequence"
 psql_cmd "$TARGET_DB" -c "SELECT setval(pg_get_serial_sequence('campaign_leads', 'viber_message_id'), COALESCE((SELECT MAX(viber_message_id) FROM campaign_leads), 1));"
 
 echo "==> Verification on ${TARGET_DB}"
+VERIFY_CUTOFF=""
+if [[ -n "${CAMPAIGN_CREATED_BEFORE}" ]]; then
+  VERIFY_CUTOFF=" AND created_at <= TIMESTAMP '${CAMPAIGN_CREATED_BEFORE}'"
+fi
 psql_cmd "$TARGET_DB" -c "
-SELECT 'campaigns' AS what, COUNT(*) FROM campaigns WHERE company_id = '${SRC_CID}'::uuid
+SELECT 'campaigns' AS what, COUNT(*) FROM campaigns WHERE company_id = '${SRC_CID}'::uuid${VERIFY_CUTOFF}
+UNION ALL SELECT 'campaigns_total', COUNT(*) FROM campaigns WHERE company_id = '${SRC_CID}'::uuid
 UNION ALL SELECT 'lead_collections', COUNT(*) FROM lead_collections WHERE company_id = '${SRC_CID}'::uuid
 UNION ALL SELECT 'leads', COUNT(*) FROM leads WHERE company_id = '${SRC_CID}'::uuid
 UNION ALL SELECT 'lead_assignments', COUNT(*) FROM lead_assignments WHERE lead_collection_id IN (
