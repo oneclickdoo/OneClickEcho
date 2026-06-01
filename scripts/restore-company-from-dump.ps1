@@ -55,32 +55,41 @@ if ($CompanyId) {
         throw "Company '$CompanyName' not found in dump."
     }
 }
-Write-Host "==> Source company id: $srcCid"
+$srcName = Invoke-PsqlScalar $SrcDb "SELECT name FROM companies WHERE id = '$srcCid'::uuid;"
+Write-Host "==> Source company: $srcName ($srcCid)"
+
+if ($CompanyId) {
+    Write-Host "==> Delete scope: ONLY company id $srcCid (Biosvet and other companies are not touched)"
+    $campaignCompanyWhere = "c.company_id = '$srcCid'::uuid"
+    $directCompanyWhere = "company_id = '$srcCid'::uuid"
+    $companiesWhere = "id = '$srcCid'::uuid"
+} else {
+    Write-Host "==> Delete scope: companies matching name '%$CompanyName%'"
+    $campaignCompanyWhere = "c.company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%'))"
+    $directCompanyWhere = "company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%'))"
+    $companiesWhere = "lower(name) LIKE lower('%$CompanyName%')"
+}
 
 $deleteSql = @"
 DELETE FROM viber_delivery_events WHERE campaign_lead_id IN (
-  SELECT cl.id FROM campaign_leads cl JOIN campaigns c ON c.id = cl.campaign_id
-  WHERE c.company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR c.company_id = '$srcCid'::uuid);
+  SELECT cl.id FROM campaign_leads cl JOIN campaigns c ON c.id = cl.campaign_id WHERE $campaignCompanyWhere);
 DELETE FROM received_messages WHERE campaign_lead_id IN (
-  SELECT cl.id FROM campaign_leads cl JOIN campaigns c ON c.id = cl.campaign_id
-  WHERE c.company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR c.company_id = '$srcCid'::uuid);
-DELETE FROM campaign_leads WHERE campaign_id IN (
-  SELECT id FROM campaigns WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid);
-DELETE FROM campaign_lead_collections WHERE campaign_id IN (
-  SELECT id FROM campaigns WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid);
-DELETE FROM campaigns WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid;
-DELETE FROM lead_assignments WHERE lead_collection_id IN (
-  SELECT id FROM lead_collections WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid);
-DELETE FROM lead_collections WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid;
-DELETE FROM leads WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid;
-DELETE FROM api_messages WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid;
-DELETE FROM test_messages WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid;
-DELETE FROM senders WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid;
-DELETE FROM application_user_companies WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%$CompanyName%')) OR company_id = '$srcCid'::uuid;
-DELETE FROM companies WHERE lower(name) LIKE lower('%$CompanyName%') OR id = '$srcCid'::uuid;
+  SELECT cl.id FROM campaign_leads cl JOIN campaigns c ON c.id = cl.campaign_id WHERE $campaignCompanyWhere);
+DELETE FROM campaign_leads WHERE campaign_id IN (SELECT id FROM campaigns WHERE $directCompanyWhere);
+DELETE FROM campaign_lead_collections WHERE campaign_id IN (SELECT id FROM campaigns WHERE $directCompanyWhere);
+DELETE FROM gpt_requests WHERE campaign_id IN (SELECT id FROM campaigns WHERE $directCompanyWhere);
+DELETE FROM campaigns WHERE $directCompanyWhere;
+DELETE FROM lead_assignments WHERE lead_collection_id IN (SELECT id FROM lead_collections WHERE $directCompanyWhere);
+DELETE FROM lead_collections WHERE $directCompanyWhere;
+DELETE FROM leads WHERE $directCompanyWhere;
+DELETE FROM api_messages WHERE $directCompanyWhere;
+DELETE FROM test_messages WHERE $directCompanyWhere;
+DELETE FROM senders WHERE $directCompanyWhere;
+DELETE FROM application_user_companies WHERE $directCompanyWhere;
+DELETE FROM companies WHERE $companiesWhere;
 "@
 
-Write-Host "==> Delete old $CompanyName rows in target"
+Write-Host "==> Delete old $srcName rows in target"
 docker exec $PgContainer psql -U $PgUser -d $TargetDb -c $deleteSql
 
 Copy-TableRows "companies" "id = '$srcCid'::uuid"

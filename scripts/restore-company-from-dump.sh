@@ -2,11 +2,11 @@
 # Selective restore: one company (default biosvet) from a pg_dump custom file
 # into the live oneclickecho database, without touching other companies.
 #
-# Server example:
-#   cd /var/www/OneClickEcho
-#   docker compose --profile full stop api dashboard
-#   COMPANY_ID=075fe381-fda7-4d94-aaf1-5d72ec07a2eb DUMP_PATH=/root/oneclickecho.dump ./scripts/restore-company-from-dump.sh
-#   docker compose --profile full up -d api dashboard
+# Server example (Biosvet by name):
+#   COMPANY_NAME=biosvet DUMP_PATH=/root/oneclickecho.dump bash ./scripts/restore-company-from-dump.sh
+#
+# Kotex (or any company) — use COMPANY_ID so Biosvet is never matched by default name filter:
+#   COMPANY_ID=cdbdb0e7-038f-4bce-a630-28fd74ff8b6b DUMP_PATH=/root/oneclickecho.dump bash ./scripts/restore-company-from-dump.sh
 #
 # Local Windows (Git Bash / WSL) with postgres container oneclickecho.postgres17:
 #   PG_CONTAINER=oneclickecho.postgres17 PG_USER=postgres DUMP_PATH=/c/Users/Admin/Desktop/oneclickecho.dump ./scripts/restore-company-from-dump.sh
@@ -21,7 +21,6 @@ PG_USER="${PG_USER:-oneclickecho_admin}"
 TARGET_DB="${TARGET_DB:-oneclickecho}"
 SRC_DB="${SRC_DB:-oneclickecho_src}"
 DUMP_PATH="${DUMP_PATH:-/root/oneclickecho.dump}"
-BACKUP_PATH="${BACKUP_PATH:-/root/backup_before_${COMPANY_NAME}_restore.dump}"
 
 psql_cmd() {
   local db="$1"
@@ -46,11 +45,6 @@ copy_rows() {
   docker exec "$PG_CONTAINER" rm -f "$tmp"
 }
 
-echo "==> Backup target database to ${BACKUP_PATH}"
-docker exec "$PG_CONTAINER" pg_dump -U "$PG_USER" -Fc -f "/tmp/pre_restore.backup" "$TARGET_DB"
-docker cp "${PG_CONTAINER}:/tmp/pre_restore.backup" "$BACKUP_PATH"
-ls -lh "$BACKUP_PATH"
-
 echo "==> Restore dump into temporary database ${SRC_DB}"
 docker cp "$DUMP_PATH" "${PG_CONTAINER}:/tmp/oneclickecho.dump"
 psql_cmd postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('${SRC_DB}', '${TARGET_DB}') AND pid <> pg_backend_pid();" >/dev/null || true
@@ -72,84 +66,98 @@ else
     exit 1
   fi
 fi
-echo "==> Source company id: ${SRC_CID}"
+SRC_NAME="$(psql_scalar "$SRC_DB" "SELECT name FROM companies WHERE id = '${SRC_CID}'::uuid;")"
+echo "==> Source company: ${SRC_NAME} (${SRC_CID})"
 psql_cmd "$SRC_DB" -c "SELECT id, name, sms_username, LEFT(COALESCE(api_password,''), 4) AS api_pw_prefix FROM companies WHERE id = '${SRC_CID}';"
 
-TGT_CID="$(psql_scalar "$TARGET_DB" "SELECT id::text FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%') ORDER BY created_at LIMIT 1;")"
-if [[ -n "$TGT_CID" && "$TGT_CID" != "$SRC_CID" ]]; then
-  echo "==> Target has different id (${TGT_CID}); removing old ${COMPANY_NAME} rows first."
+RESTORE_LABEL="${RESTORE_LABEL:-$(echo "${SRC_NAME}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_' | sed 's/^_\|_$//g')}"
+BACKUP_PATH="${BACKUP_PATH:-/root/backup_before_${RESTORE_LABEL}_restore.dump}"
+
+if [[ -n "$COMPANY_ID" ]]; then
+  echo "==> Delete scope: ONLY company id ${SRC_CID} (other companies, including Biosvet, are not touched)"
+  CAMPAIGN_COMPANY_WHERE="c.company_id = '${SRC_CID}'::uuid"
+  DIRECT_COMPANY_WHERE="company_id = '${SRC_CID}'::uuid"
+  COMPANIES_WHERE="id = '${SRC_CID}'::uuid"
+else
+  echo "==> Delete scope: companies matching name '%${COMPANY_NAME}%'"
+  CAMPAIGN_COMPANY_WHERE="c.company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))"
+  DIRECT_COMPANY_WHERE="company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))"
+  COMPANIES_WHERE="lower(name) LIKE lower('%${COMPANY_NAME}%')"
 fi
 
-echo "==> Delete existing ${COMPANY_NAME} data in ${TARGET_DB}"
+echo "==> Backup full target database to ${BACKUP_PATH}"
+docker exec "$PG_CONTAINER" pg_dump -U "$PG_USER" -Fc -f "/tmp/pre_restore.backup" "$TARGET_DB"
+docker cp "${PG_CONTAINER}:/tmp/pre_restore.backup" "$BACKUP_PATH"
+ls -lh "$BACKUP_PATH"
+
+TGT_CID="$(psql_scalar "$TARGET_DB" "SELECT id::text FROM companies WHERE id = '${SRC_CID}'::uuid;")"
+if [[ -n "$TGT_CID" ]]; then
+  echo "==> Target already has this company id; replacing its rows before import."
+fi
+
+echo "==> Delete existing data for ${SRC_NAME} in ${TARGET_DB}"
 psql_cmd "$TARGET_DB" <<SQL
 DELETE FROM viber_delivery_events
 WHERE campaign_lead_id IN (
   SELECT cl.id FROM campaign_leads cl
   JOIN campaigns c ON c.id = cl.campaign_id
-  WHERE c.company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-     OR c.company_id = '${SRC_CID}'::uuid
+  WHERE ${CAMPAIGN_COMPANY_WHERE}
 );
 
 DELETE FROM received_messages
 WHERE campaign_lead_id IN (
   SELECT cl.id FROM campaign_leads cl
   JOIN campaigns c ON c.id = cl.campaign_id
-  WHERE c.company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-     OR c.company_id = '${SRC_CID}'::uuid
+  WHERE ${CAMPAIGN_COMPANY_WHERE}
 );
 
 DELETE FROM campaign_leads
 WHERE campaign_id IN (
   SELECT id FROM campaigns
-  WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-     OR company_id = '${SRC_CID}'::uuid
+  WHERE ${DIRECT_COMPANY_WHERE}
 );
 
 DELETE FROM campaign_lead_collections
 WHERE campaign_id IN (
   SELECT id FROM campaigns
-  WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-     OR company_id = '${SRC_CID}'::uuid
+  WHERE ${DIRECT_COMPANY_WHERE}
+);
+
+DELETE FROM gpt_requests
+WHERE campaign_id IN (
+  SELECT id FROM campaigns
+  WHERE ${DIRECT_COMPANY_WHERE}
 );
 
 DELETE FROM campaigns
-WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-   OR company_id = '${SRC_CID}'::uuid;
+WHERE ${DIRECT_COMPANY_WHERE};
 
 DELETE FROM lead_assignments
 WHERE lead_collection_id IN (
   SELECT id FROM lead_collections
-  WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-     OR company_id = '${SRC_CID}'::uuid
+  WHERE ${DIRECT_COMPANY_WHERE}
 );
 
 DELETE FROM lead_collections
-WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-   OR company_id = '${SRC_CID}'::uuid;
+WHERE ${DIRECT_COMPANY_WHERE};
 
 DELETE FROM leads
-WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-   OR company_id = '${SRC_CID}'::uuid;
+WHERE ${DIRECT_COMPANY_WHERE};
 
 DELETE FROM api_messages
-WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-   OR company_id = '${SRC_CID}'::uuid;
+WHERE ${DIRECT_COMPANY_WHERE};
 
 DELETE FROM test_messages
-WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-   OR company_id = '${SRC_CID}'::uuid;
+WHERE ${DIRECT_COMPANY_WHERE};
 
 DELETE FROM senders
-WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-   OR company_id = '${SRC_CID}'::uuid;
+WHERE ${DIRECT_COMPANY_WHERE};
 
 DELETE FROM application_user_companies
-WHERE company_id IN (SELECT id FROM companies WHERE lower(name) LIKE lower('%${COMPANY_NAME}%'))
-   OR company_id = '${SRC_CID}'::uuid;
+WHERE ${DIRECT_COMPANY_WHERE};
 
 DELETE FROM companies
-WHERE lower(name) LIKE lower('%${COMPANY_NAME}%')
-   OR id = '${SRC_CID}'::uuid;
+WHERE ${COMPANIES_WHERE};
 SQL
 
 echo "==> Copy company + related rows from ${SRC_DB}"
@@ -183,4 +191,4 @@ echo "==> Drop temporary database ${SRC_DB}"
 psql_cmd postgres -c "DROP DATABASE IF EXISTS ${SRC_DB};"
 
 echo "Done. Backup: ${BACKUP_PATH}"
-echo "Login itocs@oneclick.rs (and other global users) were NOT changed — only ${COMPANY_NAME} company data/credentials from dump."
+echo "Login itocs@oneclick.rs (and other global users) were NOT changed — only ${SRC_NAME} (${SRC_CID}) from dump."
