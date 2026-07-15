@@ -44,5 +44,9 @@ public class CampaignLeadConfiguration : EntityTypeConfiguration<CampaignLead, C
         builder.HasIndex(e => new { e.CampaignId, e.LeadId })
             .IsUnique()
             .HasDatabaseName("ix_campaign_leads_campaign_id_lead_id_unique");
+
+        // Lead report / analytics filters by status within a campaign (None, Received, Expired, …).
+        builder.HasIndex(e => new { e.CampaignId, e.ViberStatus })
+            .HasDatabaseName("ix_campaign_leads_campaign_id_viber_status");
     }
 }

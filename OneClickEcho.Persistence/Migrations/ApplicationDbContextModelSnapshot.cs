@@ -609,6 +609,9 @@ namespace OneClickEcho.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_campaign_leads_campaign_id_lead_id_unique");
 
+                    b.HasIndex("CampaignId", "ViberStatus")
+                        .HasDatabaseName("ix_campaign_leads_campaign_id_viber_status");
+
                     b.ToTable("campaign_leads", (string)null);
                 });
 
