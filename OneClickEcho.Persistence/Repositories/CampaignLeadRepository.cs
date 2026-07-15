@@ -112,9 +112,10 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
     }
 
     /// <summary>
-    /// Paged lead report for one campaign. Status-only filters count on <c>campaign_leads</c> alone
-    /// (no join) so large buckets (None / Received / Expired) do not time out behind a reverse proxy.
-    /// Phone / unsubscribe filters still join <c>leads</c>. Rows ordered by phone for display.
+    /// Paged lead report for one campaign.
+    /// Status-only path: COUNT on <c>campaign_leads</c>, then page by <c>viber_message_id</c> and join
+    /// <c>leads</c> only for that page (avoids sorting huge Expired/None/Received buckets by phone → 504).
+    /// Phone / unsubscribe filters still join + order by phone.
     /// </summary>
     public async Task<IPagedList<CampaignLeadReportRow>> GetCampaignLeadReportAsync(
         CampaignId campaignId,
@@ -163,25 +164,58 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
             if (!needsLeadFilter)
             {
-                // Large status buckets: COUNT without joining leads (avoids gateway 504).
                 totalCount = await campaignLeadQuery.CountAsync(cancellationToken);
 
-                items = await (
-                        from cl in campaignLeadQuery
-                        join l in _dbContext.Set<Lead>().AsNoTracking() on cl.LeadId equals l.Id
-                        orderby l.PhoneNumber ?? string.Empty
-                        select new CampaignLeadReportRow
-                        {
-                            PhoneNumber = l.PhoneNumber ?? string.Empty,
-                            ViberStatus = (short)cl.ViberStatus,
-                            ViberStatusDescription = cl.ViberStatusDescription,
-                            SmsStatus = (short)cl.SMSStatus,
-                            SmsStatusDescription = cl.SMSStatusDescription,
-                            IsUnsubscribed = l.IsUnsubscribed
-                        })
+                // Page ids from campaign_leads only (index-friendly), then hydrate phones for that page.
+                List<CampaignLeadId> pageIds = await campaignLeadQuery
+                    .OrderBy(cl => cl.ViberMessageId)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
+                    .Select(cl => cl.Id)
                     .ToListAsync(cancellationToken);
+
+                if (pageIds.Count == 0)
+                {
+                    items = [];
+                }
+                else
+                {
+                    var pageRows = await (
+                            from cl in _dbContext.Set<CampaignLead>().AsNoTracking()
+                            join l in _dbContext.Set<Lead>().AsNoTracking() on cl.LeadId equals l.Id
+                            where pageIds.Contains(cl.Id)
+                            select new
+                            {
+                                cl.Id,
+                                PhoneNumber = l.PhoneNumber ?? string.Empty,
+                                ViberStatus = (short)cl.ViberStatus,
+                                cl.ViberStatusDescription,
+                                SmsStatus = (short)cl.SMSStatus,
+                                cl.SMSStatusDescription,
+                                l.IsUnsubscribed
+                            })
+                        .ToListAsync(cancellationToken);
+
+                    var byId = pageRows.ToDictionary(r => r.Id);
+                    items = new List<CampaignLeadReportRow>(pageIds.Count);
+                    foreach (CampaignLeadId id in pageIds)
+                    {
+                        if (!byId.TryGetValue(id, out var r))
+                        {
+                            continue;
+                        }
+
+                        items.Add(new CampaignLeadReportRow
+                        {
+                            PhoneNumber = r.PhoneNumber,
+                            ViberStatus = r.ViberStatus,
+                            ViberStatusDescription = r.ViberStatusDescription,
+                            SmsStatus = r.SmsStatus,
+                            SmsStatusDescription = r.SMSStatusDescription,
+                            IsUnsubscribed = r.IsUnsubscribed
+                        });
+                    }
+                }
             }
             else
             {

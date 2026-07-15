@@ -45,8 +45,8 @@ public class CampaignLeadConfiguration : EntityTypeConfiguration<CampaignLead, C
             .IsUnique()
             .HasDatabaseName("ix_campaign_leads_campaign_id_lead_id_unique");
 
-        // Lead report / analytics filters by status within a campaign (None, Received, Expired, …).
-        builder.HasIndex(e => new { e.CampaignId, e.ViberStatus })
-            .HasDatabaseName("ix_campaign_leads_campaign_id_viber_status");
+        // Lead report / status filters: supports ORDER BY viber_message_id within a status bucket.
+        builder.HasIndex(e => new { e.CampaignId, e.ViberStatus, e.ViberMessageId })
+            .HasDatabaseName("ix_campaign_leads_campaign_id_viber_status_message_id");
     }
 }

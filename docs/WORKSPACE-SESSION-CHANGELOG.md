@@ -102,10 +102,12 @@
 
 ## 13. Campaign lead report — HTTP 504 na velikim Viber filterima (2026-07-15)
 
-- **Simptom:** filteri **Nije poslato (0)**, **Primljeno (1)**, **Isteklo (6)** → „Izveštaj nije mogao da se učita“ / **HTTP 504**; manji bucketi (npr. Viđeno, Kliknuto) rade.
-- **Uzrok:** nije greška mapiranja filtera. `GetCampaignLeadReportAsync` radio je `COUNT` preko **JOIN** `campaign_leads` × `leads`, zatim još jedan JOIN + `ORDER BY` telefon. Za velike bucket-e to traje duže od reverse-proxy timeouta (504), dok DB command timeout ostaje 120s.
-- **Fix:** `COUNT` bez JOIN-a kad nema phone/unsubscribe filtera; indeks **`(campaign_id, viber_status)`** (`ix_campaign_leads_campaign_id_viber_status`, migracija `20260715120000_AddCampaignLeadCampaignIdViberStatusIndex`); `AsNoTracking` na report upitu.
-- **Fajlovi:** `CampaignLeadRepository.cs`, `CampaignLeadConfiguration.cs`, migracija + snapshot.
+- **Simptom:** filteri **Nije poslato (0)**, **Primljeno (1)**, **Isteklo (6)** → „Izveštaj nije mogao da se učita“ / **HTTP 504**; manji bucketi (npr. Viđeno, Kliknuto) rade. Najgore na **velikim današnjim** kampanjama (Expired).
+- **Uzrok:** nije greška mapiranja filtera. Stari upit radio je `COUNT` + JOIN + `ORDER BY` telefon preko celog bucketa — duže od reverse-proxy timeouta.
+- **Fix 1:** `COUNT` bez JOIN-a kad nema phone/unsubscribe filtera; `AsNoTracking`.
+- **Fix 2:** status-only stranica — prvo `ORDER BY viber_message_id` + `LIMIT` na `campaign_leads`, pa JOIN samo za tu stranicu (ne sortira milione telefona).
+- **Indeks:** `(campaign_id, viber_status, viber_message_id)` — `ix_campaign_leads_campaign_id_viber_status_message_id` (migracija `20260715140000_…`; stari 2-kolonski indeks se dropuje).
+- **Fajlovi:** `CampaignLeadRepository.cs`, `CampaignLeadConfiguration.cs`, migracije + snapshot, i18n subtitle.
 
 ---
 
