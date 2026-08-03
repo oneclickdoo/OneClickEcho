@@ -37,10 +37,13 @@ namespace OneClickEcho.Persistence.Repositories
 
         public async Task<List<ApiMessage>> GetSentApiMessages(DateTime startDate, CancellationToken cancellationToken = default)
         {
+            // Keep polling until terminal Clicked / Expired (same idea as campaign leads).
+            // Stopping at Seen prevented ClickCount updates that arrive after the message was opened.
             return await _dbContext.ApiMessages
                 .Where(m => m.IsSent && m.CreatedAt.ToUniversalTime() >= startDate.ToUniversalTime())
-                .Where(m => m.ViberStatus != CampaignLeadViberStatus.Seen)
-                .Where(m => m.SMSStatus != CampaignLeadSMSStatus.Delivered)
+                .Where(m =>
+                    m.ViberStatus != CampaignLeadViberStatus.Clicked &&
+                    m.ViberStatus != CampaignLeadViberStatus.Expired)
                 .ToListAsync(cancellationToken);
         }
 

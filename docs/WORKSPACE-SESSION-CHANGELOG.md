@@ -111,6 +111,12 @@
 
 ---
 
+## 15. API Message delivery poll — ne stati na Seen (2026-08-03)
+
+- `GetSentApiMessages` ranije isključivao `ViberStatus == Seen`, pa klik posle otvaranja poruke nije mogao da se upiše kao `Clicked`.
+- Sada se polluje dok status nije **Clicked** ili **Expired** (kao kod campaign leadova).
+- Napomena: ako Comtrade `DeliveryById` vrati `ClickCount: 0`, mi i dalje ne možemo da postavimo Kliknuto — to je na provajderu.
+
 ## 14. API Message — status u Send response + GET poll (2026-08-03)
 
 - **Send** (`POST /api/Message/Send`) više ne vraća samo `{ id }` — dodati `isSent`, `viberStatus`, `viberStatusDescription`, `smsStatus`, `smsStatusDescription`, `phoneNumber`, `createdAt` (početno: status 0 / „još nije poslata“).
