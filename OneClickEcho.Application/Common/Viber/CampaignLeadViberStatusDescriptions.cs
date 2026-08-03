@@ -42,6 +42,13 @@ public static class CampaignLeadViberStatusDescriptions
     public static string ForExpired() =>
         "Poruka je istekla (validnost) pre konačne isporuke.";
 
+    /// <summary>Initial row before Quartz hands the message to Comtrade.</summary>
+    public static string ForQueued() =>
+        BaseForStatus(CampaignLeadViberStatus.None);
+
+    public static string ForStatus(CampaignLeadViberStatus status) =>
+        BaseForStatus(status);
+
     private static string BaseForStatus(CampaignLeadViberStatus status) =>
         status switch
         {

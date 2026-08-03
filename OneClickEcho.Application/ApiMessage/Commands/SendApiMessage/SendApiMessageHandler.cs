@@ -1,5 +1,7 @@
 using OneClickEcho.Application.Common.Messaging;
+using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Domain.ApiMessageAggregate.Repositories;
+using OneClickEcho.Domain.CampaignLeadAggregate.Enums;
 using OneClickEcho.Domain.Common.Repositories;
 using OneClickEcho.Domain.Common.Shared;
 using OneClickEcho.Domain.CompanyAggregate.Repositories;
@@ -40,10 +42,21 @@ public class SendApiMessageHandler(IApiMessageRepository apiMessageRepository, I
             viberVideoDuration: request.ViberVideoDuration
         );
 
+        apiMessage.ViberStatus = CampaignLeadViberStatus.None;
+        apiMessage.ViberStatusDescription = CampaignLeadViberStatusDescriptions.ForQueued();
+
         apiMessageRepository.Add(apiMessage);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new SendApiMessageResponse(apiMessage.Id.Value);
+        return new SendApiMessageResponse(
+            Id: apiMessage.Id.Value,
+            IsSent: apiMessage.IsSent,
+            ViberStatus: (short)apiMessage.ViberStatus,
+            ViberStatusDescription: apiMessage.ViberStatusDescription,
+            SmsStatus: (short)apiMessage.SMSStatus,
+            SmsStatusDescription: apiMessage.SMSStatusDescription,
+            PhoneNumber: apiMessage.PhoneNumber,
+            CreatedAt: apiMessage.CreatedAt);
     }
 }

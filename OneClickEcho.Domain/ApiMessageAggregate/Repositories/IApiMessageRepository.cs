@@ -6,6 +6,7 @@ namespace OneClickEcho.Domain.ApiMessageAggregate.Repositories;
 
 public interface IApiMessageRepository : IRepository<ApiMessage, ApiMessageId>
 {
+    Task<ApiMessage?> GetByIdAsync(ApiMessageId id, CancellationToken cancellationToken = default);
     Task<IPagedList<ApiMessage>> GetPagedAsync(IPagedQuery query, CancellationToken cancellationToken = default);
     Task<List<ApiMessage>> GetUnsentApiMessages(DateTime startDate, CancellationToken cancellationToken = default);
     Task<List<ApiMessage>> GetSentApiMessages(DateTime startDate, CancellationToken cancellationToken = default);

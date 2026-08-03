@@ -1,5 +1,5 @@
 @OneClickEcho_HostAddress = http://localhost:5050
-@OneClickEcho_HostAddress_Prod = https://echo.oneclick.rs
+@OneClickEcho_HostAddress_Prod = https://viber.oneclick.rs
 
 ### Send message dev
 POST {{OneClickEcho_HostAddress}}/api/message/send
@@ -17,6 +17,10 @@ Content-Type: application/json
   "viberButtonUrl": "https://echo.oneclick.rs",
   "viberButtonUrlTitle": "Test button"
 }
+
+### Get message status
+GET {{OneClickEcho_HostAddress}}/api/message/{{messageId}}/status?companyId=b25cfadc-8a0f-4306-be83-821116ca6e2e&apiPassword=TestPassword
+Accept: application/json
 
 ### Send message prod
 POST {{OneClickEcho_HostAddress_Prod}}/api/message/send

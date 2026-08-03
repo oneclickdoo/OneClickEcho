@@ -111,6 +111,14 @@
 
 ---
 
+## 14. API Message — status u Send response + GET poll (2026-08-03)
+
+- **Send** (`POST /api/Message/Send`) više ne vraća samo `{ id }` — dodati `isSent`, `viberStatus`, `viberStatusDescription`, `smsStatus`, `smsStatusDescription`, `phoneNumber`, `createdAt` (početno: status 0 / „još nije poslata“).
+- **Novi endpoint:** `GET /api/Message/{id}/status?companyId=&apiPassword=` — ista auth šema kao Send; čita ažurirani status iz `api_messages` (Quartz delivery ~1 min).
+- **Fajlovi:** `SendApiMessageResponse` / Handler, `GetApiMessageStatus*`, `ApiMessageController`, `IApiMessageRepository.GetByIdAsync`, `doc.md`, `ApiMessage.http`.
+
+---
+
 **Cursor:** pravilo [`.cursor/rules/workspace-session-context.mdc`](../.cursor/rules/workspace-session-context.mdc) (`alwaysApply: true`) podsjeće agenta da pročita ovaj fajl pri većim zadacima.
 
 *Ažuriraj ovaj fajl ili dodaj novu sekciju kada uradiš veće izmene van git commit poruka.*

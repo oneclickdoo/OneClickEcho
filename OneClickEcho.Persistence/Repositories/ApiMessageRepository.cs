@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OneClickEcho.Domain.ApiMessageAggregate;
 using OneClickEcho.Domain.ApiMessageAggregate.Repositories;
+using OneClickEcho.Domain.ApiMessageAggregate.ValueObjects;
 using OneClickEcho.Domain.CampaignLeadAggregate.Enums;
 using OneClickEcho.Domain.Common.Queries;
 using OneClickEcho.Persistence.Common;
@@ -10,6 +11,13 @@ namespace OneClickEcho.Persistence.Repositories
     public class ApiMessageRepository(ApplicationDbContext dbContext) : IApiMessageRepository
     {
         private readonly ApplicationDbContext _dbContext = dbContext;
+
+        public async Task<ApiMessage?> GetByIdAsync(ApiMessageId id, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.ApiMessages
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        }
 
         public async Task<IPagedList<ApiMessage>> GetPagedAsync(IPagedQuery query, CancellationToken cancellationToken = default)
         {
