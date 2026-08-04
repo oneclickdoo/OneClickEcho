@@ -55,6 +55,16 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     {
                         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
                     });
+
+                    // Log outbound MessageType(s) without credentials (helps verify 108 vs 106/109).
+                    if (request.ViberMessages is { Count: > 0 })
+                    {
+                        string types = string.Join(", ",
+                            request.ViberMessages.Select(m =>
+                                $"id={m.MessageId} type={(int)m.MessageType} btn={(m.ButtonUrl is null ? "n" : "y")} img={(m.ImageUrl is null ? "n" : "y")}"));
+                        Console.WriteLine($"{DateTime.UtcNow:O} [ComTrade Send] {types}");
+                    }
+
                     using StringContent content = new(json, Encoding.UTF8, "application/json");
                     using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "/ViberCTOC/ReceivingService.svc/json/Send")
                     {
@@ -357,46 +367,55 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
         
         public static ViberSendMessageType DetermineApiMessageType(ApiMessage apiMessage)
         {
+            bool hasMedia = !string.IsNullOrWhiteSpace(apiMessage.ViberMedia);
+            bool hasButton = !string.IsNullOrWhiteSpace(apiMessage.ViberButtonUrl);
+
             // Text only
-            if (string.IsNullOrEmpty(apiMessage.ViberMedia) && string.IsNullOrEmpty(apiMessage.ViberButtonUrl))
+            if (!hasMedia && !hasButton)
             {
-                return ViberSendMessageType.OneWayTextOnly;
+                return ViberSendMessageType.OneWayTextOnly; // 106
             }
 
-            // Text with button
-            if (string.IsNullOrEmpty(apiMessage.ViberMedia) && !string.IsNullOrEmpty(apiMessage.ViberButtonUrl))
+            // Text + button (no media)
+            if (!hasMedia && hasButton)
             {
-                return ViberSendMessageType.OneWayTextButton;
+                return ViberSendMessageType.OneWayTextButton; // 109
             }
 
-            if (!string.IsNullOrEmpty(apiMessage.ViberMedia))
+            // Video (230–233) when media extension is a known video type
+            ViberSendMessageType videoType = DetermineVideoOutboundType(
+                apiMessage.ViberMedia,
+                apiMessage.Message,
+                apiMessage.ViberButtonUrl,
+                apiMessage.ViberButtonUrlTitle);
+
+            if (videoType != ViberSendMessageType.OneWayTextOnly)
             {
-                ViberSendMessageType videoType = DetermineVideoOutboundType(
-                    apiMessage.ViberMedia,
-                    apiMessage.Message,
-                    apiMessage.ViberButtonUrl,
-                    apiMessage.ViberButtonUrlTitle);
-
-                if (videoType != ViberSendMessageType.OneWayTextOnly)
-                {
-                    return videoType;
-                }
-
-                try
-                {
-                    if (MediaHelper.GetMediaType(apiMessage.ViberMedia) == CampaignMediaType.Image
-                        && !string.IsNullOrEmpty(apiMessage.ViberButtonUrl))
-                    {
-                        return ViberSendMessageType.OneWayTextImageButton;
-                    }
-                }
-                catch (Exception)
-                {
-                    // fall through
-                }
+                return videoType;
             }
 
-            return ViberSendMessageType.OneWayTextOnly;
+            try
+            {
+                if (MediaHelper.GetMediaType(apiMessage.ViberMedia!) == CampaignMediaType.Image)
+                {
+                    // Comtrade 108 = text + image + button; 107 = image only
+                    return hasButton
+                        ? ViberSendMessageType.OneWayTextImageButton // 108
+                        : ViberSendMessageType.OneWayImageOnly; // 107
+                }
+            }
+            catch (Exception)
+            {
+                // Unknown media extension — keep button if present rather than stripping it.
+            }
+
+            // Unrecognized media URL: still send button message when URL/caption exist.
+            if (hasButton)
+            {
+                return ViberSendMessageType.OneWayTextButton; // 109
+            }
+
+            return ViberSendMessageType.OneWayTextOnly; // 106
         }
     }
 }

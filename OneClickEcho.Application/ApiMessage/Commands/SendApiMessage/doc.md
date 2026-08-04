@@ -108,7 +108,27 @@ On `Send` you get the message id and the **initial** status (usually `viberStatu
 
 Poll every ~15–60s until status is terminal for your use case (e.g. Seen, Clicked, Undelivered, Expired). Delivery updates come from Comtrade polling (~1 min).
 
-## Duplicate protection
+### Comtrade `MessageType` (not `apiMessageType`)
+
+`apiMessageType: 1` only means **Viber channel**. The Comtrade outbound type is chosen in code (`DetermineApiMessageType`):
+
+| Your fields | Comtrade `MessageType` |
+|-------------|------------------------|
+| text only | **106** |
+| text + button | **109** |
+| text + image + button | **108** |
+| image only | **107** |
+| video variants | **230–233** |
+
+Example body with `viberMedia` (`.jpg`/`.png`) + `viberButtonUrl` + title → payload includes `"MessageType": 108`, `ImageUrl`, `ButtonUrl`, `ButtonCaption`.
+
+Check Docker API logs after send:
+
+```text
+[API→Comtrade] MessageId=... ComtradeMessageType=108 (OneWayTextImageButton) ...
+[ComTrade Send] id=... type=108 btn=y img=y
+```
+
 
 Identical messages to the **same phone** for the **same company** are rejected within the **same calendar day** (Europe/Belgrade).
 

@@ -841,6 +841,13 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
                     videoThumbnailUrl = ResolvePublicMediaUrlOrNull(uploadsBase, apiMessage.ViberVideoThumbnail);
 
+                    Console.WriteLine(
+                        $"{DateTime.UtcNow:O} [API→Comtrade] MessageId={apiMessage.ViberMessageId} " +
+                        $"ComtradeMessageType={(int)messageType} ({messageType}) " +
+                        $"Display={apiMessage.Sender} MSISDN={apiMessage.PhoneNumber} " +
+                        $"ImageUrl={imageUrl ?? "-"} ButtonUrl={apiMessage.ViberButtonUrl ?? "-"} " +
+                        $"ButtonCaption={apiMessage.ViberButtonUrlTitle ?? "-"}");
+
                     switch (messageType)
                     {
                         case ViberSendMessageType.OneWayTextOnly:
@@ -849,6 +856,20 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                                 // Text
                                 MessageText = apiViberText!,
                                 // Must have
+                                Display = apiMessage.Sender!,
+                                Label = "promotion",
+                                MSISDN = apiMessage.PhoneNumber,
+                                MessageId = apiMessage.ViberMessageId,
+                                MessageType = messageType,
+                                Priority = 255,
+                                Tag = "tag",
+                                Validity = validity
+                            };
+                            break;
+                        case ViberSendMessageType.OneWayImageOnly:
+                            viberMessage = new()
+                            {
+                                ImageUrl = imageUrl,
                                 Display = apiMessage.Sender!,
                                 Label = "promotion",
                                 MSISDN = apiMessage.PhoneNumber,
