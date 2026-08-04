@@ -20,7 +20,22 @@ public class ApiMessageController(IMediator mediator) : ApiController(mediator)
     public async Task<IActionResult> SendApiMessage([FromBody] SendApiMessageCommand sendApiMessageCommand, CancellationToken cancellationToken)
     {
         Result<SendApiMessageResponse> response = await Mediator.Send(sendApiMessageCommand, cancellationToken);
-        return response.IsSuccess ? Ok(response.Value) : NotFound(response.Error);
+        if (response.IsSuccess)
+        {
+            return Ok(response.Value);
+        }
+
+        if (response.Error.Code == "ApiMessage.DuplicateSameDay")
+        {
+            return Conflict(response.Error);
+        }
+
+        if (response.Error.Code == "Company.InvalidApiPassword")
+        {
+            return Unauthorized(response.Error);
+        }
+
+        return NotFound(response.Error);
     }
 
     /// <summary>

@@ -107,3 +107,18 @@ On `Send` you get the message id and the **initial** status (usually `viberStatu
 `viberStatusDescription` is a Serbian human-readable text (includes provider sub-reasons when available, e.g. blocked / not a Viber user).
 
 Poll every ~15–60s until status is terminal for your use case (e.g. Seen, Clicked, Undelivered, Expired). Delivery updates come from Comtrade polling (~1 min).
+
+## Duplicate protection
+
+Identical messages to the **same phone** for the **same company** are rejected within the **same calendar day** (Europe/Belgrade).
+
+“Identical” means same: `phoneNumber`, `apiMessageType`, `message`, `sender`, `viberMedia`, `viberButtonUrl`, `viberButtonUrlTitle`.
+
+**HTTP 409 Conflict** example:
+
+```json
+{
+  "code": "ApiMessage.DuplicateSameDay",
+  "message": "An identical message to this phone number was already accepted today for this company. ExistingId:5eceb554-9f64-48c8-ab45-eca56751677f"
+}
+```

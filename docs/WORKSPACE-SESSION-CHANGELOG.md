@@ -111,6 +111,11 @@
 
 ---
 
+## 16. API Message — blokada duplikata istog dana (2026-08-04)
+
+- `POST /api/Message/Send`: odbija identičnu poruku (ista kompanija, telefon, tip, tekst, sender, media, button) u istom kalendarskom danu (Europe/Belgrade) sa **HTTP 409** `ApiMessage.DuplicateSameDay` (+ `ExistingId` u poruci).
+- **Fajlovi:** `SendApiMessageHandler`, `IApiMessageRepository.FindIdenticalSameDayAsync`, `ApiMessageRepository`, `ApiMessageController`, `doc.md`.
+
 ## 15. API Message delivery poll — ne stati na Seen (2026-08-03)
 
 - `GetSentApiMessages` ranije isključivao `ViberStatus == Seen`, pa klik posle otvaranja poruke nije mogao da se upiše kao `Clicked`.

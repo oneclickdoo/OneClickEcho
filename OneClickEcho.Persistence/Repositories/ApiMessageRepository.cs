@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OneClickEcho.Domain.ApiMessageAggregate;
+using OneClickEcho.Domain.ApiMessageAggregate.Enums;
 using OneClickEcho.Domain.ApiMessageAggregate.Repositories;
 using OneClickEcho.Domain.ApiMessageAggregate.ValueObjects;
 using OneClickEcho.Domain.CampaignLeadAggregate.Enums;
 using OneClickEcho.Domain.Common.Queries;
+using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Persistence.Common;
 
 namespace OneClickEcho.Persistence.Repositories
@@ -21,10 +23,10 @@ namespace OneClickEcho.Persistence.Repositories
 
         public async Task<IPagedList<ApiMessage>> GetPagedAsync(IPagedQuery query, CancellationToken cancellationToken = default)
         {
-            PagedList<ApiMessage> pagedList = await PagedList<ApiMessage>
+            PagedList<ApiMessage> apiMessagePagedList = await PagedList<ApiMessage>
                 .CreateAsync(_dbContext.ApiMessages, query, cancellationToken);
 
-            return pagedList;
+            return apiMessagePagedList;
         }
 
         public async Task<List<ApiMessage>> GetUnsentApiMessages(DateTime startDate, CancellationToken cancellationToken = default)
@@ -47,9 +49,54 @@ namespace OneClickEcho.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<ApiMessage?> FindIdenticalSameDayAsync(
+            CompanyId companyId,
+            string phoneNumber,
+            string message,
+            ApiMessageType messageType,
+            string? sender,
+            string? viberMedia,
+            string? viberButtonUrl,
+            string? viberButtonUrlTitle,
+            DateTime dayStartUtc,
+            DateTime dayEndUtc,
+            CancellationToken cancellationToken = default)
+        {
+            string phone = phoneNumber.Trim();
+            string text = message.Trim();
+            string senderNorm = NormalizeOptional(sender) ?? string.Empty;
+            string mediaNorm = NormalizeOptional(viberMedia) ?? string.Empty;
+            string buttonUrlNorm = NormalizeOptional(viberButtonUrl) ?? string.Empty;
+            string buttonTitleNorm = NormalizeOptional(viberButtonUrlTitle) ?? string.Empty;
+
+            return await _dbContext.ApiMessages
+                .AsNoTracking()
+                .Where(m => m.CompanyId == companyId)
+                .Where(m => m.CreatedAt >= dayStartUtc && m.CreatedAt < dayEndUtc)
+                .Where(m => m.PhoneNumber == phone)
+                .Where(m => m.MessageType == messageType)
+                .Where(m => m.Message == text)
+                .Where(m => (m.Sender ?? string.Empty) == senderNorm)
+                .Where(m => (m.ViberMedia ?? string.Empty) == mediaNorm)
+                .Where(m => (m.ViberButtonUrl ?? string.Empty) == buttonUrlNorm)
+                .Where(m => (m.ViberButtonUrlTitle ?? string.Empty) == buttonTitleNorm)
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public void Add(ApiMessage apiMessage)
         {
             _dbContext.Set<ApiMessage>().Add(apiMessage);
+        }
+
+        private static string? NormalizeOptional(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            return value.Trim();
         }
     }
 }
