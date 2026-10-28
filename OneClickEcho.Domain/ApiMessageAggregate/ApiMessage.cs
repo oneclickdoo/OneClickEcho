@@ -23,7 +23,14 @@ public class ApiMessage : AggregateRoot<ApiMessageId>
         int? viberValidity,
         string? viberVideoThumbnail = null,
         int? viberFileSize = null,
-        int? viberVideoDuration = null
+        int? viberVideoDuration = null,
+        string? viberImageFormat = null,
+        string? viberImageRatio = null,
+        string? viberSurveyOptionsJson = null,
+        short? viberSurveyUiType = null,
+        string? viberCarouselJson = null,
+        Guid? viberTemplateId = null,
+        string? viberTemplateParamsJson = null
     ) : base(ApiMessageId.CreateUnique())
     {
         CompanyId = companyId;
@@ -41,6 +48,13 @@ public class ApiMessage : AggregateRoot<ApiMessageId>
         ViberVideoThumbnail = viberVideoThumbnail;
         ViberFileSize = viberFileSize;
         ViberVideoDuration = viberVideoDuration;
+        ViberImageFormat = viberImageFormat;
+        ViberImageRatio = viberImageRatio;
+        ViberSurveyOptionsJson = viberSurveyOptionsJson;
+        ViberSurveyUiType = viberSurveyUiType;
+        ViberCarouselJson = viberCarouselJson;
+        ViberTemplateId = viberTemplateId;
+        ViberTemplateParamsJson = viberTemplateParamsJson;
     }
     
     public CompanyId CompanyId { get; set; } = default!;
@@ -84,6 +98,21 @@ public class ApiMessage : AggregateRoot<ApiMessageId>
     public int? ViberFileSize { get; set; }
 
     public int? ViberVideoDuration { get; set; }
+
+    /// <summary>Explicit Comtrade ImageFormat: gif or img. Gif is also inferred from the media extension.</summary>
+    public string? ViberImageFormat { get; set; }
+
+    public string? ViberImageRatio { get; set; }
+
+    public string? ViberSurveyOptionsJson { get; set; }
+
+    public short? ViberSurveyUiType { get; set; }
+
+    public string? ViberCarouselJson { get; set; }
+
+    public Guid? ViberTemplateId { get; set; }
+
+    public string? ViberTemplateParamsJson { get; set; }
 
     // Used for EFCore
     public ApiMessage() : base(ApiMessageId.CreateUnique()) { }

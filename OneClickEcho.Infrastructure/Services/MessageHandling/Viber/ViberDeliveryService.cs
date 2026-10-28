@@ -22,6 +22,7 @@ using OneClickEcho.Domain.LeadAggregate.Repositories;
 using OneClickEcho.Domain.LeadAggregate.ValueObjects;
 using OneClickEcho.Domain.TestMessageAggregate;
 using OneClickEcho.Domain.TestMessageAggregate.Repositories;
+using OneClickEcho.Domain.ViberSessionAggregate.Repositories;
 using OneClickEcho.Infrastructure.Services.MessageHandling.Sms;
 using OneClickEcho.Infrastructure.Settings;
 
@@ -573,12 +574,59 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             await unitOfWork.SaveChangesAsync();
         }
         
+        public static async Task PollSessionDeliveries(
+            IViberSessionRepository sessionRepository,
+            IHttpClientFactory httpClientFactory,
+            IOptions<ViberSettings> viberSettings,
+            IUnitOfWork unitOfWork)
+        {
+            List<long> ids = await sessionRepository.GetRecentOutboundMessageIdsAsync(DateTime.UtcNow.AddHours(-49));
+            if (ids.Count == 0)
+            {
+                return;
+            }
+
+            HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
+            ViberService viberService = new(httpClient);
+            ViberUserCredentials credentials = new()
+            {
+                UserName = viberSettings.Value.Username,
+                Password = viberSettings.Value.Password
+            };
+
+            for (int i = 0; i < ids.Count; i += MAX_RECORDS_PER_REQUEST)
+            {
+                List<long> chunk = ids.GetRange(i, Math.Min(MAX_RECORDS_PER_REQUEST, ids.Count - i));
+                DeliveryViberMessageResponseDto? response = await viberService.DeliveryById(new DeliveryViberMessageDto
+                {
+                    UserCredentials = credentials,
+                    IDList = chunk
+                });
+
+                if (response is null)
+                {
+                    continue;
+                }
+
+                foreach (DeliveryViberMessageResponse item in response.ViberMessageResponses)
+                {
+                    if (!string.IsNullOrWhiteSpace(item.SessionId))
+                    {
+                        await sessionRepository.NoteSessionIdAsync(item.MessageId, item.MSISDN, item.SessionId);
+                    }
+                }
+            }
+
+            await unitOfWork.SaveChangesAsync();
+        }
+
         public static async Task GetViberAnswersForLast49Hours(
             ICampaignRepository campaignRepository,
             ICampaignLeadRepository campaignLeadRepository,
             IHttpClientFactory httpClientFactory,
             IOptions<ViberSettings> viberSettings,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IViberSessionRepository sessionRepository)
         {
             List<Campaign> last49HoursViberTwoWayCampaigns = await campaignRepository.GetLast49HoursViberTwoWayCampaigns();
 
@@ -610,6 +658,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             int j = 0;
 
             List<ReceivedMessage> receivedMessages = [];
+            Dictionary<CampaignId, Campaign> campaignsById = last49HoursViberTwoWayCampaigns.ToDictionary(c => c.Id);
 
             // send chunk by chunk
             foreach (List<CampaignLead> dividedCampaignLead in dividedCampaignLeads)
@@ -644,6 +693,19 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             CampaignLeadId = campaignLead.Id,
                             MessageContent = entry.MessageText
                         });
+
+                        if (campaignsById.TryGetValue(campaignLead.CampaignId, out Campaign? campaign) &&
+                            !string.IsNullOrWhiteSpace(campaign.ViberSender) &&
+                            !string.IsNullOrWhiteSpace(entry.MSISDN))
+                        {
+                            await sessionRepository.RecordInboundAsync(
+                                campaign.CompanyId,
+                                campaign.ViberSender,
+                                entry.MSISDN,
+                                entry.MessageText,
+                                entry.MessageToken,
+                                entry.Received);
+                        }
                     }
                     else
                     {
@@ -653,6 +715,44 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             }
 
             await campaignLeadRepository.AddReceivedMessages(receivedMessages);
+
+            HashSet<long> alreadyAsked = campaignLeads.Select(x => x.ViberMessageId).ToHashSet();
+            List<long> sessionIds = (await sessionRepository.GetRecentOutboundMessageIdsAsync(DateTime.UtcNow.AddHours(-49)))
+                .Where(id => !alreadyAsked.Contains(id))
+                .ToList();
+
+            for (int i = 0; i < sessionIds.Count; i += MAX_RECORDS_PER_REQUEST)
+            {
+                List<long> chunk = sessionIds.GetRange(i, Math.Min(MAX_RECORDS_PER_REQUEST, sessionIds.Count - i));
+                AnswerViberMessageResponseDto? response = await viberService.AnswersById(new AnswerViberMessageDto
+                {
+                    UserCredentials = credentials,
+                    IDList = chunk
+                });
+
+                if (response is null)
+                {
+                    continue;
+                }
+
+                foreach (ViberAnswer entry in response.ViberAnswers)
+                {
+                    Domain.ViberSessionAggregate.ViberSession? owner =
+                        await sessionRepository.FindByOutboundMessageIdAsync(entry.MessageId);
+                    if (owner is null || string.IsNullOrWhiteSpace(entry.MSISDN))
+                    {
+                        continue;
+                    }
+
+                    await sessionRepository.RecordInboundAsync(
+                        owner.CompanyId,
+                        owner.Sender,
+                        entry.MSISDN,
+                        entry.MessageText,
+                        entry.MessageToken,
+                        entry.Received);
+                }
+            }
 
             await unitOfWork.SaveChangesAsync();
         }

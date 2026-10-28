@@ -25,6 +25,13 @@ public interface IApiMessageRepository : IRepository<ApiMessage, ApiMessageId>
         string? viberMedia,
         string? viberButtonUrl,
         string? viberButtonUrlTitle,
+        string? viberImageFormat,
+        string? viberImageRatio,
+        string? viberSurveyOptionsJson,
+        short? viberSurveyUiType,
+        string? viberCarouselJson,
+        Guid? viberTemplateId,
+        string? viberTemplateParamsJson,
         DateTime dayStartUtc,
         DateTime dayEndUtc,
         CancellationToken cancellationToken = default);

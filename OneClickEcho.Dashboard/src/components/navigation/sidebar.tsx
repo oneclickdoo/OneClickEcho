@@ -11,9 +11,11 @@ import {
     RiBuildingLine,
     RiGroupLine,
     RiHome2Line,
+    RiChat3Line,
     RiListCheck,
     RiMessage2Line,
-    RiStackLine
+    RiStackLine,
+    RiFileList3Line
 } from "@remixicon/react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -26,7 +28,7 @@ import { UserProfileDesktop, UserProfileMobile } from "./UserProfile";
 import { cx, focusRing } from "@/lib/utils";
 import { siteConfig } from "@/app/siteConfig";
 
-type SidebarLabelKey = "overview" | "campaigns" | "leadLists" | "leads" | "apiMessages" | "companies";
+type SidebarLabelKey = "overview" | "campaigns" | "leadLists" | "leads" | "apiMessages" | "viberTemplates" | "viberSessions" | "companies";
 
 export interface SidebarNavigationItem {
     labelKey: SidebarLabelKey;
@@ -41,6 +43,8 @@ const navigation: SidebarNavigationItem[] = [
     { labelKey: "leadLists", href: siteConfig.baseLinks.collections, icon: RiStackLine, isAdminLink: false },
     { labelKey: "leads", href: siteConfig.baseLinks.leads, icon: RiGroupLine, isAdminLink: false },
     { labelKey: "apiMessages", href: siteConfig.baseLinks.api_messages, icon: RiMessage2Line, isAdminLink: false },
+    { labelKey: "viberTemplates", href: siteConfig.baseLinks.viber_templates, icon: RiFileList3Line, isAdminLink: false },
+    { labelKey: "viberSessions", href: siteConfig.baseLinks.viber_sessions, icon: RiChat3Line, isAdminLink: false },
     { labelKey: "companies", href: siteConfig.baseLinks.companies, icon: RiBuildingLine, isAdminLink: true }
 ];
 

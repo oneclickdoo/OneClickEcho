@@ -195,6 +195,46 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             }
         }
 
+        public Task<CreateViberTemplateResponseDto?> CreateTemplate(CreateViberTemplateRequestDto request) =>
+            PostJson<CreateViberTemplateResponseDto>("/ViberCTOC/ReceivingService.svc/json/CreateTemplate", request);
+
+        public Task<DeleteViberTemplateResponseDto?> DeleteTemplate(ViberTemplateIdRequestDto request) =>
+            PostJson<DeleteViberTemplateResponseDto>("/ViberCTOC/ReceivingService.svc/json/DeleteTemplate", request);
+
+        public Task<ViberTemplateListResponseDto?> GetTemplates(ViberTemplatesListRequestDto request) =>
+            PostJson<ViberTemplateListResponseDto>("/ViberCTOC/ReceivingService.svc/json/GetTemplates", request);
+
+        public Task<ViberTemplateListResponseDto?> GetTemplateById(ViberTemplateIdRequestDto request) =>
+            PostJson<ViberTemplateListResponseDto>("/ViberCTOC/ReceivingService.svc/json/GetTemplateById", request);
+
+        public Task<ViberTemplateListResponseDto?> RefreshTemplate(ViberTemplateIdRequestDto request) =>
+            PostJson<ViberTemplateListResponseDto>("/ViberCTOC/ReceivingService.svc/json/RefreshTemplate", request);
+
+        private async Task<T?> PostJson<T>(string path, object request) where T : class
+        {
+            try
+            {
+                string json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                });
+                using StringContent content = new(json, Encoding.UTF8, "application/json");
+                using HttpRequestMessage httpRequest = new(HttpMethod.Post, path) { Content = content };
+                HttpResponseMessage response = await _httpClient.SendAsync(httpRequest);
+                response.EnsureSuccessStatusCode();
+                string body = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<T>(body, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return null;
+            }
+        }
+
         public static ViberSendMessageType DetermineMessageType(Campaign campaign)
         {
             CampaignViberContentKind kind = campaign.ViberContentKind;
@@ -210,6 +250,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
 
             return kind switch
             {
+                CampaignViberContentKind.Carousel => ViberSendMessageType.OneWayCarousel,
+                CampaignViberContentKind.TransactionalTemplate => ViberSendMessageType.TransactionalTemplate,
                 CampaignViberContentKind.Survey => ViberSendMessageType.OneWaySurveyList,
                 CampaignViberContentKind.File => ViberSendMessageType.OneWayFile,
                 CampaignViberContentKind.Image => string.IsNullOrWhiteSpace(campaign.ViberButtonUrl)
@@ -367,6 +409,21 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
         
         public static ViberSendMessageType DetermineApiMessageType(ApiMessage apiMessage)
         {
+            if (apiMessage.ViberTemplateId is not null)
+            {
+                return ViberSendMessageType.TransactionalTemplate;
+            }
+
+            if (!string.IsNullOrWhiteSpace(apiMessage.ViberCarouselJson))
+            {
+                return ViberSendMessageType.OneWayCarousel;
+            }
+
+            if (!string.IsNullOrWhiteSpace(apiMessage.ViberSurveyOptionsJson))
+            {
+                return ViberSendMessageType.OneWaySurveyList;
+            }
+
             bool hasMedia = !string.IsNullOrWhiteSpace(apiMessage.ViberMedia);
             bool hasButton = !string.IsNullOrWhiteSpace(apiMessage.ViberButtonUrl);
 

@@ -23,7 +23,9 @@ namespace OneClickEcho.Application.Campaign.Commands.UploadCampaignViberMedia
                 .Must(file => CheckFileType(file!))
                 .WithMessage("Only image or video files are allowed.")
                 .Must(file => file!.Length <= maxBytes)
-                .WithMessage("File size must be less than 200 MB.");
+                .WithMessage("File size must be less than 200 MB.")
+                .Must(file => !IsGif(file!) || file!.Length <= ViberImageFields.MaxGifBytes)
+                .WithMessage("GIF files must be 24 MB or smaller.");
 
             When(x => !x.IsThumbnail && x.File != null && IsMp4Video(x.File), () =>
             {
@@ -51,11 +53,14 @@ namespace OneClickEcho.Application.Campaign.Commands.UploadCampaignViberMedia
 
         private static bool CheckFileType(IFormFile file)
         {
-            string[] allowedExtensions = [".jpg", ".jpeg", ".png", ".mp4"];
+            string[] allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".mp4"];
 
             string extension = Path.GetExtension(file.FileName).ToLowerInvariant();
 
             return allowedExtensions.Contains(extension);
         }
+
+        private static bool IsGif(IFormFile file) =>
+            string.Equals(Path.GetExtension(file.FileName), ".gif", StringComparison.OrdinalIgnoreCase);
     }
 }

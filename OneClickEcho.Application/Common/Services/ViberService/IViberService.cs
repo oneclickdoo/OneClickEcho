@@ -10,5 +10,15 @@ namespace OneClickEcho.Application.Common.Services.ViberService
         public Task<DeliveryViberMessageResponseDto?> DeliveryById(DeliveryViberMessageDto request);
 
         public Task<AnswerViberMessageResponseDto?> AnswersById(AnswerViberMessageDto request);
+
+        public Task<CreateViberTemplateResponseDto?> CreateTemplate(CreateViberTemplateRequestDto request);
+
+        public Task<DeleteViberTemplateResponseDto?> DeleteTemplate(ViberTemplateIdRequestDto request);
+
+        public Task<ViberTemplateListResponseDto?> GetTemplates(ViberTemplatesListRequestDto request);
+
+        public Task<ViberTemplateListResponseDto?> GetTemplateById(ViberTemplateIdRequestDto request);
+
+        public Task<ViberTemplateListResponseDto?> RefreshTemplate(ViberTemplateIdRequestDto request);
     }
 }

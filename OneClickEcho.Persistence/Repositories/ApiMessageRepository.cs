@@ -58,6 +58,13 @@ namespace OneClickEcho.Persistence.Repositories
             string? viberMedia,
             string? viberButtonUrl,
             string? viberButtonUrlTitle,
+            string? viberImageFormat,
+            string? viberImageRatio,
+            string? viberSurveyOptionsJson,
+            short? viberSurveyUiType,
+            string? viberCarouselJson,
+            Guid? viberTemplateId,
+            string? viberTemplateParamsJson,
             DateTime dayStartUtc,
             DateTime dayEndUtc,
             CancellationToken cancellationToken = default)
@@ -68,6 +75,11 @@ namespace OneClickEcho.Persistence.Repositories
             string mediaNorm = NormalizeOptional(viberMedia) ?? string.Empty;
             string buttonUrlNorm = NormalizeOptional(viberButtonUrl) ?? string.Empty;
             string buttonTitleNorm = NormalizeOptional(viberButtonUrlTitle) ?? string.Empty;
+            string formatNorm = NormalizeOptional(viberImageFormat) ?? string.Empty;
+            string ratioNorm = NormalizeOptional(viberImageRatio) ?? string.Empty;
+            string surveyNorm = NormalizeOptional(viberSurveyOptionsJson) ?? string.Empty;
+            string carouselNorm = NormalizeOptional(viberCarouselJson) ?? string.Empty;
+            string templateParamsNorm = NormalizeOptional(viberTemplateParamsJson) ?? string.Empty;
 
             return await _dbContext.ApiMessages
                 .AsNoTracking()
@@ -80,6 +92,13 @@ namespace OneClickEcho.Persistence.Repositories
                 .Where(m => (m.ViberMedia ?? string.Empty) == mediaNorm)
                 .Where(m => (m.ViberButtonUrl ?? string.Empty) == buttonUrlNorm)
                 .Where(m => (m.ViberButtonUrlTitle ?? string.Empty) == buttonTitleNorm)
+                .Where(m => (m.ViberImageFormat ?? string.Empty) == formatNorm)
+                .Where(m => (m.ViberImageRatio ?? string.Empty) == ratioNorm)
+                .Where(m => (m.ViberSurveyOptionsJson ?? string.Empty) == surveyNorm)
+                .Where(m => m.ViberSurveyUiType == viberSurveyUiType)
+                .Where(m => (m.ViberCarouselJson ?? string.Empty) == carouselNorm)
+                .Where(m => m.ViberTemplateId == viberTemplateId)
+                .Where(m => (m.ViberTemplateParamsJson ?? string.Empty) == templateParamsNorm)
                 .OrderByDescending(m => m.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
         }

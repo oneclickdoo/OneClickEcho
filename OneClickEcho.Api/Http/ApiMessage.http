@@ -22,6 +22,47 @@ Content-Type: application/json
 GET {{OneClickEcho_HostAddress}}/api/message/{{messageId}}/status?companyId=b25cfadc-8a0f-4306-be83-821116ca6e2e&apiPassword=TestPassword
 Accept: application/json
 
+### Send carousel
+POST {{OneClickEcho_HostAddress}}/api/message/send
+Content-Type: application/json
+
+{
+  "companyId": "b25cfadc-8a0f-4306-be83-821116ca6e2e",
+  "apiPassword": "TestPassword",
+  "apiMessageType": 1,
+  "sender": "OneClickTest",
+  "phoneNumber": "+381621671771",
+  "message": "Carousel intro",
+  "viberCarouselJson": "{\"items\":[{\"imageUrl\":\"https://example.com/a.jpg\",\"title\":\"Card one\",\"primaryButton\":{\"label\":\"Open\",\"actionUrl\":\"https://example.com\"}},{\"imageUrl\":\"https://example.com/b.jpg\",\"title\":\"Card two\",\"primaryButton\":{\"label\":\"Open\",\"actionUrl\":\"https://example.com\"}}]}"
+}
+
+### Create transactional template
+POST {{OneClickEcho_HostAddress}}/api/viber/templates
+Content-Type: application/json
+
+{
+  "companyId": "b25cfadc-8a0f-4306-be83-821116ca6e2e",
+  "apiPassword": "TestPassword",
+  "display": "OneClickTest",
+  "name": "Code ready",
+  "language": "en",
+  "body": "Hello {{name}}, your code is ready."
+}
+
+### Session reply (inside the 24h window)
+POST {{OneClickEcho_HostAddress}}/api/viber/session/send
+Content-Type: application/json
+
+{
+  "companyId": "b25cfadc-8a0f-4306-be83-821116ca6e2e",
+  "apiPassword": "TestPassword",
+  "sender": "OneClickTest",
+  "phoneNumber": "+381621671771",
+  "kind": 0,
+  "text": "Thanks for your reply.",
+  "allowOutsideSession": false
+}
+
 ### Send message prod
 POST {{OneClickEcho_HostAddress_Prod}}/api/message/send
 Content-Type: application/json

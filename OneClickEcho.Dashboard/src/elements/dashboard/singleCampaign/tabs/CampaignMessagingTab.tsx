@@ -23,6 +23,7 @@ import { Button } from "@/components/tremor/Button";
 
 import { getCompanySenders, type SenderDto } from "../../singleCompany/fetchData";
 import { type CampaignDto, updateCampaign, uploadCampaignViberMedia } from "@/elements/dashboard/singleCampaign/fetchData";
+import { ViberExtraContentFields } from "@/elements/dashboard/singleCampaign/tabs/ViberExtraContentFields";
 
 import { getCampaignSendingTypeOptions } from "@/lib/selects";
 import { useToast } from "@/lib/useToast";
@@ -69,7 +70,8 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
     const [companyMedia, setCompanyMedia] = useState<string[]>([]);
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [externalMediaUrlInput, setExternalMediaUrlInput] = useState("");
-    const [surveyOptionDrafts, setSurveyOptionDrafts] = useState<string[]>(["", "", "", "", ""]);
+    const emptySurveySlots = () => Array.from({ length: 10 }, () => "");
+    const [surveyOptionDrafts, setSurveyOptionDrafts] = useState<string[]>(emptySurveySlots());
 
     const viberMessageInputRef = useRef<HTMLTextAreaElement>(null);
     const smsMessageInputRef = useRef<HTMLTextAreaElement>(null);
@@ -191,8 +193,8 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
             if (!Array.isArray(arr)) {
                 return;
             }
-            const next = ["", "", "", "", ""];
-            for (let i = 0; i < Math.min(5, arr.length); i++) {
+            const next = emptySurveySlots();
+            for (let i = 0; i < Math.min(10, arr.length); i++) {
                 next[i] = typeof arr[i] === "string" ? arr[i] : "";
             }
             setSurveyOptionDrafts((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
@@ -209,6 +211,19 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
         }
 
         handleChange("viberContentKind", kind as any);
+        if (kind !== CampaignViberContentKind.Image) {
+            handleChange("viberImageRatio", null);
+        }
+        if (kind !== CampaignViberContentKind.Survey) {
+            handleChange("viberSurveyUiType", null);
+        }
+        if (kind !== CampaignViberContentKind.Carousel) {
+            handleChange("viberCarouselJson", null);
+        }
+        if (kind !== CampaignViberContentKind.TransactionalTemplate) {
+            handleChange("viberTemplateId", null);
+            handleChange("viberTemplateParamsJson", null);
+        }
 
         const clearMedia = () => {
             setMedia(null);
@@ -222,7 +237,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
 
         const clearSurvey = () => {
             handleChange("viberSurveyOptionsJson" as any, null as any);
-            setSurveyOptionDrafts(["", "", "", "", ""]);
+            setSurveyOptionDrafts(emptySurveySlots());
         };
 
         if (kind === CampaignViberContentKind.Survey) {
@@ -852,6 +867,12 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                         <SelectItem value={String(CampaignViberContentKind.Survey)}>
                                             {t("viber.contentKind.survey")}
                                         </SelectItem>
+                                        <SelectItem value={String(CampaignViberContentKind.Carousel)}>
+                                            {t("viber.contentKind.carousel")}
+                                        </SelectItem>
+                                        <SelectItem value={String(CampaignViberContentKind.TransactionalTemplate)}>
+                                            {t("viber.contentKind.template")}
+                                        </SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {viberContentKind === CampaignViberContentKind.File ? (
@@ -860,6 +881,8 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     </p>
                                 ) : null}
                             </div>
+
+                            <ViberExtraContentFields formData={formData} handleChange={handleChange} />
 
                             {showSurveyBlock ? (
                                 <div className="mb-4 space-y-2">
@@ -896,7 +919,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                         if (checked) {
                                             handleChange("viberContentKind", CampaignViberContentKind.Text as any);
                                             handleChange("viberSurveyOptionsJson" as any, null as any);
-                                            setSurveyOptionDrafts(["", "", "", "", ""]);
+                                            setSurveyOptionDrafts(emptySurveySlots());
                                         }
                                     }}
                                 />

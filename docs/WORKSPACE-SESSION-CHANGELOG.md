@@ -111,6 +111,14 @@
 
 ---
 
+## 17. Comtrade Viber — GIF, karusel, šabloni, sesija (2026-10-22)
+
+- **GIF / odnos slike / anketa:** `ImageFormat` (`gif` do 24 MB, tipovi 107 i 108) i `ImageRatio` (`square` / `portrait` / `landscape`). Anketa 2–10 opcija, `ListMessageUiType` 1 radio / 2 dugmad. Kampanja + `POST /api/Message/Send`.
+- **Karusel 901** i **transakcioni šablon 1702** na kampanji i na Send. Lokalni CRUD šablona: dashboard `api/app/viber-templates`, javni `api/viber/templates` (ista auth kao Send). Slanje samo kad je status `APPROVED`.
+- **Viber sesija** nije Message/Send. Odgovor na kampanju sa „Omogući odgovore“ otvara prozor 24h (60 poruka, 10 zaredom). Slanje 306/307/221/802: dashboard `api/app/viber-sessions`, javni `POST /api/viber/session/send`. Van prozora HTTP 409 `ViberSession.Closed`; `allowOutsideSession` šalje kao promociju.
+- **Migracija:** `20261022140000_AddComtradeViberGifCarouselTemplateSession`. Identity sesijskih poruka od `8000000000`.
+- **Fajlovi:** domen/slanje/kontroleri, dashboard stranice `viber-templates` i `viber-sessions`, `doc.md`, `ApiMessage.http`.
+
 ## 16. API Message — blokada duplikata istog dana (2026-08-04)
 
 - `POST /api/Message/Send`: odbija identičnu poruku (ista kompanija, telefon, tip, tekst, sender, media, button) u istom kalendarskom danu (Europe/Belgrade) sa **HTTP 409** `ApiMessage.DuplicateSameDay` (+ `ExistingId` u poruci).

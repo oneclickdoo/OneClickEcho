@@ -11,5 +11,8 @@
         public required DeliveryViberMessageStatus MessageStatus { get; set; }
 
         public required ViberClickInfo ClickInfo { get; set; }
+
+        /// <summary>Present when the message belongs to an active Viber session.</summary>
+        public string? SessionId { get; set; }
     }
 }

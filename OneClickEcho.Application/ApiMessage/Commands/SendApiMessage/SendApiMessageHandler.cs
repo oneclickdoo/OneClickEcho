@@ -33,12 +33,19 @@ public class SendApiMessageHandler(IApiMessageRepository apiMessageRepository, I
         Domain.ApiMessageAggregate.ApiMessage? duplicate = await apiMessageRepository.FindIdenticalSameDayAsync(
             companyId,
             request.PhoneNumber,
-            request.Message,
+            request.Message ?? string.Empty,
             request.ApiMessageType,
             request.Sender,
             request.ViberMedia,
             request.ViberButtonUrl,
             request.ViberButtonUrlTitle,
+            request.ViberImageFormat,
+            request.ViberImageRatio,
+            request.ViberSurveyOptionsJson,
+            request.ViberSurveyUiType,
+            request.ViberCarouselJson,
+            request.ViberTemplateId,
+            request.ViberTemplateParamsJson,
             dayStartUtc,
             dayEndUtc,
             cancellationToken);
@@ -53,7 +60,7 @@ public class SendApiMessageHandler(IApiMessageRepository apiMessageRepository, I
         Domain.ApiMessageAggregate.ApiMessage apiMessage = new(
             companyId,
             request.PhoneNumber.Trim(),
-            request.Message.Trim(),
+            (request.Message ?? string.Empty).Trim(),
             request.ApiMessageType,
             request.HasSmsFallback,
             request.Sender,
@@ -65,7 +72,14 @@ public class SendApiMessageHandler(IApiMessageRepository apiMessageRepository, I
             request.ViberValidity,
             viberVideoThumbnail: request.ViberVideoThumbnail,
             viberFileSize: request.ViberFileSize,
-            viberVideoDuration: request.ViberVideoDuration
+            viberVideoDuration: request.ViberVideoDuration,
+            viberImageFormat: request.ViberImageFormat,
+            viberImageRatio: request.ViberImageRatio,
+            viberSurveyOptionsJson: request.ViberSurveyOptionsJson,
+            viberSurveyUiType: request.ViberSurveyUiType,
+            viberCarouselJson: request.ViberCarouselJson,
+            viberTemplateId: request.ViberTemplateId,
+            viberTemplateParamsJson: request.ViberTemplateParamsJson
         );
 
         apiMessage.ViberStatus = CampaignLeadViberStatus.None;

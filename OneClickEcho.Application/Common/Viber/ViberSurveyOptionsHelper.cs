@@ -7,7 +7,7 @@ public static class ViberSurveyOptionsHelper
 {
     public const int MinOptions = 2;
 
-    public const int MaxOptions = 5;
+    public const int MaxOptions = 10;
 
     public const int MaxOptionLength = 50;
 

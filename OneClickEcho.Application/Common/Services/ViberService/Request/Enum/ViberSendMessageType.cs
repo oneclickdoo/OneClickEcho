@@ -23,6 +23,24 @@
         /// <summary>Survey / list (Comtrade 801).</summary>
         OneWaySurveyList = 801,
 
+        /// <summary>Session file (Comtrade 221).</summary>
+        SessionFile = 221,
+
+        /// <summary>Session text (Comtrade 306).</summary>
+        SessionText = 306,
+
+        /// <summary>Session image or GIF (Comtrade 307).</summary>
+        SessionImage = 307,
+
+        /// <summary>Session quick replies (Comtrade 802).</summary>
+        SessionQuickReplies = 802,
+
+        /// <summary>Promotional carousel (Comtrade 901).</summary>
+        OneWayCarousel = 901,
+
+        /// <summary>Approved transactional template (Comtrade 1702).</summary>
+        TransactionalTemplate = 1702,
+
         // We dont handle two way connection
         TwoWayTextOnly = 206,
         TwoWayImageOnly = 207,

@@ -10,7 +10,9 @@ export const siteConfig = {
         companies: "/companies",
         leads: "/leads",
         login: "/login",
-        api_messages: "/api_messages"
+        api_messages: "/api_messages",
+        viber_templates: "/viber-templates",
+        viber_sessions: "/viber-sessions"
     }
 };
 

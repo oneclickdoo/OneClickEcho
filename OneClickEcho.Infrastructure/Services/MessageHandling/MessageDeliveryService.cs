@@ -11,6 +11,7 @@ using OneClickEcho.Domain.CompanyAggregate.Repositories;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Domain.LeadAggregate.Repositories;
 using OneClickEcho.Domain.TestMessageAggregate.Repositories;
+using OneClickEcho.Domain.ViberSessionAggregate.Repositories;
 using OneClickEcho.Infrastructure.Services.MessageHandling.Sms;
 using OneClickEcho.Infrastructure.Services.MessageHandling.Viber;
 using OneClickEcho.Infrastructure.Settings;
@@ -21,7 +22,8 @@ public class MessageDeliveryService(ICampaignRepository campaignRepository,
     ILeadRepository leadRepository, ICampaignLeadRepository campaignLeadRepository,
     ICompanyRepository companyRepository, IApiMessageRepository apiMessageRepository,
     ITestMessageRepository testMessageRepository, IStringTemplatingService stringTemplatingService,
-    IHttpClientFactory httpClientFactory, IUnitOfWork unitOfWork, IOptions<ViberSettings> viberSettings)
+    IHttpClientFactory httpClientFactory, IUnitOfWork unitOfWork, IOptions<ViberSettings> viberSettings,
+    IViberSessionRepository viberSessionRepository)
     : IMessageDeliveryService
 {
     private readonly ICampaignRepository _campaignRepository = campaignRepository;
@@ -34,6 +36,7 @@ public class MessageDeliveryService(ICampaignRepository campaignRepository,
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IOptions<ViberSettings> _viberSettings = viberSettings;
+    private readonly IViberSessionRepository _viberSessionRepository = viberSessionRepository;
 
     public async Task GetViberDeliveryForLast49Hours()
     {
@@ -46,6 +49,12 @@ public class MessageDeliveryService(ICampaignRepository campaignRepository,
             _leadRepository,
             _stringTemplatingService,
             _unitOfWork);
+
+        await ViberDeliveryService.PollSessionDeliveries(
+            _viberSessionRepository,
+            _httpClientFactory,
+            _viberSettings,
+            _unitOfWork);
     }
 
     public async Task GetViberAnswersForLast49Hours()
@@ -55,7 +64,8 @@ public class MessageDeliveryService(ICampaignRepository campaignRepository,
             _campaignLeadRepository,
             _httpClientFactory,
             _viberSettings,
-            _unitOfWork);
+            _unitOfWork,
+            _viberSessionRepository);
     }
 
     public async Task GetApiMessagesDelivery()

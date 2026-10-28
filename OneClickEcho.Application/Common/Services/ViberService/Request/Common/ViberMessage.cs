@@ -33,6 +33,12 @@ namespace OneClickEcho.Application.Common.Services.ViberService.Request.Common
         // url pointing to image on web
         public string? ImageUrl { get; set; }
 
+        /// <summary>Optional. <c>gif</c> or <c>img</c>. Omitted for static jpg/png unless the caller asks for <c>img</c>.</summary>
+        public string? ImageFormat { get; set; }
+
+        /// <summary>Optional aspect ratio for image types: square, portrait, landscape.</summary>
+        public string? ImageRatio { get; set; }
+
         // services are obligated to state the type of the message
         // possible values - promotion / transaction
         public string Label { get; set; } = "promotion";
@@ -65,8 +71,18 @@ namespace OneClickEcho.Application.Common.Services.ViberService.Request.Common
         // the opening image of the video
         public string? Thumbnail { get; set; }
 
-        /// <summary>Comtrade type <b>801</b> survey / list.</summary>
+        /// <summary>Comtrade type <b>801</b> survey / list, or session quick replies <b>802</b>.</summary>
         public ViberSurveyPayload? Survey { get; set; }
+
+        /// <summary>Comtrade type <b>901</b> carousel.</summary>
+        public ViberCarouselPayload? Carousel { get; set; }
+
+        /// <summary>Comtrade <c>ViberTemplateId</c> for type <b>1702</b>.</summary>
+        public string? TemplateId { get; set; }
+
+        public string? TemplateLang { get; set; }
+
+        public Dictionary<string, string>? CustomTemplateParams { get; set; }
 
         // validity time in seconds
         public int Validity { get; set; }

@@ -95,7 +95,46 @@ public sealed class EditCampaignValidator : AbstractValidator<EditCampaignComman
                         return false;
                     }
                 })
-                .WithMessage("Survey options must be valid JSON with 2–5 non-empty options (max 50 characters each).");
+                .WithMessage("Survey options must be valid JSON with 2–10 non-empty options (max 50 characters each).");
+
+            RuleFor(x => x.ViberSurveyUiType)
+                .Must(ui => ui is null or 1 or 2)
+                .WithMessage("Survey UI type must be 1 (radio) or 2 (buttons).");
+        });
+
+        RuleFor(x => x.ViberImageRatio)
+            .Must(ViberImageFields.IsAllowedRatio)
+            .When(x => x.IsViber)
+            .WithMessage("Image ratio must be square, portrait, or landscape.");
+
+        When(x => x.IsViber && x.ViberContentKind == CampaignViberContentKind.Carousel, () =>
+        {
+            RuleFor(x => x.ViberCarouselJson)
+                .NotEmpty()
+                .Must(json =>
+                {
+                    try
+                    {
+                        ViberCarouselHelper.ParseRequired(json);
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                })
+                .WithMessage("Carousel must be JSON with 2–5 cards (PNG/JPEG, title 2–38, primary button).");
+
+            RuleFor(x => x.ViberMessage)
+                .NotEmpty()
+                .WithMessage("Carousel campaigns require message text.");
+        });
+
+        When(x => x.IsViber && x.ViberContentKind == CampaignViberContentKind.TransactionalTemplate, () =>
+        {
+            RuleFor(x => x.ViberTemplateId)
+                .NotEmpty()
+                .WithMessage("An approved transactional template is required.");
         });
 
         RuleFor(x => x.SendingDatetime)

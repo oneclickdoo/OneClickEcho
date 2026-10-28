@@ -252,9 +252,21 @@ namespace OneClickEcho.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("viber_button_url_title");
 
+                    b.Property<string>("ViberCarouselJson")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_carousel_json");
+
                     b.Property<int?>("ViberFileSize")
                         .HasColumnType("integer")
                         .HasColumnName("viber_file_size");
+
+                    b.Property<string>("ViberImageFormat")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_image_format");
+
+                    b.Property<string>("ViberImageRatio")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_image_ratio");
 
                     b.Property<string>("ViberMedia")
                         .HasColumnType("text")
@@ -275,6 +287,22 @@ namespace OneClickEcho.Persistence.Migrations
                     b.Property<string>("ViberStatusDescription")
                         .HasColumnType("text")
                         .HasColumnName("viber_status_description");
+
+                    b.Property<string>("ViberSurveyOptionsJson")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_survey_options_json");
+
+                    b.Property<short?>("ViberSurveyUiType")
+                        .HasColumnType("smallint")
+                        .HasColumnName("viber_survey_ui_type");
+
+                    b.Property<Guid?>("ViberTemplateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("viber_template_id");
+
+                    b.Property<string>("ViberTemplateParamsJson")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_template_params_json");
 
                     b.Property<int?>("ViberValidity")
                         .HasColumnType("integer")
@@ -475,6 +503,10 @@ namespace OneClickEcho.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("viber_button_url_title");
 
+                    b.Property<string>("ViberCarouselJson")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_carousel_json");
+
                     b.Property<short>("ViberContentKind")
                         .HasColumnType("smallint")
                         .HasColumnName("viber_content_kind");
@@ -482,6 +514,10 @@ namespace OneClickEcho.Persistence.Migrations
                     b.Property<int?>("ViberFileSize")
                         .HasColumnType("integer")
                         .HasColumnName("viber_file_size");
+
+                    b.Property<string>("ViberImageRatio")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_image_ratio");
 
                     b.Property<string>("ViberMedia")
                         .HasColumnType("text")
@@ -498,6 +534,18 @@ namespace OneClickEcho.Persistence.Migrations
                     b.Property<string>("ViberSurveyOptionsJson")
                         .HasColumnType("text")
                         .HasColumnName("viber_survey_options_json");
+
+                    b.Property<short?>("ViberSurveyUiType")
+                        .HasColumnType("smallint")
+                        .HasColumnName("viber_survey_ui_type");
+
+                    b.Property<Guid?>("ViberTemplateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("viber_template_id");
+
+                    b.Property<string>("ViberTemplateParamsJson")
+                        .HasColumnType("text")
+                        .HasColumnName("viber_template_params_json");
 
                     b.Property<int?>("ViberValidity")
                         .HasColumnType("integer")
@@ -1009,6 +1057,205 @@ namespace OneClickEcho.Persistence.Migrations
                     b.ToTable("test_messages", (string)null);
                 });
 
+            modelBuilder.Entity("OneClickEcho.Domain.ViberSessionAggregate.Entities.ViberSessionMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("BilledAsPromotion")
+                        .HasColumnType("boolean")
+                        .HasColumnName("billed_as_promotion");
+
+                    b.Property<string>("Body")
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<int>("ComtradeMessageType")
+                        .HasColumnType("integer")
+                        .HasColumnName("comtrade_message_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer")
+                        .HasColumnName("direction");
+
+                    b.Property<bool>("IsSent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sent");
+
+                    b.Property<string>("Media")
+                        .HasColumnType("text")
+                        .HasColumnName("media");
+
+                    b.Property<string>("MessageToken")
+                        .HasColumnType("text")
+                        .HasColumnName("message_token");
+
+                    b.Property<string>("SendError")
+                        .HasColumnType("text")
+                        .HasColumnName("send_error");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("SurveyOptionsJson")
+                        .HasColumnType("text")
+                        .HasColumnName("survey_options_json");
+
+                    b.Property<long>("ViberMessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("viber_message_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("ViberMessageId"));
+                    NpgsqlPropertyBuilderExtensions.HasIdentityOptions(b.Property<long>("ViberMessageId"), 8000000000L, null, null, null, null, null);
+
+                    b.HasKey("Id")
+                        .HasName("pk_viber_session_messages");
+
+                    b.HasIndex("MessageToken")
+                        .HasDatabaseName("ix_viber_session_messages_message_token");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_viber_session_messages_session_id");
+
+                    b.HasIndex("ViberMessageId")
+                        .HasDatabaseName("ix_viber_session_messages_viber_message_id");
+
+                    b.ToTable("viber_session_messages", (string)null);
+                });
+
+            modelBuilder.Entity("OneClickEcho.Domain.ViberSessionAggregate.ViberSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<string>("ComtradeSessionId")
+                        .HasColumnType("text")
+                        .HasColumnName("comtrade_session_id");
+
+                    b.Property<int>("ConsecutiveOutbound")
+                        .HasColumnType("integer")
+                        .HasColumnName("consecutive_outbound");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime?>("LastInboundAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_inbound_at");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("phone_number");
+
+                    b.Property<string>("Sender")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("sender");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<int>("TotalOutbound")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_outbound");
+
+                    b.HasKey("Id")
+                        .HasName("pk_viber_sessions");
+
+                    b.HasIndex("CompanyId", "Sender", "PhoneNumber")
+                        .HasDatabaseName("ix_viber_sessions_company_id_sender_phone_number");
+
+                    b.ToTable("viber_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("OneClickEcho.Domain.ViberTemplateAggregate.ViberTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("category");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<int>("ComtradeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("comtrade_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Display")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("display");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("language");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("ProviderTemplateId")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_template_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Tag")
+                        .HasColumnType("text")
+                        .HasColumnName("tag");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_viber_templates");
+
+                    b.HasIndex("CompanyId", "ComtradeId")
+                        .HasDatabaseName("ix_viber_templates_company_id_comtrade_id");
+
+                    b.ToTable("viber_templates", (string)null);
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", b =>
                 {
                     b.Property<string>("Id")
@@ -1492,6 +1739,36 @@ namespace OneClickEcho.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_test_messages_companies_company_id");
+                });
+
+            modelBuilder.Entity("OneClickEcho.Domain.ViberSessionAggregate.Entities.ViberSessionMessage", b =>
+                {
+                    b.HasOne("OneClickEcho.Domain.ViberSessionAggregate.ViberSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_viber_session_messages_viber_sessions_session_id");
+                });
+
+            modelBuilder.Entity("OneClickEcho.Domain.ViberSessionAggregate.ViberSession", b =>
+                {
+                    b.HasOne("OneClickEcho.Domain.CompanyAggregate.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_viber_sessions_companies_company_id");
+                });
+
+            modelBuilder.Entity("OneClickEcho.Domain.ViberTemplateAggregate.ViberTemplate", b =>
+                {
+                    b.HasOne("OneClickEcho.Domain.CompanyAggregate.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_viber_templates_companies_company_id");
                 });
 
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization", b =>

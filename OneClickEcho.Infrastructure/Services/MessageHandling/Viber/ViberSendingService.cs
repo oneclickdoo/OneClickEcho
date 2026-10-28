@@ -17,6 +17,9 @@ using OneClickEcho.Domain.CampaignLeadAggregate.Repositories;
 using OneClickEcho.Domain.Common.Repositories;
 using OneClickEcho.Domain.LeadAggregate;
 using OneClickEcho.Domain.TestMessageAggregate;
+using OneClickEcho.Domain.ViberTemplateAggregate;
+using OneClickEcho.Domain.ViberTemplateAggregate.Repositories;
+using OneClickEcho.Domain.ViberTemplateAggregate.ValueObjects;
 using OneClickEcho.Infrastructure.Settings;
 
 namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
@@ -57,12 +60,24 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             return string.IsNullOrEmpty(name) ? "file" : name;
         }
 
+        private static async Task<ViberTemplate?> LoadTemplateAsync(IViberTemplateRepository repository, Guid? id)
+        {
+            if (id is null)
+            {
+                return null;
+            }
+
+            return await repository.GetByIdAsync(ViberTemplateId.Create(id.Value))
+                ?? throw new InvalidOperationException($"Viber template {id} was not found.");
+        }
+
         public static async Task SendViberMessagesToTestPhoneNumbers(
             Campaign campaign,
             TestMessage testMessage,
             IHttpClientFactory httpClientFactory,
             IOptions<ViberSettings> viberSettings,
-            string mediaPublicBaseUrl)
+            string mediaPublicBaseUrl,
+            IViberTemplateRepository templateRepository)
         {
             // Setup HTTP request
             HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
@@ -120,6 +135,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                 testSurveyOptions = ViberSurveyOptionsHelper.ParseRequired(campaign.ViberSurveyOptionsJson);
             }
 
+            ViberTemplate? campaignTemplate = await LoadTemplateAsync(templateRepository, campaign.ViberTemplateId);
+
             string? testViberText = string.IsNullOrWhiteSpace(campaign.ViberMessage)
                 ? null
                 : ViberMessageFormatting.MigrateLegacyHtmlToMarkdown(campaign.ViberMessage);
@@ -135,7 +152,25 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     
                     int validity = campaign.ViberValidity ?? 86400;
 
-                    switch (messageType)
+                    ViberMessage? special = ViberComtradePayloadBuilder.TryBuild(
+                        messageType,
+                        campaign.ViberSender!,
+                        testPhoneNumber,
+                        testMessage.ViberId,
+                        validity,
+                        testViberText,
+                        campaign.ViberCarouselJson,
+                        surveyJson: null,
+                        campaign.ViberSurveyUiType,
+                        campaign.ViberTemplateParamsJson,
+                        campaignTemplate,
+                        uploadsBase);
+
+                    if (special is not null)
+                    {
+                        viberMessage = special;
+                    }
+                    else switch (messageType)
                     {
                         case ViberSendMessageType.OneWaySurveyList:
                             viberMessage = new()
@@ -330,6 +365,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             throw new Exception("Unhandled message type");
                     }
 
+                    ViberOutboundEnricher.Apply(
+                        viberMessage,
+                        campaign.ViberMedia,
+                        campaign.ViberImageRatio,
+                        explicitFormat: null,
+                        campaign.ViberSurveyUiType);
                     viberMessages.Add(viberMessage);
                 }
 
@@ -360,7 +401,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             string mediaPublicBaseUrl,
             ICampaignLeadRepository campaignLeadRepository,
             IStringTemplatingService stringTemplatingService,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IViberTemplateRepository templateRepository)
         {
             // Setup HTTP request
             HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
@@ -424,6 +466,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             {
                 surveyOptionsList = ViberSurveyOptionsHelper.ParseRequired(campaign.ViberSurveyOptionsJson);
             }
+
+            ViberTemplate? leadCampaignTemplate = await LoadTemplateAsync(templateRepository, campaign.ViberTemplateId);
 
             // Split leads into batches
             List<List<Lead>> dividedLeads = [];
@@ -497,7 +541,25 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     
                     int validity = campaign.ViberValidity ?? 86400;
 
-                    switch (messageType)
+                    ViberMessage? leadSpecial = ViberComtradePayloadBuilder.TryBuild(
+                        messageType,
+                        campaign.ViberSender!,
+                        lead.PhoneNumber,
+                        campaignLead.ViberMessageId,
+                        validity,
+                        personalizedMarkdown,
+                        campaign.ViberCarouselJson,
+                        surveyJson: null,
+                        campaign.ViberSurveyUiType,
+                        campaign.ViberTemplateParamsJson,
+                        leadCampaignTemplate,
+                        uploadsBase);
+
+                    if (leadSpecial is not null)
+                    {
+                        viberMessage = leadSpecial;
+                    }
+                    else switch (messageType)
                     {
                         case ViberSendMessageType.OneWaySurveyList:
                             viberMessage = new()
@@ -691,6 +753,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             throw new Exception("Unhandled message type");
                     }
 
+                    ViberOutboundEnricher.Apply(
+                        viberMessage,
+                        campaign.ViberMedia,
+                        campaign.ViberImageRatio,
+                        explicitFormat: null,
+                        campaign.ViberSurveyUiType);
                     viberMessages.Add(viberMessage);
                 }
 
@@ -780,7 +848,8 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             IHttpClientFactory httpClientFactory,
             IOptions<ViberSettings> viberSettings,
             string mediaPublicBaseUrl,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IViberTemplateRepository templateRepository)
         {
             HttpClient httpClient = httpClientFactory.CreateClient("ViberHttpClient");
 
@@ -813,6 +882,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     // 24 hours
                     int validity = apiMessage.ViberValidity ?? 86400;
                     ViberSendMessageType messageType = ViberService.DetermineApiMessageType(apiMessage);
+                    ViberTemplate? apiTemplate = await LoadTemplateAsync(templateRepository, apiMessage.ViberTemplateId);
 
                     string? apiViberText = messageType == ViberSendMessageType.OneWayVideo
                         ? null
@@ -848,7 +918,25 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                         $"ImageUrl={imageUrl ?? "-"} ButtonUrl={apiMessage.ViberButtonUrl ?? "-"} " +
                         $"ButtonCaption={apiMessage.ViberButtonUrlTitle ?? "-"}");
 
-                    switch (messageType)
+                    ViberMessage? apiSpecial = ViberComtradePayloadBuilder.TryBuild(
+                        messageType,
+                        apiMessage.Sender!,
+                        apiMessage.PhoneNumber,
+                        apiMessage.ViberMessageId,
+                        validity,
+                        apiViberText,
+                        apiMessage.ViberCarouselJson,
+                        apiMessage.ViberSurveyOptionsJson,
+                        apiMessage.ViberSurveyUiType,
+                        apiMessage.ViberTemplateParamsJson,
+                        apiTemplate,
+                        uploadsBase);
+
+                    if (apiSpecial is not null)
+                    {
+                        viberMessage = apiSpecial;
+                    }
+                    else switch (messageType)
                     {
                         case ViberSendMessageType.OneWayTextOnly:
                             viberMessage = new()
@@ -996,6 +1084,12 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                             throw new Exception("Unhandled message type");
                     }
 
+                    ViberOutboundEnricher.Apply(
+                        viberMessage,
+                        apiMessage.ViberMedia,
+                        apiMessage.ViberImageRatio,
+                        apiMessage.ViberImageFormat,
+                        apiMessage.ViberSurveyUiType);
                     viberMessages.Add(viberMessage);
                 }
 

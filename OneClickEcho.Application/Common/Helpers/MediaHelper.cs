@@ -8,7 +8,7 @@
 
     public class MediaHelper
     {
-        private static readonly string[] IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"];
+        private static readonly string[] IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif"];
 
         private static readonly string[] VIDEO_EXTENSIONS = [".mp4", ".avi"];
 

@@ -43,6 +43,11 @@ public class EditCampaignHandler(ICampaignRepository campaignRepository, IUnitOf
         campaign.ViberValidity = request.ViberValidity;
         campaign.ViberContentKind = request.ViberContentKind;
         campaign.ViberSurveyOptionsJson = request.ViberSurveyOptionsJson;
+        campaign.ViberImageRatio = request.ViberImageRatio;
+        campaign.ViberSurveyUiType = request.ViberSurveyUiType;
+        campaign.ViberCarouselJson = request.ViberCarouselJson;
+        campaign.ViberTemplateId = request.ViberTemplateId;
+        campaign.ViberTemplateParamsJson = request.ViberTemplateParamsJson;
         campaign.SmsSender = request.SmsSender;
         campaign.SmsMessage = request.SmsMessage;
         campaign.SendingType = request.SendingType;

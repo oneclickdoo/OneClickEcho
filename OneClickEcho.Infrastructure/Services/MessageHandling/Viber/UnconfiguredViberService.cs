@@ -17,4 +17,19 @@ public sealed class UnconfiguredViberService : IViberService
 
     public Task<AnswerViberMessageResponseDto?> AnswersById(AnswerViberMessageDto request) =>
         Task.FromResult<AnswerViberMessageResponseDto?>(null);
+
+    public Task<CreateViberTemplateResponseDto?> CreateTemplate(CreateViberTemplateRequestDto request) =>
+        Task.FromResult<CreateViberTemplateResponseDto?>(null);
+
+    public Task<DeleteViberTemplateResponseDto?> DeleteTemplate(ViberTemplateIdRequestDto request) =>
+        Task.FromResult<DeleteViberTemplateResponseDto?>(null);
+
+    public Task<ViberTemplateListResponseDto?> GetTemplates(ViberTemplatesListRequestDto request) =>
+        Task.FromResult<ViberTemplateListResponseDto?>(null);
+
+    public Task<ViberTemplateListResponseDto?> GetTemplateById(ViberTemplateIdRequestDto request) =>
+        Task.FromResult<ViberTemplateListResponseDto?>(null);
+
+    public Task<ViberTemplateListResponseDto?> RefreshTemplate(ViberTemplateIdRequestDto request) =>
+        Task.FromResult<ViberTemplateListResponseDto?>(null);
 }

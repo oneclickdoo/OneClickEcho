@@ -39,6 +39,8 @@
     "leadLists": "Lead lists",
     "leads": "Leads",
     "apiMessages": "API messages",
+    "viberTemplates": "Viber templates",
+    "viberSessions": "Viber sessions",
     "companies": "Companies",
     "shortcuts": "Shortcuts",
     "shortcutsAria": "Shortcuts",
@@ -46,6 +48,41 @@
     "mobileTitle": "Menu",
     "workspaces": "Workspaces",
     "member": "Member"
+  },
+  "ViberTemplates": {
+    "title": "Viber templates",
+    "subtitle": "Transactional templates are approved by Viber (often within 24 hours). Refresh the status before sending.",
+    "sender": "Sender",
+    "name": "Template name",
+    "tag": "Tag",
+    "create": "Create template",
+    "refresh": "Refresh",
+    "delete": "Delete",
+    "pending": "not approved yet",
+    "error": "Error",
+    "saveFailed": "Template was not created."
+  },
+  "ViberSessions": {
+    "title": "Viber sessions",
+    "subtitle": "A session opens when someone replies. You can send up to 10 messages in a row and 60 in 24 hours. Outside that window the message is billed as promotional.",
+    "empty": "No sessions yet. Replies to campaigns with “Enable responses” show up here.",
+    "open": "Open",
+    "closed": "Closed",
+    "promo": "promotional",
+    "send": "Send",
+    "textPlaceholder": "Message",
+    "mediaPlaceholder": "Public media URL",
+    "repliesPlaceholder": "One quick reply per line (2–10)",
+    "outsideConfirm": "This session is closed. Send anyway and bill it as a promotional message?",
+    "error": "Error",
+    "sendFailed": "Message was not sent.",
+    "limits": "{total}/60 sent, {consecutive}/10 in a row",
+    "kind": {
+      "0": "Text",
+      "1": "Image",
+      "2": "File",
+      "3": "Quick replies"
+    }
   },
   "Overview": {
     "title": "Overview",
@@ -606,12 +643,39 @@
             "video": "Video",
             "file": "File (document)",
             "survey": "Survey / list",
+            "carousel": "Carousel",
+            "template": "Transactional template",
             "fileFormatsHint": "Allowed: .doc, .docx, .rtf, .dot, .dotx, .odt, .odf, .fodt, .txt, .info, .pdf, .xps, .pdax, .eps, .xls, .xlsx, .ods, .fods, .csv, .xlsm, .xltx. Max 200 MB per file. Comtrade type 220 uses only the file URL (no thumbnail)."
           },
           "survey": {
             "optionsLabel": "Survey options",
-            "hint": "Enter 2–5 options (max 50 characters each). The intro text is the message field above.",
+            "hint": "Enter 2–10 options (max 50 characters each). The intro text is the message field above.",
+            "uiLabel": "Option style",
+            "uiRadio": "Radio buttons",
+            "uiButtons": "Buttons",
             "optionPlaceholder": "Option {n}"
+          },
+          "imageRatio": {
+            "label": "Image aspect ratio",
+            "square": "Square (1:1)",
+            "portrait": "Portrait (9:16)",
+            "landscape": "Landscape (16:9)"
+          },
+          "carousel": {
+            "hint": "2–5 cards. PNG or JPEG, title 2–38 characters, primary button required.",
+            "card": "Card {n}",
+            "image": "Image URL",
+            "title": "Title",
+            "primaryLabel": "Primary button label",
+            "primaryUrl": "Primary button URL",
+            "secondaryLabel": "Secondary button label (optional)",
+            "secondaryUrl": "Secondary button URL (optional)",
+            "add": "Add card",
+            "remove": "Remove card"
+          },
+          "template": {
+            "pick": "Approved template",
+            "hint": "Only approved templates can be sent. Create them on the Viber templates page."
           },
           "tooltips": {
             "transactional": "Transactional messages are used for service notifications and may follow different delivery rules.",
@@ -620,7 +684,7 @@
             "videoPromoOnly": "Video selected, no button: you can leave the message empty for promotional video-only (thumbnail required). Add text if you want video + caption.",
             "validityHint": "How long Viber will try to deliver the message (seconds). This is not the maximum video length. Typical value: 86400 (24 hours). Max video duration for types 230–232 is 600 seconds (10 minutes) per provider rules.",
             "externalMediaUrl": "Paste a public HTTPS (or HTTP) link to an image or video file. Extension must be .jpg, .png, .mp4, or .avi. For hosted video you must also enter duration and size below (required for sending).",
-            "externalMediaUrlImage": "Paste a public link to an image. Path must end with .jpg, .jpeg, or .png.",
+            "externalMediaUrlImage": "Paste a public link to an image. Path must end with .jpg, .jpeg, .png, or .gif (GIF max 24 MB).",
             "externalMediaUrlVideo": "Paste a public link to a video. Path must end with .mp4 or .avi. For hosted video, enter duration (1–600 s) and size below.",
             "externalMediaUrlFile": "Paste a public link to a document with an allowed extension (e.g. .pdf, .docx). Max 200 MB. Type 220 sends only this file URL to Viber.",
             "hostedVideoMeta": "Hosted video: enter duration (1–600 s) and approximate file size in MB. Viber/Comtrade need these values with the media URL. Use your player or file properties to read them."
@@ -636,7 +700,7 @@
             "noExistingMedia": "No media from completed campaigns yet. Upload a file or paste a URL."
           },
           "mediaUpload": {
-            "dropzoneImage": "Drag & drop your image, or click to select it. Recommended image dimensions are 500×500.",
+            "dropzoneImage": "Drag & drop your image, or click to select it. JPG, PNG, or GIF (GIF max 24 MB). Recommended size 500×500.",
             "dropzoneMedia": "Drag & drop your media, or click to select it. Images: recommended 500×500 (JPG/PNG). Video: MP4, up to 1280×720 (720p), max ~200 MB, max length 600 seconds per Viber.",
             "dropzoneDocuments": "Drag & drop a document, or click to select. Max 200 MB. Use an allowed type (.pdf, Office formats, etc.).",
             "documentLabel": "Document",

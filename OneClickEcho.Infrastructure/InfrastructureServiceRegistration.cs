@@ -64,14 +64,7 @@ public static class InfrastructureServiceRegistration
             client.Timeout = TimeSpan.FromSeconds(120);
         });
 
-        if (viberConfigured)
-        {
-            services.AddScoped<IViberService, ViberService>();
-        }
-        else
-        {
-            services.AddScoped<IViberService, UnconfiguredViberService>();
-        }
+        services.AddSingleton<IViberAccount>(_ => new ConfiguredViberAccount(viberSettings.Username, viberSettings.Password));
 
         // add SMS configuration
         /*SMSSettings smsSettings = new();
@@ -113,10 +106,23 @@ public static class InfrastructureServiceRegistration
                     .AddClasses(
                         classes => classes.Where(type =>
                             type.Namespace != "OneClickEcho.Infrastructure.Services.GptService" &&
-                            type.Name != "QuartzCampaignLaunchScheduler"),
+                            type.Name != "QuartzCampaignLaunchScheduler" &&
+                            type.Name != "ViberService" &&
+                            type.Name != "UnconfiguredViberService" &&
+                            type.Name != "ConfiguredViberAccount"),
                         publicOnly: false)
                     .AsImplementedInterfaces()
                     .WithScopedLifetime());
+
+        if (viberConfigured)
+        {
+            services.AddScoped<IViberService>(sp =>
+                new ViberService(sp.GetRequiredService<IHttpClientFactory>().CreateClient("ViberHttpClient")));
+        }
+        else
+        {
+            services.AddScoped<IViberService, UnconfiguredViberService>();
+        }
 
         // OpenAI / GPT — registered only here
         OpenAiSettings openAiSettings = new();

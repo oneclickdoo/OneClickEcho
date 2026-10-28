@@ -98,11 +98,24 @@ export const MediaUpload = (props: IMediaUploadProps) => {
         disabled: props.disabled,
         accept: props.documentsOnly
             ? docAccept
-            : {
-                  "image/jpeg": [".jpg", ".jpeg"],
-                  "image/png": [".png"],
-                  "video/mp4": [".mp4"]
-              },
+            : props.imageOnly
+              ? {
+                    "image/jpeg": [".jpg", ".jpeg"],
+                    "image/png": [".png"],
+                    "image/gif": [".gif"]
+                }
+              : {
+                    "image/jpeg": [".jpg", ".jpeg"],
+                    "image/png": [".png"],
+                    "image/gif": [".gif"],
+                    "video/mp4": [".mp4"]
+                },
+        validator: (file) => {
+            if (file.name.toLowerCase().endsWith(".gif") && file.size > 24 * 1024 * 1024) {
+                return { code: "gif-too-large", message: "GIF max 24 MB" };
+            }
+            return null;
+        },
         maxSize: props.documentsOnly ? 200 * 1024 * 1024 : undefined,
         multiple: false,
         onDrop: (acceptedFiles: FileWithPath[]) => {

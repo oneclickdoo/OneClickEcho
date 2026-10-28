@@ -132,8 +132,23 @@ public sealed class Campaign : AggregateRoot<CampaignId>
     /// <summary>Explicit Viber layout; when <see cref="CampaignViberContentKind.Text"/> and <see cref="ViberMedia"/> is set, sending infers image/video/file from media.</summary>
     public CampaignViberContentKind ViberContentKind { get; set; }
 
-    /// <summary>JSON array of 2–5 strings (Comtrade survey options), used when <see cref="ViberContentKind"/> is <see cref="CampaignViberContentKind.Survey"/>.</summary>
+    /// <summary>JSON array of 2–10 strings (Comtrade survey options), used when <see cref="ViberContentKind"/> is <see cref="CampaignViberContentKind.Survey"/>.</summary>
     public string? ViberSurveyOptionsJson { get; set; }
+
+    /// <summary>Comtrade <c>ImageRatio</c>: square, portrait, landscape. Null sends square.</summary>
+    public string? ViberImageRatio { get; set; }
+
+    /// <summary>Comtrade survey <c>ListMessageUiType</c>: 1 radio, 2 buttons. Null omits the field (provider default 1).</summary>
+    public short? ViberSurveyUiType { get; set; }
+
+    /// <summary>JSON carousel payload for content kind <see cref="CampaignViberContentKind.Carousel"/>.</summary>
+    public string? ViberCarouselJson { get; set; }
+
+    /// <summary>Local transactional template id (Comtrade type 1702).</summary>
+    public Guid? ViberTemplateId { get; set; }
+
+    /// <summary>JSON object of template variable values.</summary>
+    public string? ViberTemplateParamsJson { get; set; }
     
     public int? ViberValidity { get; set; }
 

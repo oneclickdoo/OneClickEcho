@@ -127,7 +127,7 @@ export const filterPassedTime = (time: Date | string | number) => {
 // Media helpers (used by campaign validation)
 // --------------------------------------------------------
 
-const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"] as const;
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif"] as const;
 const VIDEO_EXTENSIONS = [".mp4", ".avi"] as const;
 
 const VIBER_DOCUMENT_EXTENSION_TO_FILE_TYPE: Record<string, string> = {
@@ -216,6 +216,8 @@ export type CampaignChannelsLike = {
     viberFileSize?: unknown;
     viberContentKind?: unknown;
     viberSurveyOptionsJson?: unknown;
+    viberCarouselJson?: unknown;
+    viberTemplateId?: unknown;
     isViberReceivable?: unknown;
 
     smsSender?: unknown;
@@ -377,7 +379,7 @@ export const validateCampaignChannels = (
             }
             const raw = campaign.viberSurveyOptionsJson;
             if (typeof raw !== "string" || !raw.trim()) {
-                showErrorMessage("Survey requires 2–5 options.");
+                showErrorMessage("Survey requires 2–10 options.");
                 return false;
             }
             let arr: unknown;
@@ -395,8 +397,8 @@ export const validateCampaignChannels = (
                 .filter((x): x is string => typeof x === "string")
                 .map((s) => s.replace(/\r\n|\r|\n|\t/g, " ").trim())
                 .filter((s) => s.length > 0);
-            if (opts.length < 2 || opts.length > 5) {
-                showErrorMessage("Survey requires between 2 and 5 non-empty options.");
+            if (opts.length < 2 || opts.length > 10) {
+                showErrorMessage("Survey requires between 2 and 10 non-empty options.");
                 return false;
             }
             if (opts.some((o) => o.length > 50)) {
@@ -424,7 +426,7 @@ export const validateCampaignChannels = (
             }
             try {
                 if (getMediaType(media) !== CampaignMediaType.Image) {
-                    showErrorMessage("Viber image message must use an image (.jpg / .png).");
+                    showErrorMessage("Viber image message must use an image (.jpg / .png / .gif).");
                     return false;
                 }
             } catch {
@@ -476,6 +478,34 @@ export const validateCampaignChannels = (
                     );
                     return false;
                 }
+            }
+        } else if (kind === CampaignViberContentKind.Carousel) {
+            const msg = typeof campaign.viberMessage === "string" ? campaign.viberMessage : "";
+            if (!msg.trim()) {
+                showErrorMessage("Viber carousel requires message text.");
+                return false;
+            }
+            const raw = campaign.viberCarouselJson;
+            if (typeof raw !== "string" || !raw.trim()) {
+                showErrorMessage("Carousel requires 2–5 cards.");
+                return false;
+            }
+            try {
+                const parsed = JSON.parse(raw) as { items?: unknown };
+                const items = Array.isArray(parsed?.items) ? parsed.items : [];
+                if (items.length < 2 || items.length > 5) {
+                    showErrorMessage("Carousel requires 2–5 cards.");
+                    return false;
+                }
+            } catch {
+                showErrorMessage("Carousel JSON is invalid.");
+                return false;
+            }
+        } else if (kind === CampaignViberContentKind.TransactionalTemplate) {
+            const id = campaign.viberTemplateId;
+            if (typeof id !== "string" || !id.trim()) {
+                showErrorMessage("Select an approved transactional template.");
+                return false;
             }
         } else {
             if (campaignHasViberVideoMedia(campaign) && !isViberVideoType233Layout(campaign)) {

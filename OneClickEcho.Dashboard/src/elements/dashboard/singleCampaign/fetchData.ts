@@ -50,8 +50,15 @@ export type CampaignDto = {
     viberValidity?: number;
     /** Comtrade layout: Text=0, Image, Video, File, Survey */
     viberContentKind?: CampaignViberContentKind;
-    /** JSON string array of 2–5 options (Survey). */
+    /** JSON string array of 2–10 options (Survey). */
     viberSurveyOptionsJson?: string | null;
+    /** square | portrait | landscape */
+    viberImageRatio?: string | null;
+    /** 1 radio, 2 buttons */
+    viberSurveyUiType?: number | null;
+    viberCarouselJson?: string | null;
+    viberTemplateId?: string | null;
+    viberTemplateParamsJson?: string | null;
 
     isSms: boolean;
     smsSender?: string;
@@ -710,6 +717,11 @@ export const updateCampaign = async (updatedData: Partial<CampaignDto>, authFetc
         viberValidity: d.viberValidity ?? 86400,
         viberContentKind: d.viberContentKind ?? CampaignViberContentKind.Text,
         viberSurveyOptionsJson: d.viberSurveyOptionsJson ?? null,
+        viberImageRatio: d.viberImageRatio ?? null,
+        viberSurveyUiType: d.viberSurveyUiType ?? null,
+        viberCarouselJson: d.viberCarouselJson ?? null,
+        viberTemplateId: d.viberTemplateId ?? null,
+        viberTemplateParamsJson: d.viberTemplateParamsJson ?? null,
         isSms: d.isSms ?? false,
         smsSender: d.smsSender ?? null,
         smsMessage: d.smsMessage ?? null,

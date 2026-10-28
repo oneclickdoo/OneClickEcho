@@ -16,6 +16,9 @@ using OneClickEcho.Domain.LeadCollectionAggregate;
 using OneClickEcho.Domain.LeadCollectionAggregate.Entities;
 using OneClickEcho.Domain.NounCaseAggregate;
 using OneClickEcho.Domain.TestMessageAggregate;
+using OneClickEcho.Domain.ViberSessionAggregate;
+using OneClickEcho.Domain.ViberSessionAggregate.Entities;
+using OneClickEcho.Domain.ViberTemplateAggregate;
 using OneClickEcho.Persistence.Configurations;
 
 namespace OneClickEcho.Persistence;
@@ -54,6 +57,12 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     
     public DbSet<ApiMessage> ApiMessages { get; set; }
 
+    public DbSet<ViberTemplate> ViberTemplates { get; set; }
+
+    public DbSet<ViberSession> ViberSessions { get; set; }
+
+    public DbSet<ViberSessionMessage> ViberSessionMessages { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.UseOpenIddict();
@@ -75,5 +84,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         new SenderConfiguration().Configure(modelBuilder.Entity<Sender>());
         new TestMessageConfiguration().Configure(modelBuilder.Entity<TestMessage>());
         new ApiMessageConfiguration().Configure(modelBuilder.Entity<ApiMessage>());
+        new ViberTemplateConfiguration().Configure(modelBuilder.Entity<ViberTemplate>());
+        new ViberSessionConfiguration().Configure(modelBuilder.Entity<ViberSession>());
+        new ViberSessionMessageConfiguration().Configure(modelBuilder.Entity<ViberSessionMessage>());
     }
 }

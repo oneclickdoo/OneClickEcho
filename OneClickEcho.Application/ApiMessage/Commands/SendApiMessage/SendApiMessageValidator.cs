@@ -21,11 +21,64 @@ public sealed class SendApiMessageValidator : AbstractValidator<SendApiMessageCo
             .Matches(@"^\+?[1-9]\d{1,14}$")
             .WithMessage("Invalid phone number format. Must follow E.164 format.");
             
+        When(x => x.ViberTemplateId is null, () =>
+        {
+            RuleFor(x => x.Message)
+                .NotEmpty()
+                .WithMessage("MessageContent is required.");
+        });
+
         RuleFor(x => x.Message)
-            .NotEmpty()
-            .WithMessage("MessageContent is required.")
             .MaximumLength(1600)
             .WithMessage("MessageContent must not exceed 1600 characters.");
+
+        RuleFor(x => x.ViberImageFormat)
+            .Must(ViberImageFields.IsAllowedFormat)
+            .WithMessage("ViberImageFormat must be gif or img.");
+
+        RuleFor(x => x.ViberImageRatio)
+            .Must(ViberImageFields.IsAllowedRatio)
+            .WithMessage("ViberImageRatio must be square, portrait, or landscape.");
+
+        RuleFor(x => x.ViberSurveyUiType)
+            .Must(ui => ui is null or 1 or 2)
+            .WithMessage("ViberSurveyUiType must be 1 or 2.");
+
+        When(x => !string.IsNullOrWhiteSpace(x.ViberSurveyOptionsJson), () =>
+        {
+            RuleFor(x => x.ViberSurveyOptionsJson)
+                .Must(json =>
+                {
+                    try
+                    {
+                        ViberSurveyOptionsHelper.ParseRequired(json);
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                })
+                .WithMessage("ViberSurveyOptionsJson must contain 2–10 unique options (max 50 characters).");
+        });
+
+        When(x => !string.IsNullOrWhiteSpace(x.ViberCarouselJson), () =>
+        {
+            RuleFor(x => x.ViberCarouselJson)
+                .Must(json =>
+                {
+                    try
+                    {
+                        ViberCarouselHelper.ParseRequired(json);
+                        return true;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                })
+                .WithMessage("ViberCarouselJson must contain 2–5 valid cards.");
+        });
         
         RuleFor(x => x.Sender)
             .NotEmpty()

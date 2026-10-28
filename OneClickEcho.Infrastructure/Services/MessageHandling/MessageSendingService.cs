@@ -23,6 +23,7 @@ using OneClickEcho.Infrastructure.Services.Scheduling.Jobs;
 using OneClickEcho.Infrastructure.Settings;
 using Quartz;
 using OneClickEcho.Domain.TestMessageAggregate;
+using OneClickEcho.Domain.ViberTemplateAggregate.Repositories;
 
 namespace OneClickEcho.Infrastructure.Services.MessageHandling;
 
@@ -31,7 +32,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     ICompanyRepository companyRepository, IApiMessageRepository apiMessageRepository, IStringTemplatingService stringTemplatingService,
     IHttpClientFactory httpClientFactory, IUnitOfWork unitOfWork,
     IOptions<ViberSettings> viberSettings, IOptions<PublicUploadsSettings> publicUploadsSettings,
-    ISchedulerFactory schedulerFactory) : IMessageSendingService
+    ISchedulerFactory schedulerFactory, IViberTemplateRepository viberTemplateRepository) : IMessageSendingService
 {
     private readonly ICampaignRepository _campaignRepository = campaignRepository;
     private readonly ILeadRepository _leadRepository = leadRepository;
@@ -44,6 +45,7 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
     private readonly IOptions<ViberSettings> _viberSettings = viberSettings;
     private readonly IOptions<PublicUploadsSettings> _publicUploadsSettings = publicUploadsSettings;
     private readonly ISchedulerFactory _schedulerFactory = schedulerFactory;
+    private readonly IViberTemplateRepository _viberTemplateRepository = viberTemplateRepository;
 
     /// <summary>Public base for <c>/uploads/…</c> files. Comtrade fetches video/image from this host; wrong or legacy default → delivery substatus 28 (file not permitted). Set <c>PublicUploads:BaseUrl</c> (e.g. <c>https://viber.oneclick.rs/uploads</c>).</summary>
     private string ViberMediaPublicBaseUrl =>
@@ -172,7 +174,8 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 ViberMediaPublicBaseUrl,
                 _campaignLeadRepository,
                 _stringTemplatingService,
-                _unitOfWork);
+                _unitOfWork,
+                _viberTemplateRepository);
         }
 
         // SMS channel
@@ -208,7 +211,8 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 _httpClientFactory,
                 _viberSettings,
                 ViberMediaPublicBaseUrl,
-                _unitOfWork);
+                _unitOfWork,
+                _viberTemplateRepository);
         }
         else if (messageType == ApiMessageType.Sms)
         {
@@ -261,7 +265,8 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 testMessage,
                 _httpClientFactory,
                 _viberSettings,
-                ViberMediaPublicBaseUrl);
+                ViberMediaPublicBaseUrl,
+                _viberTemplateRepository);
         }
 
         // SMS channel
@@ -389,6 +394,21 @@ public class MessageSendingService(ICampaignRepository campaignRepository,
                 if (string.IsNullOrEmpty(campaign.ViberMedia))
                 {
                     throw new Exception($"Campaign [{campaign.Id.Value}] - Viber image message requires image media.");
+                }
+            }
+            else if (outboundType == ViberSendMessageType.OneWayCarousel)
+            {
+                ViberCarouselHelper.ParseRequired(campaign.ViberCarouselJson);
+                if (string.IsNullOrWhiteSpace(campaign.ViberMessage))
+                {
+                    throw new Exception($"Campaign [{campaign.Id.Value}] - Viber carousel requires message text.");
+                }
+            }
+            else if (outboundType == ViberSendMessageType.TransactionalTemplate)
+            {
+                if (campaign.ViberTemplateId is null)
+                {
+                    throw new Exception($"Campaign [{campaign.Id.Value}] - transactional template is not selected.");
                 }
             }
             else if (string.IsNullOrWhiteSpace(campaign.ViberMessage))

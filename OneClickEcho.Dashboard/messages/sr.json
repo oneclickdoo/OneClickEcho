@@ -39,6 +39,8 @@
     "leadLists": "Liste leadova",
     "leads": "Leadovi",
     "apiMessages": "API poruke",
+    "viberTemplates": "Viber šabloni",
+    "viberSessions": "Viber sesije",
     "companies": "Kompanije",
     "shortcuts": "Prečice",
     "shortcutsAria": "Prečice",
@@ -46,6 +48,41 @@
     "mobileTitle": "Meni",
     "workspaces": "Radni prostori",
     "member": "Član"
+  },
+  "ViberTemplates": {
+    "title": "Viber šabloni",
+    "subtitle": "Transakcione šablone odobrava Viber (često u roku od 24 sata). Osvežite status pre slanja.",
+    "sender": "Pošiljalac",
+    "name": "Naziv šablona",
+    "tag": "Oznaka",
+    "create": "Napravi šablon",
+    "refresh": "Osveži",
+    "delete": "Obriši",
+    "pending": "još nije odobren",
+    "error": "Greška",
+    "saveFailed": "Šablon nije napravljen."
+  },
+  "ViberSessions": {
+    "title": "Viber sesije",
+    "subtitle": "Sesija se otvara kad neko odgovori. Možete poslati do 10 poruka zaredom i 60 u 24 sata. Van tog prozora poruka se tarifa kao promocija.",
+    "empty": "Još nema sesija. Odgovori na kampanje sa „Omogući odgovore“ pojaviće se ovde.",
+    "open": "Otvorena",
+    "closed": "Zatvorena",
+    "promo": "promocija",
+    "send": "Pošalji",
+    "textPlaceholder": "Poruka",
+    "mediaPlaceholder": "Javni URL medije",
+    "repliesPlaceholder": "Jedan brzi odgovor po liniji (2–10)",
+    "outsideConfirm": "Sesija je zatvorena. Poslati ipak i naplatiti kao promotivnu poruku?",
+    "error": "Greška",
+    "sendFailed": "Poruka nije poslata.",
+    "limits": "{total}/60 poslato, {consecutive}/10 zaredom",
+    "kind": {
+      "0": "Tekst",
+      "1": "Slika",
+      "2": "Fajl",
+      "3": "Brzi odgovori"
+    }
   },
   "Overview": {
     "title": "Pregled",
@@ -606,12 +643,39 @@
             "video": "Video",
             "file": "Fajl (dokument)",
             "survey": "Anketa / lista",
+            "carousel": "Karusel",
+            "template": "Transakcioni šablon",
             "fileFormatsHint": "Dozvoljeno: .doc, .docx, .rtf, .dot, .dotx, .odt, .odf, .fodt, .txt, .info, .pdf, .xps, .pdax, .eps, .xls, .xlsx, .ods, .fods, .csv, .xlsm, .xltx. Najviše 200 MB. Comtrade tip 220 šalje samo URL fajla (bez thumbnail-a)."
           },
           "survey": {
             "optionsLabel": "Opcije ankete",
-            "hint": "Unesite 2–5 opcija (najviše 50 znakova po opciji). Uvodni tekst je polje poruke iznad.",
+            "hint": "Unesite 2–10 opcija (najviše 50 znakova po opciji). Uvodni tekst je polje poruke iznad.",
+            "uiLabel": "Izgled opcija",
+            "uiRadio": "Radio dugmad",
+            "uiButtons": "Dugmad",
             "optionPlaceholder": "Opcija {n}"
+          },
+          "imageRatio": {
+            "label": "Odnos stranica slike",
+            "square": "Kvadrat (1:1)",
+            "portrait": "Uspravno (9:16)",
+            "landscape": "Široko (16:9)"
+          },
+          "carousel": {
+            "hint": "2–5 kartica. PNG ili JPEG, naslov 2–38 karaktera, primarno dugme je obavezno.",
+            "card": "Kartica {n}",
+            "image": "URL slike",
+            "title": "Naslov",
+            "primaryLabel": "Tekst primarnog dugmeta",
+            "primaryUrl": "URL primarnog dugmeta",
+            "secondaryLabel": "Tekst sekundarnog dugmeta (opciono)",
+            "secondaryUrl": "URL sekundarnog dugmeta (opciono)",
+            "add": "Dodaj karticu",
+            "remove": "Ukloni karticu"
+          },
+          "template": {
+            "pick": "Odobren šablon",
+            "hint": "Slati se mogu samo odobreni šabloni. Napravite ih na stranici Viber šabloni."
           },
           "tooltips": {
             "transactional": "Transakcione poruke se koriste za servisna obaveštenja i mogu imati drugačija pravila isporuke.",
@@ -620,7 +684,7 @@
             "videoPromoOnly": "Izabran je video bez dugmeta: poruku možete ostaviti praznu za promotivni video bez teksta (obavezna minijatura). Dodajte tekst ako želite video sa natpisom.",
             "validityHint": "Koliko dugo će Viber pokušavati isporuku poruke (sekunde). To nije maksimalno trajanje videa. Uobičajeno: 86400 (24 h). Maks. dužina videa za tipove 230–232 je 600 s po pravilima provajdera.",
             "externalMediaUrl": "Nalepite javni HTTPS (ili HTTP) link ka slici ili videu. Ekstenzija mora biti .jpg, .png, .mp4 ili .avi. Za video na tom linku obavezno unesite trajanje i veličinu ispod.",
-            "externalMediaUrlImage": "Nalepite javni link ka slici. Putanja mora da se završava sa .jpg, .jpeg ili .png.",
+            "externalMediaUrlImage": "Nalepite javni link ka slici. Putanja mora da se završava sa .jpg, .jpeg, .png ili .gif (GIF najviše 24 MB).",
             "externalMediaUrlVideo": "Nalepite javni link ka videu. Putanja mora da se završava sa .mp4 ili .avi. Za video sa linka unesite trajanje (1–600 s) i veličinu ispod.",
             "externalMediaUrlFile": "Nalepite javni link ka dokumentu sa dozvoljenom ekstenzijom (npr. .pdf, .docx). Najviše 200 MB. Tip 220 šalje samo ovaj URL fajla ka Viberu.",
             "hostedVideoMeta": "Video sa linka: unesite trajanje (1–600 s) i približnu veličinu u MB. Viber/Comtrade zahtevaju ove podatke uz URL. Pročitajte iz plejera ili svojstava fajla."
@@ -636,7 +700,7 @@
             "noExistingMedia": "Još nema medija iz završenih kampanja. Otpremite fajl ili nalepite URL."
           },
           "mediaUpload": {
-            "dropzoneImage": "Prevucite i pustite sliku ili kliknite da je izaberete. Preporučene dimenzije slike su 500×500.",
+            "dropzoneImage": "Prevucite i pustite sliku ili kliknite da je izaberete. JPG, PNG ili GIF (GIF najviše 24 MB). Preporučeno 500×500.",
             "dropzoneMedia": "Prevucite i pustite mediju ili kliknite da je izaberete. Slike: preporučeno 500×500 (JPG/PNG). Video: MP4, do 1280×720 (720p), najviše ~200 MB, najduže 600 s po Viberu.",
             "dropzoneDocuments": "Prevucite dokument ili kliknite da ga izaberete. Najviše 200 MB. Koristite dozvoljeni tip (.pdf, Office formate itd.).",
             "documentLabel": "Dokument",

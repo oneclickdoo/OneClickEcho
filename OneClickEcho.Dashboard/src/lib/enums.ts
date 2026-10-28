@@ -67,7 +67,9 @@ export enum CampaignViberContentKind {
     Image = 1,
     Video = 2,
     File = 3,
-    Survey = 4
+    Survey = 4,
+    Carousel = 5,
+    TransactionalTemplate = 6
 }
 
 export enum LeadGender {

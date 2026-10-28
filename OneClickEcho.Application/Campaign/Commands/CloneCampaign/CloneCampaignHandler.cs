@@ -55,6 +55,11 @@ namespace OneClickEcho.Application.Campaign.Commands.CloneCampaign
 
             newCampaign.ViberContentKind = campaign.ViberContentKind;
             newCampaign.ViberSurveyOptionsJson = campaign.ViberSurveyOptionsJson;
+            newCampaign.ViberImageRatio = campaign.ViberImageRatio;
+            newCampaign.ViberSurveyUiType = campaign.ViberSurveyUiType;
+            newCampaign.ViberCarouselJson = campaign.ViberCarouselJson;
+            newCampaign.ViberTemplateId = campaign.ViberTemplateId;
+            newCampaign.ViberTemplateParamsJson = campaign.ViberTemplateParamsJson;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
