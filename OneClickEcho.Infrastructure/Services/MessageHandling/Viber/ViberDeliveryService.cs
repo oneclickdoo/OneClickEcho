@@ -678,7 +678,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     ?? throw new Exception($"Failed to get answer response.");
 
                 // check responses
-                foreach (ViberAnswer entry in response.ViberAnswers)
+                foreach (ViberAnswer entry in response.ViberAnswers ?? [])
                 {
                     // get campaign lead
                     CampaignLead? campaignLead = campaignLeads.FirstOrDefault(x => x.ViberMessageId == entry.MessageId);
@@ -715,6 +715,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
             }
 
             await campaignLeadRepository.AddReceivedMessages(receivedMessages);
+            await unitOfWork.SaveChangesAsync();
 
             HashSet<long> alreadyAsked = campaignLeads.Select(x => x.ViberMessageId).ToHashSet();
             List<long> sessionIds = (await sessionRepository.GetRecentOutboundMessageIdsAsync(DateTime.UtcNow.AddHours(-49)))
@@ -735,7 +736,7 @@ namespace OneClickEcho.Infrastructure.Services.MessageHandling.Viber
                     continue;
                 }
 
-                foreach (ViberAnswer entry in response.ViberAnswers)
+                foreach (ViberAnswer entry in response.ViberAnswers ?? [])
                 {
                     Domain.ViberSessionAggregate.ViberSession? owner =
                         await sessionRepository.FindByOutboundMessageIdAsync(entry.MessageId);

@@ -111,6 +111,13 @@
 
 ---
 
+## 18. Viber odgovori — datum Comtrade `/Date(...)/` (2026-10-29)
+
+- **Simptom:** `AnswersById` vrati odgovor, `received_messages` ostane prazan, ponovni poziv da `ViberAnswers: []`.
+- **Uzrok:** `ViberAnswer.Received` je `DateTime`, a Comtrade šalje `/Date(milisekunde+offset)/`. `System.Text.Json` baci izuzetak, posao ne sačuva red, a Comtrade odgovor više ne vraća.
+- **Fix:** `ComtradeDateTimeJsonConverter` na `Received`. Odgovori kampanje se snimaju pre poll-a sesije.
+- **Fajlovi:** `ViberAnswer.cs`, `ComtradeDateTimeJsonConverter.cs`, `ViberDeliveryService.cs`.
+
 ## 17. Comtrade Viber — GIF, karusel, šabloni, sesija (2026-10-22)
 
 - **GIF / odnos slike / anketa:** `ImageFormat` (`gif` do 24 MB, tipovi 107 i 108) i `ImageRatio` (`square` / `portrait` / `landscape`). Anketa 2–10 opcija, `ListMessageUiType` 1 radio / 2 dugmad. Kampanja + `POST /api/Message/Send`.

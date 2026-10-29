@@ -4,5 +4,5 @@ namespace OneClickEcho.Application.Common.Services.ViberService.Response;
 
 public class AnswerViberMessageResponseDto
 {
-    public required List<ViberAnswer> ViberAnswers { get; set; }
+    public List<ViberAnswer>? ViberAnswers { get; set; }
 }
