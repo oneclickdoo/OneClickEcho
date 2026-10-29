@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using OneClickEcho.Application.Common.Viber;
 using Microsoft.EntityFrameworkCore.Storage;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
@@ -577,6 +578,8 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             select new
             {
                 cl.Id,
+                CampaignId = c.Id,
+                CampaignName = c.Name,
                 cl.CreatedAt,
                 cl.ViberMessageId,
                 c.ViberMessage,
@@ -598,6 +601,8 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
 
         return sent.Select(row => new CampaignPhoneExchange(
             row.Id.Value,
+            row.CampaignId.Value,
+            row.CampaignName,
             row.CreatedAt,
             row.ViberMessageId,
             row.ViberMessage,
@@ -608,6 +613,54 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
                 .OrderBy(r => r.CreatedAt)
                 .Select(r => new CampaignPhoneReply(r.Id.Value, r.CreatedAt, r.MessageContent))
                 .ToList())).ToList();
+    }
+
+    public async Task<List<PhoneCampaignLink>> GetLatestViberCampaignsAsync(
+        CompanyId companyId,
+        IReadOnlyCollection<string> phoneNumbers,
+        CancellationToken cancellationToken = default)
+    {
+        if (phoneNumbers.Count == 0)
+        {
+            return [];
+        }
+
+        HashSet<string> variants = [];
+        foreach (string phoneNumber in phoneNumbers)
+        {
+            string plus = ViberPhone.Normalize(phoneNumber);
+            string bare = plus.TrimStart('+');
+            variants.Add(plus);
+            variants.Add(bare);
+            variants.Add("00" + bare);
+        }
+
+        var sent = await (
+            from cl in _dbContext.CampaignLeads.AsNoTracking()
+            join c in _dbContext.Campaigns.AsNoTracking() on cl.CampaignId equals c.Id
+            join l in _dbContext.Leads.AsNoTracking() on cl.LeadId equals l.Id
+            where c.CompanyId == companyId
+                && c.IsViber
+                && cl.ViberMessageId > 0
+                && c.ViberSender != null
+                && variants.Contains(l.PhoneNumber)
+            select new
+            {
+                CampaignId = c.Id,
+                CampaignName = c.Name,
+                Sender = c.ViberSender!,
+                l.PhoneNumber,
+                cl.CreatedAt
+            }).ToListAsync(cancellationToken);
+
+        return sent
+            .GroupBy(row => (row.Sender.Trim(), ViberPhone.Normalize(row.PhoneNumber)))
+            .Select(group =>
+            {
+                var latest = group.OrderByDescending(row => row.CreatedAt).First();
+                return new PhoneCampaignLink(group.Key.Item1, group.Key.Item2, latest.CampaignId.Value, latest.CampaignName);
+            })
+            .ToList();
     }
 
     public Task SyncCampaignLeadViberMessageIdSequenceAsync(CancellationToken cancellationToken = default)

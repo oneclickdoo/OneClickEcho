@@ -108,15 +108,29 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
         string sender,
         string phoneNumber,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Latest Viber campaign for each sender and phone among the given numbers.</summary>
+    Task<List<PhoneCampaignLink>> GetLatestViberCampaignsAsync(
+        CompanyId companyId,
+        IReadOnlyCollection<string> phoneNumbers,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record CampaignPhoneReply(Guid Id, DateTime At, string Text);
 
 public sealed record CampaignPhoneExchange(
     Guid CampaignLeadId,
+    Guid CampaignId,
+    string CampaignName,
     DateTime SentAt,
     long ViberMessageId,
     string? Question,
     string? Media,
     string? SurveyOptionsJson,
     IReadOnlyList<CampaignPhoneReply> Replies);
+
+public sealed record PhoneCampaignLink(
+    string Sender,
+    string Phone,
+    Guid CampaignId,
+    string CampaignName);

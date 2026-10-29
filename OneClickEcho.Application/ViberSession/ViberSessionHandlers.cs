@@ -14,18 +14,54 @@ using OneClickEcho.Domain.ViberSessionAggregate.ValueObjects;
 namespace OneClickEcho.Application.ViberSession;
 
 public class ListViberSessionsHandler(IViberSessionRepository sessions, ICampaignLeadRepository campaignLeads)
-    : IQueryHandler<ListViberSessionsQuery, List<ViberSessionResponse>>
+    : IQueryHandler<ListViberSessionsQuery, List<ViberSessionListItemResponse>>
 {
-    public async Task<Result<List<ViberSessionResponse>>> Handle(ListViberSessionsQuery query, CancellationToken cancellationToken)
+    public async Task<Result<List<ViberSessionListItemResponse>>> Handle(ListViberSessionsQuery query, CancellationToken cancellationToken)
     {
-        List<SessionEntity> rows = await sessions.ListByCompanyAsync(CompanyId.Create(query.CompanyId), cancellationToken);
-        List<ViberSessionResponse> result = [];
+        CompanyId companyId = CompanyId.Create(query.CompanyId);
+        List<SessionEntity> rows = await sessions.ListByCompanyAsync(companyId, query.Phone, query.Sender, cancellationToken);
+        List<ViberSessionLatestMessage> previews = await sessions.GetLatestMessagesAsync(rows.Select(row => row.Id).ToList(), cancellationToken);
+        Dictionary<Guid, ViberSessionLatestMessage> previewBySession = previews.ToDictionary(preview => preview.SessionId);
+        List<PhoneCampaignLink> campaigns = await campaignLeads.GetLatestViberCampaignsAsync(
+            companyId,
+            rows.Select(row => row.PhoneNumber).Distinct().ToList(),
+            cancellationToken);
+        Dictionary<(string Sender, string Phone), PhoneCampaignLink> campaignByPhone = campaigns
+            .GroupBy(link => (link.Sender, link.Phone))
+            .ToDictionary(group => group.Key, group => group.First());
+
+        DateTime utcNow = DateTime.UtcNow;
+        List<ViberSessionListItemResponse> result = [];
         foreach (SessionEntity row in rows)
         {
-            result.Add(await ViberSessionThread.MapAsync(sessions, campaignLeads, row, cancellationToken));
+            previewBySession.TryGetValue(row.Id.Value, out ViberSessionLatestMessage? preview);
+            campaignByPhone.TryGetValue((row.Sender, row.PhoneNumber), out PhoneCampaignLink? campaign);
+            DateTime activity = preview?.At ?? row.LastInboundAt ?? row.StartedAt;
+            result.Add(new ViberSessionListItemResponse(
+                row.Id.Value,
+                row.Sender,
+                row.PhoneNumber,
+                row.IsOpen(utcNow),
+                row.ExpiresAt,
+                activity,
+                TrimPreview(preview?.Text),
+                campaign?.CampaignId,
+                campaign?.CampaignName));
         }
 
+        result.Sort((a, b) => b.LastActivityAt.CompareTo(a.LastActivityAt));
         return result;
+    }
+
+    private static string? TrimPreview(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        string oneLine = text.Replace('\n', ' ').Trim();
+        return oneLine.Length <= 80 ? oneLine : oneLine[..80] + "…";
     }
 }
 

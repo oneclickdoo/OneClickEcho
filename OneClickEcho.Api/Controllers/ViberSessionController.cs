@@ -14,14 +14,20 @@ namespace OneClickEcho.App.Controllers;
 public class ViberSessionController(IMediator mediator) : ApiController(mediator)
 {
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] Guid companyId, CancellationToken cancellationToken)
+    public async Task<IActionResult> List(
+        [FromQuery] Guid companyId,
+        [FromQuery] string? phone,
+        [FromQuery] string? sender,
+        CancellationToken cancellationToken)
     {
         if (!CampaignTenantFilter.UserMayAccessCampaignCompany(User, companyId))
         {
             return Forbid();
         }
 
-        Result<List<ViberSessionResponse>> response = await Mediator.Send(new ListViberSessionsQuery(companyId), cancellationToken);
+        Result<List<ViberSessionListItemResponse>> response = await Mediator.Send(
+            new ListViberSessionsQuery(companyId, phone, sender),
+            cancellationToken);
         return response.IsSuccess ? Ok(response.Value) : BadRequest(response.Error);
     }
 

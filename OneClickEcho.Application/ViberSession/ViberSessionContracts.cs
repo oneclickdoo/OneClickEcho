@@ -14,7 +14,9 @@ public record ViberSessionMessageResponse(
     bool IsSent,
     bool BilledAsPromotion,
     string? SendError,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid? CampaignId = null,
+    string? CampaignName = null);
 
 public record ViberSessionResponse(
     Guid Id,
@@ -30,7 +32,19 @@ public record ViberSessionResponse(
     bool IsOpen,
     IReadOnlyList<ViberSessionMessageResponse> Messages);
 
-public record ListViberSessionsQuery(Guid CompanyId) : IQuery<List<ViberSessionResponse>>;
+public record ViberSessionListItemResponse(
+    Guid Id,
+    string Sender,
+    string PhoneNumber,
+    bool IsOpen,
+    DateTime ExpiresAt,
+    DateTime LastActivityAt,
+    string? LastPreview,
+    Guid? CampaignId,
+    string? CampaignName);
+
+public record ListViberSessionsQuery(Guid CompanyId, string? Phone = null, string? Sender = null)
+    : IQuery<List<ViberSessionListItemResponse>>;
 
 public record GetViberSessionQuery(Guid CompanyId, Guid SessionId) : IQuery<ViberSessionResponse>;
 

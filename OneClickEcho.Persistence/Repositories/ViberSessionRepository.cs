@@ -32,14 +32,65 @@ public class ViberSessionRepository(ApplicationDbContext dbContext) : IViberSess
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<List<ViberSession>> ListByCompanyAsync(CompanyId companyId, CancellationToken cancellationToken = default)
+    public async Task<List<ViberSession>> ListByCompanyAsync(
+        CompanyId companyId,
+        string? phoneSearch,
+        string? sender,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.ViberSessions
+        IQueryable<ViberSession> query = _dbContext.ViberSessions
             .AsNoTracking()
-            .Where(s => s.CompanyId == companyId)
+            .Where(s => s.CompanyId == companyId);
+
+        if (!string.IsNullOrWhiteSpace(sender))
+        {
+            string senderNorm = sender.Trim();
+            query = query.Where(s => s.Sender == senderNorm);
+        }
+
+        if (!string.IsNullOrWhiteSpace(phoneSearch))
+        {
+            string digits = new string(phoneSearch.Where(char.IsDigit).ToArray());
+            if (digits.Length > 0)
+            {
+                string alternate = digits.StartsWith('0') && digits.Length > 1
+                    ? "381" + digits[1..]
+                    : digits.StartsWith("381", StringComparison.Ordinal) && digits.Length > 3
+                        ? "0" + digits[3..]
+                        : digits;
+                query = query.Where(s => s.PhoneNumber.Contains(digits) || s.PhoneNumber.Contains(alternate));
+            }
+        }
+
+        return await query
             .OrderByDescending(s => s.LastInboundAt ?? s.StartedAt)
             .Take(200)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<ViberSessionLatestMessage>> GetLatestMessagesAsync(
+        IReadOnlyCollection<ViberSessionId> sessionIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (sessionIds.Count == 0)
+        {
+            return [];
+        }
+
+        List<ViberSessionMessage> messages = await _dbContext.ViberSessionMessages
+            .AsNoTracking()
+            .Where(m => sessionIds.Contains(m.SessionId))
+            .ToListAsync(cancellationToken);
+
+        return messages
+            .GroupBy(m => m.SessionId.Value)
+            .Select(group =>
+            {
+                ViberSessionMessage latest = group.OrderByDescending(m => m.CreatedAt).First();
+                string? text = string.IsNullOrWhiteSpace(latest.Body) ? latest.Media : latest.Body;
+                return new ViberSessionLatestMessage(group.Key, latest.CreatedAt, text);
+            })
+            .ToList();
     }
 
     public async Task<List<ViberSessionMessage>> ListMessagesAsync(ViberSessionId sessionId, CancellationToken cancellationToken = default)

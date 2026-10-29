@@ -14,18 +14,28 @@ public static class ViberSessionMapper
         DateTime utcNow,
         IReadOnlyList<CampaignPhoneExchange>? campaignExchanges = null)
     {
-        List<ViberSessionMessageResponse> thread = messages.Select(m => new ViberSessionMessageResponse(
-            m.Id.Value,
-            m.Direction.ToString(),
-            m.ComtradeMessageType,
-            m.Body,
-            m.Media,
-            m.SurveyOptionsJson,
-            m.ViberMessageId,
-            m.IsSent,
-            m.BilledAsPromotion,
-            m.SendError,
-            m.CreatedAt)).ToList();
+        Dictionary<long, CampaignPhoneExchange> exchangeByMessage = (campaignExchanges ?? [])
+            .GroupBy(exchange => exchange.ViberMessageId)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        List<ViberSessionMessageResponse> thread = messages.Select(m =>
+        {
+            exchangeByMessage.TryGetValue(m.ViberMessageId, out CampaignPhoneExchange? exchange);
+            return new ViberSessionMessageResponse(
+                m.Id.Value,
+                m.Direction.ToString(),
+                m.ComtradeMessageType,
+                m.Body,
+                m.Media,
+                m.SurveyOptionsJson,
+                m.ViberMessageId,
+                m.IsSent,
+                m.BilledAsPromotion,
+                m.SendError,
+                m.CreatedAt,
+                exchange?.CampaignId,
+                exchange?.CampaignName);
+        }).ToList();
 
         HashSet<long> outboundIds = thread.Select(m => m.ViberMessageId).ToHashSet();
         HashSet<string> inboundTexts = thread
@@ -48,7 +58,9 @@ public static class ViberSessionMapper
                     true,
                     false,
                     null,
-                    exchange.SentAt));
+                    exchange.SentAt,
+                    exchange.CampaignId,
+                    exchange.CampaignName));
             }
 
             foreach (CampaignPhoneReply reply in exchange.Replies)
@@ -70,7 +82,9 @@ public static class ViberSessionMapper
                     true,
                     false,
                     null,
-                    reply.At));
+                    reply.At,
+                    exchange.CampaignId,
+                    exchange.CampaignName));
             }
         }
 

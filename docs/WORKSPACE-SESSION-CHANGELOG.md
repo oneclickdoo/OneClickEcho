@@ -111,6 +111,12 @@
 
 ---
 
+## 24. Viber sesije — prijemno sanduče (2026-10-29)
+
+- Grana `viber-sessions-inbox`. Stari prikaz je commit `9e96bd3` na `main`. Povratak: `git checkout main`.
+- Lista je sažetak (telefon, status, poslednja poruka, poslednja kampanja). Pretraga po telefonu (`064`, `38164`, `+38164`). Filter pošiljalac, otvoreno/zatvoreno i kampanja.
+- Nit jednog broja se učitava posebno. U vrhu piše koja kampanja je otvorila razgovor. Kad se kampanja promeni u istoriji, stoji linija sa nazivom.
+
 ## 23. Kampanja — „Omogući odgovore“ samo za tekst, sliku i anketu uz dvosmernog pošiljaoca (2026-10-29)
 
 - Checkbox je vidljiv samo za tekst, sliku i anketu, i samo ako je izabrani Viber pošiljalac označen kao dvosmeran (`senders.is_two_way`). Karusel, fajl, video i šablon ga nemaju; uključen flag se tada gasi.

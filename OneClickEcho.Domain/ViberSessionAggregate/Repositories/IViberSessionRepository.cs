@@ -5,6 +5,8 @@ using OneClickEcho.Domain.ViberSessionAggregate.ValueObjects;
 
 namespace OneClickEcho.Domain.ViberSessionAggregate.Repositories;
 
+public sealed record ViberSessionLatestMessage(Guid SessionId, DateTime At, string? Text);
+
 public interface IViberSessionRepository : IRepository<ViberSession, ViberSessionId>
 {
     Task<ViberSession?> GetByIdAsync(ViberSessionId id, CancellationToken cancellationToken = default);
@@ -15,9 +17,17 @@ public interface IViberSessionRepository : IRepository<ViberSession, ViberSessio
         string phoneNumber,
         CancellationToken cancellationToken = default);
 
-    Task<List<ViberSession>> ListByCompanyAsync(CompanyId companyId, CancellationToken cancellationToken = default);
+    Task<List<ViberSession>> ListByCompanyAsync(
+        CompanyId companyId,
+        string? phoneSearch,
+        string? sender,
+        CancellationToken cancellationToken = default);
 
     Task<List<ViberSessionMessage>> ListMessagesAsync(ViberSessionId sessionId, CancellationToken cancellationToken = default);
+
+    Task<List<ViberSessionLatestMessage>> GetLatestMessagesAsync(
+        IReadOnlyCollection<ViberSessionId> sessionIds,
+        CancellationToken cancellationToken = default);
 
     Task<List<long>> GetRecentOutboundMessageIdsAsync(DateTime sinceUtc, CancellationToken cancellationToken = default);
 
