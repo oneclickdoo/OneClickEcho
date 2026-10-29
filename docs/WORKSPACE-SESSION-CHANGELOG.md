@@ -111,6 +111,17 @@
 
 ---
 
+## 23. Kampanja — „Omogući odgovore“ samo za tekst, sliku i anketu uz dvosmernog pošiljaoca (2026-10-29)
+
+- Checkbox je vidljiv samo za tekst, sliku i anketu, i samo ako je izabrani Viber pošiljalac označen kao dvosmeran (`senders.is_two_way`). Karusel, fajl, video i šablon ga nemaju; uključen flag se tada gasi.
+- Na stranici kompanije, uz Viber pošiljaoca, stoji „Dvosmerno (odgovori)“. Kolona: `ALTER TABLE public.senders ADD COLUMN IF NOT EXISTS is_two_way boolean NOT NULL DEFAULT false;`
+- Anketa i dalje sama uključuje odgovore, ali samo kad je pošiljalac dvosmeran.
+
+## 22. Kampanja — checkbox „Transakciona poruka“ samo za tekst (2026-10-29)
+
+- Checkbox je vidljiv samo kad je vrsta poruke „Tekst (bez medije)“. Za sliku, video, fajl, anketu, karusel i šablon se ne prikazuje, pa se ne može slučajno uključiti i vratiti formu na tekst.
+- Prelazak sa teksta na drugu vrstu gasi `isTransactional`.
+
 ## 21. Kampanja — unos na tabu Poruke ostaje pri promeni taba (2026-10-29)
 
 - Prelazak sa prvog taba više ne snima pa ponovo ne učitava kampanju sa servera, što je brisalo nečuvani tekst, pošiljaoca i vrstu poruke.

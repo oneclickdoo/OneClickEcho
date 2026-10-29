@@ -318,7 +318,9 @@
       "viberDescription": "Upravljaj Viber pošiljaocima.",
       "smsTitle": "SMS pošiljaoci",
       "smsDescription": "Upravljaj SMS pošiljaocima.",
-      "nameLabel": "Naziv"
+      "nameLabel": "Naziv",
+      "twoWay": "Dvosmerno (odgovori)",
+      "twoWayHint": "Uključite samo ako je ovaj Viber naziv kod Comtrade-a otvoren za two-way."
     },
     "companyUsers": {
       "newUserButton": "Novi korisnik",
@@ -625,6 +627,7 @@
           "subtitle": "Napišite Viber poruku i opciono dodajte rich media.",
           "fields": {
             "sender": "Viber pošiljalac",
+            "senderTwoWay": "dvosmerno",
             "message": "Poruka",
             "media": "Medija",
             "thumbnail": "Thumbnail",
@@ -682,7 +685,9 @@
           },
           "tooltips": {
             "transactional": "Transakcione poruke se koriste za servisna obaveštenja i mogu imati drugačija pravila isporuke.",
-            "enableReplies": "Omogućava primaocima da odgovore na ovu Viber poruku.",
+            "enableReplies": "Omogućava primaocima da odgovore na ovu Viber poruku. Vidljivo samo za tekst, sliku i anketu, i samo ako je pošiljalac označen kao dvosmeran.",
+            "repliesHiddenKind": "Comtrade ne prima tekstualni odgovor za ovu vrstu (fajl, video, karusel, šablon). Odgovor postoji za tekst, sliku i anketu.",
+            "repliesHiddenSender": "Ovaj pošiljalac nije označen kao dvosmeran. Označite ga na stranici kompanije, kod Viber pošiljalaca.",
             "formattingHint": "Formatiranje: *podebljano* i _kurziv_ (Viber markdown). Posle zatvarajućeg znaka mora razmak pre sledeće reči (npr. *Zdravo* tamo). Ispod možete umetnuti stikere.",
             "videoPromoOnly": "Izabran je video bez dugmeta: poruku možete ostaviti praznu za promotivni video bez teksta (obavezna minijatura). Dodajte tekst ako želite video sa natpisom.",
             "validityHint": "Koliko dugo će Viber pokušavati isporuku poruke (sekunde). To nije maksimalno trajanje videa. Uobičajeno: 86400 (24 h). Maks. dužina videa za tipove 230–232 je 600 s po pravilima provajdera.",

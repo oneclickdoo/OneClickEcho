@@ -25,7 +25,11 @@ namespace OneClickEcho.Application.Sender.Commands.CreateSender
             }
 
             // create sender
-            Domain.CompanyAggregate.Entities.Sender sender = new(company.Id, command.Name, command.Type);
+            Domain.CompanyAggregate.Entities.Sender sender = new(
+                company.Id,
+                command.Name,
+                command.Type,
+                command.IsTwoWay);
 
             _senderRepository.Add(sender);
 

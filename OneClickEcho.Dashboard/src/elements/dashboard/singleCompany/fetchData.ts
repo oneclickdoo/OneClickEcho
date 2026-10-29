@@ -40,12 +40,15 @@ export type SenderDto = {
     id: string;
     name: string;
     type: SenderType;
+    /** Viber service opened at Comtrade for two-way replies. */
+    isTwoWay?: boolean;
 };
 
 export type CreateSenderDto = {
     companyId: string;
     name: string;
     type: SenderType;
+    isTwoWay?: boolean;
 };
 
 export type CompanyAnalyticsDto = {
@@ -386,6 +389,26 @@ export const createSender = async (data: Partial<CreateSenderDto>, authFetch: IF
         body: JSON.stringify(payload),
         credentials: "include"
     });
+
+    return await response.json();
+};
+
+export const setSenderTwoWay = async (senderId: string, isTwoWay: boolean, authFetch: IFetch) => {
+    const url = new URL(`/api/Sender/${senderId}/two-way`, window.location.origin);
+
+    const response = await authFetch(url.toString(), {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept-Language": "en-US,en;q=0.5"
+        },
+        body: JSON.stringify({ isTwoWay }),
+        credentials: "include"
+    });
+
+    if (!response.ok) {
+        throw new Error("Network response was not ok");
+    }
 
     return await response.json();
 };

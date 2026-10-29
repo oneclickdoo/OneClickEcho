@@ -318,7 +318,9 @@
       "viberDescription": "Manage Viber senders.",
       "smsTitle": "SMS senders",
       "smsDescription": "Manage SMS senders.",
-      "nameLabel": "Name"
+      "nameLabel": "Name",
+      "twoWay": "Two-way (replies)",
+      "twoWayHint": "Turn on only if this Viber sender is opened for two-way at Comtrade."
     },
     "companyUsers": {
       "newUserButton": "New user",
@@ -625,6 +627,7 @@
           "subtitle": "Compose your Viber message and optional rich media.",
           "fields": {
             "sender": "Viber sender",
+            "senderTwoWay": "two-way",
             "message": "Message",
             "media": "Media",
             "thumbnail": "Thumbnail",
@@ -682,7 +685,9 @@
           },
           "tooltips": {
             "transactional": "Transactional messages are used for service notifications and may follow different delivery rules.",
-            "enableReplies": "Allow recipients to reply to this Viber message.",
+            "enableReplies": "Allow recipients to reply to this Viber message. Shown only for text, image, and survey, and only when the sender is marked two-way.",
+            "repliesHiddenKind": "Comtrade does not accept a text reply for this kind (file, video, carousel, template). Replies exist for text, image, and survey.",
+            "repliesHiddenSender": "This sender is not marked as two-way. Mark it on the company page, under Viber senders.",
             "formattingHint": "Formatting: *bold* and _italic_ (Viber markdown). Put a space after the closing marker before the next word (e.g. *Hi* there). You can insert stickers below.",
             "videoPromoOnly": "Video selected, no button: you can leave the message empty for promotional video-only (thumbnail required). Add text if you want video + caption.",
             "validityHint": "How long Viber will try to deliver the message (seconds). This is not the maximum video length. Typical value: 86400 (24 hours). Max video duration for types 230–232 is 600 seconds (10 minutes) per provider rules.",

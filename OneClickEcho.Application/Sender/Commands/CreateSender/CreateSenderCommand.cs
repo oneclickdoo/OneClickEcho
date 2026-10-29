@@ -6,6 +6,7 @@ namespace OneClickEcho.Application.Sender.Commands.CreateSender
     public sealed record CreateSenderCommand(
         Guid CompanyId,
         string Name,
-        SenderType Type
+        SenderType Type,
+        bool IsTwoWay = false
         ) : ICommand<CreateSenderResponse>;
 }

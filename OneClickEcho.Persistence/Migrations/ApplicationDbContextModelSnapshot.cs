@@ -788,6 +788,12 @@ namespace OneClickEcho.Persistence.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<bool>("IsTwoWay")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_two_way");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")

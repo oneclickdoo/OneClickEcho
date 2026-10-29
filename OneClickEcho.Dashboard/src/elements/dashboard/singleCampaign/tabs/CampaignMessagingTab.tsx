@@ -131,6 +131,36 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
     };
 
     const viberContentKind = formData.viberContentKind ?? CampaignViberContentKind.Text;
+    const selectedViberSender = senders.find(
+        (sender) => sender.type === SenderType.Viber && sender.name === formData.viberSender
+    );
+    const senderIsTwoWay = selectedViberSender?.isTwoWay === true;
+    const comtradeAllowsReplies =
+        viberContentKind === CampaignViberContentKind.Text ||
+        viberContentKind === CampaignViberContentKind.Image ||
+        viberContentKind === CampaignViberContentKind.Survey;
+    const showEnableReplies =
+        !!formData.isViber &&
+        senderIsTwoWay &&
+        comtradeAllowsReplies &&
+        !(formData.isTransactional as boolean);
+
+    useEffect(() => {
+        if (formData.status !== CampaignStatus.Draft) {
+            return;
+        }
+        if (viberContentKind === CampaignViberContentKind.Survey && senderIsTwoWay) {
+            if (!formData.isViberReceivable) {
+                handleChange("isViberReceivable", true);
+            }
+            return;
+        }
+        if (!showEnableReplies && formData.isViberReceivable) {
+            handleChange("isViberReceivable", false);
+        }
+        // handleChange is recreated each render; the flags above decide when the value must change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.status, formData.isViberReceivable, viberContentKind, senderIsTwoWay, showEnableReplies]);
 
     const showRichMediaBlock =
         !!formData.isViber &&
@@ -211,6 +241,9 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
         }
 
         handleChange("viberContentKind", kind as any);
+        if (kind !== CampaignViberContentKind.Text) {
+            handleChange("isTransactional" as any, false as any);
+        }
         if (kind !== CampaignViberContentKind.Image) {
             handleChange("viberImageRatio", null);
         }
@@ -240,9 +273,24 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
             setSurveyOptionDrafts(emptySurveySlots());
         };
 
+        const nextSenderTwoWay = senders.some(
+            (sender) =>
+                sender.type === SenderType.Viber &&
+                sender.name === formData.viberSender &&
+                sender.isTwoWay
+        );
+        const nextAllowsReplies =
+            kind === CampaignViberContentKind.Text ||
+            kind === CampaignViberContentKind.Image ||
+            kind === CampaignViberContentKind.Survey;
+        if (kind === CampaignViberContentKind.Survey && nextSenderTwoWay) {
+            handleChange("isViberReceivable", true as any);
+        } else if (!nextAllowsReplies || !nextSenderTwoWay) {
+            handleChange("isViberReceivable", false as any);
+        }
+
         if (kind === CampaignViberContentKind.Survey) {
             clearMedia();
-            handleChange("isViberReceivable", true as any);
         } else if (kind === CampaignViberContentKind.Text) {
             clearMedia();
             clearSurvey();
@@ -722,7 +770,25 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                 <Select
                                     disabled={!formData.isViber || formData.status !== CampaignStatus.Draft}
                                     value={formData.viberSender}
-                                    onValueChange={(viberSender) => handleChange("viberSender", viberSender as any)}
+                                    onValueChange={(viberSender) => {
+                                        handleChange("viberSender", viberSender as any);
+                                        const nextTwoWay = senders.some(
+                                            (sender) =>
+                                                sender.type === SenderType.Viber &&
+                                                sender.name === viberSender &&
+                                                sender.isTwoWay
+                                        );
+                                        const kind = formData.viberContentKind ?? CampaignViberContentKind.Text;
+                                        const allows =
+                                            kind === CampaignViberContentKind.Text ||
+                                            kind === CampaignViberContentKind.Image ||
+                                            kind === CampaignViberContentKind.Survey;
+                                        if (kind === CampaignViberContentKind.Survey && nextTwoWay) {
+                                            handleChange("isViberReceivable", true as any);
+                                        } else if (!nextTwoWay || !allows) {
+                                            handleChange("isViberReceivable", false as any);
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger id="viberSender" className="mt-2">
                                         <SelectValue placeholder={tCommon("select")} />
@@ -734,7 +800,9 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                                 .filter((s) => s.type === SenderType.Viber)
                                                 .map((sender) => (
                                                     <SelectItem key={sender.id} value={sender.name}>
-                                                        {sender.name}
+                                                        {sender.isTwoWay
+                                                            ? `${sender.name} (${t("viber.fields.senderTwoWay")})`
+                                                            : sender.name}
                                                     </SelectItem>
                                                 ))
                                         ) : (
@@ -901,6 +969,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                 </div>
                             ) : null}
 
+                            {viberContentKind === CampaignViberContentKind.Text ? (
                             <div className="mb-4 flex items-center gap-2">
                                 <Checkbox
                                     disabled={!formData.isViber || formData.status !== CampaignStatus.Draft}
@@ -929,6 +998,7 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     </Tooltip>
                                 </Label>
                             </div>
+                            ) : null}
 
                             {showRichMediaBlock ? (
                             <div className="mb-4">
@@ -1140,11 +1210,11 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                 />
                             </div>
 
+                            {showEnableReplies ? (
                             <div className="mb-4 flex items-center gap-2">
                                 <Checkbox
                                     disabled={
                                         !formData.isViber ||
-                                        (formData.isTransactional as any) ||
                                         formData.status !== CampaignStatus.Draft ||
                                         viberContentKind === CampaignViberContentKind.Survey
                                     }
@@ -1159,6 +1229,13 @@ export function CampaignMessagingTab({ formData, setFormData }: ICampaignMessagi
                                     </Tooltip>
                                 </Label>
                             </div>
+                            ) : formData.isViber && formData.status === CampaignStatus.Draft && !(formData.isTransactional as boolean) ? (
+                                <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+                                    {comtradeAllowsReplies
+                                        ? t("viber.tooltips.repliesHiddenSender")
+                                        : t("viber.tooltips.repliesHiddenKind")}
+                                </p>
+                            ) : null}
 
                             <div className="mb-4">
                                 <Label>

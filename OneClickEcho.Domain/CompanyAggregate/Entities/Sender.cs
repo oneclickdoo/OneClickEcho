@@ -9,11 +9,13 @@ namespace OneClickEcho.Domain.CompanyAggregate.Entities
         public Sender(
             CompanyId companyId,
             string name,
-            SenderType type) : base(SenderId.CreateUnique())
+            SenderType type,
+            bool isTwoWay = false) : base(SenderId.CreateUnique())
         {
             CompanyId = companyId;
             Name = name;
             Type = type;
+            IsTwoWay = type == SenderType.Viber && isTwoWay;
         }
 
         public CompanyId CompanyId { get; set; } = default!;
@@ -21,6 +23,9 @@ namespace OneClickEcho.Domain.CompanyAggregate.Entities
         public string Name { get; set; } = string.Empty;
 
         public SenderType Type { get; set; }
+
+        /// <summary>Comtrade/Viber service is opened for two-way replies (types 206–210 and survey 801).</summary>
+        public bool IsTwoWay { get; set; }
 
         // Used for EFCore
         public Sender() : base(SenderId.CreateUnique())

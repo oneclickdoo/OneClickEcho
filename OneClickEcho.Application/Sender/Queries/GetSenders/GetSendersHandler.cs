@@ -36,7 +36,8 @@ namespace OneClickEcho.Application.Sender.Queries.GetSenders
                 result.Add(new GetSendersResponse(
                     sender.Id.Value,
                     sender.Name,
-                    sender.Type));
+                    sender.Type,
+                    sender.IsTwoWay));
             }
 
             return result;

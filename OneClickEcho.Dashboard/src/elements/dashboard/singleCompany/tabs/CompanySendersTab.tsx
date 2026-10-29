@@ -11,8 +11,9 @@ import { Card } from "@/components/tremor/Card";
 import { Label } from "@/components/tremor/Label";
 import { Input } from "@/components/tremor/Input";
 import { Button } from "@/components/tremor/Button";
+import { Checkbox } from "@/components/tremor/Checkbox";
 
-import { SenderDto, CreateSenderDto, getCompanySenders, createSender, deleteSender } from "../fetchData";
+import { SenderDto, CreateSenderDto, getCompanySenders, createSender, deleteSender, setSenderTwoWay } from "../fetchData";
 
 import { useToast } from "@/lib/useToast";
 import { SenderType } from "@/lib/enums";
@@ -25,6 +26,7 @@ export const CompanySendersTab = ({ companyId }: ICompanySendersTabProps) => {
     const tCommon = useTranslations("Common");
 
     const [viberSenderName, setViberSenderName] = useState<string>("");
+    const [viberTwoWay, setViberTwoWay] = useState(false);
     const [smsSenderName, setSmsSenderName] = useState<string>("");
     const [senders, setSenders] = useState<SenderDto[]>([]);
 
@@ -43,13 +45,15 @@ export const CompanySendersTab = ({ companyId }: ICompanySendersTabProps) => {
             const payload: CreateSenderDto = {
                 companyId,
                 name: type === SenderType.Viber ? viberSenderName : smsSenderName,
-                type
+                type,
+                isTwoWay: type === SenderType.Viber ? viberTwoWay : false
             };
 
             await createSender(payload, authFetch);
 
             if (type === SenderType.Viber) {
                 setViberSenderName("");
+                setViberTwoWay(false);
             } else {
                 setSmsSenderName("");
             }
@@ -62,6 +66,20 @@ export const CompanySendersTab = ({ companyId }: ICompanySendersTabProps) => {
                 variant: "success",
                 duration: 2000
             });
+        } catch (e: any) {
+            toast({
+                title: tCommon("toasts.error"),
+                description: e?.message ?? tCommon("errors.unexpected"),
+                variant: "error",
+                duration: 2000
+            });
+        }
+    };
+
+    const handleTwoWay = async (sender: SenderDto, isTwoWay: boolean) => {
+        try {
+            await setSenderTwoWay(sender.id, isTwoWay, authFetch);
+            await getSenders();
         } catch (e: any) {
             toast({
                 title: tCommon("toasts.error"),
@@ -120,13 +138,29 @@ export const CompanySendersTab = ({ companyId }: ICompanySendersTabProps) => {
                                 {tCommon("common.add")}
                             </Button>
                         </div>
+                        <div className="mt-3 flex items-center gap-2">
+                            <Checkbox checked={viberTwoWay} onCheckedChange={(checked) => setViberTwoWay(!!checked)} />
+                            <Label>
+                                {tCommon("companySenders.twoWay")}
+                            </Label>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">{tCommon("companySenders.twoWayHint")}</p>
                     </form>
 
                     {senders
                         .filter((sender) => sender.type === SenderType.Viber)
                         .map((sender) => (
                             <Card key={sender.id} className="flex justify-between items-center mb-2 py-2 px-4 overflow-hidden">
-                                <p className="text-sm">{sender.name}</p>
+                                <div>
+                                    <p className="text-sm">{sender.name}</p>
+                                    <label className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                                        <Checkbox
+                                            checked={!!sender.isTwoWay}
+                                            onCheckedChange={(checked) => handleTwoWay(sender, !!checked)}
+                                        />
+                                        {tCommon("companySenders.twoWay")}
+                                    </label>
+                                </div>
                                 <RiDeleteBinLine
                                     className="size-5 text-red-500 cursor-pointer hover:text-red-600"
                                     onClick={() => handleDelete(sender.id)}

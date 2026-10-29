@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using OneClickEcho.App.Abstractions;
 using OneClickEcho.Application.Sender.Commands.CreateSender;
 using OneClickEcho.Application.Sender.Commands.DeleteSender;
+using OneClickEcho.Application.Sender.Commands.SetSenderTwoWay;
 using OneClickEcho.Domain.Common.Shared;
 using OpenIddict.Validation.AspNetCore;
 
@@ -25,6 +26,21 @@ namespace OneClickEcho.App.Controllers
 
         [Authorize(Roles = "Administrator")]
         [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
+        [HttpPut("{senderId}/two-way")]
+        public async Task<IActionResult> SetSenderTwoWay(
+            [FromRoute] Guid senderId,
+            [FromBody] SetSenderTwoWayBody body,
+            CancellationToken cancellationToken)
+        {
+            Result<SetSenderTwoWayResponse> response = await Mediator.Send(
+                new SetSenderTwoWayCommand(senderId, body.IsTwoWay),
+                cancellationToken);
+
+            return response.IsSuccess ? Ok(response.Value) : NotFound(response.Error);
+        }
+
+        [Authorize(Roles = "Administrator")]
+        [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
         [HttpDelete("{senderId}")]
         public async Task<IActionResult> DeleteSender([FromRoute] Guid senderId, CancellationToken cancellationToken)
         {
@@ -35,4 +51,6 @@ namespace OneClickEcho.App.Controllers
             return response.IsSuccess ? Ok(response.Value) : NotFound(response.Error);
         }
     }
+
+    public sealed record SetSenderTwoWayBody(bool IsTwoWay);
 }
