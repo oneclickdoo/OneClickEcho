@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using OneClickEcho.Domain.CampaignAggregate;
+using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Domain.CampaignAggregate.Enums;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
 using OneClickEcho.Domain.CampaignLeadAggregate;
@@ -549,6 +550,64 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         }
 
         await tx.CommitAsync(cancellationToken);
+    }
+
+    public async Task<List<CampaignPhoneExchange>> GetViberExchangesForPhoneAsync(
+        CompanyId companyId,
+        string sender,
+        string phoneNumber,
+        CancellationToken cancellationToken = default)
+    {
+        string trimmed = phoneNumber.Trim();
+        string plus = trimmed.StartsWith('+') ? trimmed : "+" + trimmed;
+        string bare = plus.TrimStart('+');
+        string[] phones = [plus, bare, "00" + bare];
+        string senderNorm = sender.Trim();
+
+        var sent = await (
+            from cl in _dbContext.CampaignLeads.AsNoTracking()
+            join c in _dbContext.Campaigns.AsNoTracking() on cl.CampaignId equals c.Id
+            join l in _dbContext.Leads.AsNoTracking() on cl.LeadId equals l.Id
+            where c.CompanyId == companyId
+                && c.IsViber
+                && c.ViberSender == senderNorm
+                && cl.ViberMessageId > 0
+                && phones.Contains(l.PhoneNumber)
+            orderby cl.CreatedAt
+            select new
+            {
+                cl.Id,
+                cl.CreatedAt,
+                cl.ViberMessageId,
+                c.ViberMessage,
+                c.ViberMedia,
+                c.ViberSurveyOptionsJson
+            }).ToListAsync(cancellationToken);
+
+        if (sent.Count == 0)
+        {
+            return [];
+        }
+
+        List<CampaignLeadId> leadIds = sent.Select(x => x.Id).ToList();
+        var replies = await _dbContext.ReceivedMessages
+            .AsNoTracking()
+            .Where(m => leadIds.Contains(m.CampaignLeadId))
+            .Select(m => new { m.Id, m.CampaignLeadId, m.CreatedAt, m.MessageContent })
+            .ToListAsync(cancellationToken);
+
+        return sent.Select(row => new CampaignPhoneExchange(
+            row.Id.Value,
+            row.CreatedAt,
+            row.ViberMessageId,
+            row.ViberMessage,
+            row.ViberMedia,
+            row.ViberSurveyOptionsJson,
+            replies
+                .Where(r => r.CampaignLeadId == row.Id)
+                .OrderBy(r => r.CreatedAt)
+                .Select(r => new CampaignPhoneReply(r.Id.Value, r.CreatedAt, r.MessageContent))
+                .ToList())).ToList();
     }
 
     public Task SyncCampaignLeadViberMessageIdSequenceAsync(CancellationToken cancellationToken = default)

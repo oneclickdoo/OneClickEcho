@@ -123,9 +123,10 @@ export default function ViberSessionsPage() {
                             <div className="max-h-[420px] space-y-2 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-800">
                                 {current.messages.map((message) => (
                                     <div key={message.id} className={message.direction === "In" ? "text-left" : "text-right"}>
-                                        <p className="text-sm">{message.body || message.media}</p>
+                                        <p className="text-sm whitespace-pre-wrap">{message.body || message.media}</p>
                                         <p className="text-[11px] text-gray-400">
-                                            {message.direction}{message.billedAsPromotion ? ` · ${t("promo")}` : ""}
+                                            {message.direction === "In" ? t("fromUser") : t("fromApp")}
+                                            {message.billedAsPromotion ? ` · ${t("promo")}` : ""}
                                         </p>
                                     </div>
                                 ))}
@@ -141,6 +142,7 @@ export default function ViberSessionsPage() {
                             {kind === 1 || kind === 2 ? (
                                 <Input value={media} onChange={(e) => setMedia(e.target.value)} placeholder={t("mediaPlaceholder")} />
                             ) : null}
+                            <p className="text-xs text-gray-500">{t("composerNote")}</p>
                             <Button type="button" onClick={() => void send(false)}>{t("send")}</Button>
                         </div>
                     ) : null}

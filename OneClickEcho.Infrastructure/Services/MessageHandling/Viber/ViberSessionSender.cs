@@ -55,12 +55,16 @@ public class ViberSessionSender(
                 "There is no open Viber session for this phone. Sending now would be billed as a promotional message.");
         }
 
-        if (open && session!.ConsecutiveOutbound >= ViberSession.MaxConsecutive)
+        bool captionSeparately = request.Kind is ViberSessionContentKind.Image or ViberSessionContentKind.File
+            && !string.IsNullOrWhiteSpace(request.Text);
+        int outboundCount = captionSeparately ? 2 : 1;
+
+        if (open && session!.ConsecutiveOutbound + outboundCount > ViberSession.MaxConsecutive)
         {
             return Fail("ViberSession.ConsecutiveLimit", "Viber allows at most 10 session messages in a row. Wait for a reply.");
         }
 
-        if (open && session!.TotalOutbound >= ViberSession.MaxOutbound)
+        if (open && session!.TotalOutbound + outboundCount > ViberSession.MaxOutbound)
         {
             return Fail("ViberSession.TotalLimit", "This Viber session already has 60 outgoing messages.");
         }
@@ -84,44 +88,55 @@ public class ViberSessionSender(
         }
 
         bool billed = !open;
-        ViberSessionMessage outgoing = new(
-            session.Id,
-            ViberSessionDirection.Out,
-            (int)comtradeType,
-            body,
-            media,
-            request.QuickRepliesJson,
-            billed);
-        sessions.AddMessage(outgoing);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
         string uploadsBase = string.IsNullOrWhiteSpace(uploads.Value.BaseUrl)
             ? "https://api.echo.oneclick.rs/uploads"
             : uploads.Value.BaseUrl.Trim().TrimEnd('/');
 
-        ViberMessage message = Build(comtradeType, sender, phone, outgoing.ViberMessageId, body, media, request.QuickRepliesJson, request.SurveyUiType, uploadsBase);
-
-        SendViberMessageResponseDto? response = await viberService.Send(new SendViberMessageDto
+        // Comtrade 307 and 221 carry no caption. A typed text is a separate session text message (306).
+        List<(ViberSendMessageType Type, string? Body, string? Media)> parts = [];
+        if (captionSeparately)
         {
-            UserCredentials = new ViberUserCredentials { UserName = account.Username, Password = account.Password },
-            ViberMessages = [message]
-        }, retryCountParam: 2);
-
-        SendViberMessageResponse? row = response?.ViberMessageResponses.FirstOrDefault(r => r.MessageId == outgoing.ViberMessageId)
-            ?? response?.ViberMessageResponses.FirstOrDefault();
-
-        if (row is null || row.Status != ViberMessageResponseStatus.MSG_SUCCESS)
-        {
-            outgoing.SendError = row is null ? "Comtrade did not return a send status." : row.Status.ToString();
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            return Fail("ViberSession.ProviderError", outgoing.SendError);
+            parts.Add((ViberSendMessageType.SessionText, body, null));
         }
 
-        outgoing.IsSent = true;
-        if (open)
+        parts.Add((comtradeType, captionSeparately ? null : body, media));
+
+        foreach ((ViberSendMessageType type, string? partBody, string? partMedia) in parts)
         {
-            session.TotalOutbound += 1;
-            session.ConsecutiveOutbound += 1;
+            ViberSessionMessage outgoing = new(
+                session.Id,
+                ViberSessionDirection.Out,
+                (int)type,
+                partBody,
+                partMedia,
+                type == ViberSendMessageType.SessionQuickReplies ? request.QuickRepliesJson : null,
+                billed);
+            sessions.AddMessage(outgoing);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            ViberMessage message = Build(type, sender, phone, outgoing.ViberMessageId, partBody, partMedia, request.QuickRepliesJson, request.SurveyUiType, uploadsBase);
+            SendViberMessageResponseDto? response = await viberService.Send(new SendViberMessageDto
+            {
+                UserCredentials = new ViberUserCredentials { UserName = account.Username, Password = account.Password },
+                ViberMessages = [message]
+            }, retryCountParam: 2);
+
+            SendViberMessageResponse? row = response?.ViberMessageResponses.FirstOrDefault(r => r.MessageId == outgoing.ViberMessageId)
+                ?? response?.ViberMessageResponses.FirstOrDefault();
+
+            if (row is null || row.Status != ViberMessageResponseStatus.MSG_SUCCESS)
+            {
+                outgoing.SendError = row is null ? "Comtrade did not return a send status." : row.Status.ToString();
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                return Fail("ViberSession.ProviderError", outgoing.SendError);
+            }
+
+            outgoing.IsSent = true;
+            if (open)
+            {
+                session.TotalOutbound += 1;
+                session.ConsecutiveOutbound += 1;
+            }
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

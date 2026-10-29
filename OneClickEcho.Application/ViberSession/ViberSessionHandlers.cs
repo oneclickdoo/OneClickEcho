@@ -2,6 +2,7 @@ using MediatR;
 using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Application.Common.Viber;
 using OneClickEcho.Domain.Common.Shared;
+using OneClickEcho.Domain.CampaignLeadAggregate.Repositories;
 using OneClickEcho.Domain.CompanyAggregate.Repositories;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Domain.ViberSessionAggregate;
@@ -12,7 +13,7 @@ using OneClickEcho.Domain.ViberSessionAggregate.ValueObjects;
 
 namespace OneClickEcho.Application.ViberSession;
 
-public class ListViberSessionsHandler(IViberSessionRepository sessions, IViberSessionRepository messages)
+public class ListViberSessionsHandler(IViberSessionRepository sessions, ICampaignLeadRepository campaignLeads)
     : IQueryHandler<ListViberSessionsQuery, List<ViberSessionResponse>>
 {
     public async Task<Result<List<ViberSessionResponse>>> Handle(ListViberSessionsQuery query, CancellationToken cancellationToken)
@@ -21,15 +22,14 @@ public class ListViberSessionsHandler(IViberSessionRepository sessions, IViberSe
         List<ViberSessionResponse> result = [];
         foreach (SessionEntity row in rows)
         {
-            List<ViberSessionMessage> thread = await messages.ListMessagesAsync(row.Id, cancellationToken);
-            result.Add(ViberSessionMapper.Map(row, thread, DateTime.UtcNow));
+            result.Add(await ViberSessionThread.MapAsync(sessions, campaignLeads, row, cancellationToken));
         }
 
         return result;
     }
 }
 
-public class GetViberSessionHandler(IViberSessionRepository sessions)
+public class GetViberSessionHandler(IViberSessionRepository sessions, ICampaignLeadRepository campaignLeads)
     : IQueryHandler<GetViberSessionQuery, ViberSessionResponse>
 {
     public async Task<Result<ViberSessionResponse>> Handle(GetViberSessionQuery query, CancellationToken cancellationToken)
@@ -40,12 +40,11 @@ public class GetViberSessionHandler(IViberSessionRepository sessions)
             return Result.Failure<ViberSessionResponse>(new Error("ViberSession.NotFound", "Session was not found."));
         }
 
-        List<ViberSessionMessage> thread = await sessions.ListMessagesAsync(session.Id, cancellationToken);
-        return ViberSessionMapper.Map(session, thread, DateTime.UtcNow);
+        return await ViberSessionThread.MapAsync(sessions, campaignLeads, session, cancellationToken);
     }
 }
 
-public class GetViberSessionByPhoneHandler(IViberSessionRepository sessions)
+public class GetViberSessionByPhoneHandler(IViberSessionRepository sessions, ICampaignLeadRepository campaignLeads)
     : IQueryHandler<GetViberSessionByPhoneQuery, ViberSessionResponse>
 {
     public async Task<Result<ViberSessionResponse>> Handle(GetViberSessionByPhoneQuery query, CancellationToken cancellationToken)
@@ -61,8 +60,25 @@ public class GetViberSessionByPhoneHandler(IViberSessionRepository sessions)
             return Result.Failure<ViberSessionResponse>(new Error("ViberSession.NotFound", "Session was not found."));
         }
 
+        return await ViberSessionThread.MapAsync(sessions, campaignLeads, session, cancellationToken);
+    }
+}
+
+static class ViberSessionThread
+{
+    public static async Task<ViberSessionResponse> MapAsync(
+        IViberSessionRepository sessions,
+        ICampaignLeadRepository campaignLeads,
+        SessionEntity session,
+        CancellationToken cancellationToken)
+    {
         List<ViberSessionMessage> thread = await sessions.ListMessagesAsync(session.Id, cancellationToken);
-        return ViberSessionMapper.Map(session, thread, DateTime.UtcNow);
+        List<CampaignPhoneExchange> exchanges = await campaignLeads.GetViberExchangesForPhoneAsync(
+            session.CompanyId,
+            session.Sender,
+            session.PhoneNumber,
+            cancellationToken);
+        return ViberSessionMapper.Map(session, thread, DateTime.UtcNow, exchanges);
     }
 }
 

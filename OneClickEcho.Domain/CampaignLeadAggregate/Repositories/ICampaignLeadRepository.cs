@@ -1,4 +1,5 @@
 using OneClickEcho.Domain.CampaignAggregate;
+using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Domain.CampaignAggregate.ValueObjects;
 using OneClickEcho.Domain.CampaignLeadAggregate.Entities;
 using OneClickEcho.Domain.CampaignLeadAggregate.Enums;
@@ -100,4 +101,22 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
 
     /// <summary>Aligns the identity sequence for <c>campaign_leads.viber_message_id</c> with <c>MAX(viber_message_id)</c> after explicit ids were inserted.</summary>
     Task SyncCampaignLeadViberMessageIdSequenceAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Viber campaign messages and stored replies for one sender and phone, oldest first.</summary>
+    Task<List<CampaignPhoneExchange>> GetViberExchangesForPhoneAsync(
+        CompanyId companyId,
+        string sender,
+        string phoneNumber,
+        CancellationToken cancellationToken = default);
 }
+
+public sealed record CampaignPhoneReply(Guid Id, DateTime At, string Text);
+
+public sealed record CampaignPhoneExchange(
+    Guid CampaignLeadId,
+    DateTime SentAt,
+    long ViberMessageId,
+    string? Question,
+    string? Media,
+    string? SurveyOptionsJson,
+    IReadOnlyList<CampaignPhoneReply> Replies);

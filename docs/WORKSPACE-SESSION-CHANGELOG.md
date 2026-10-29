@@ -111,6 +111,22 @@
 
 ---
 
+## 21. Kampanja — unos na tabu Poruke ostaje pri promeni taba (2026-10-29)
+
+- Prelazak sa prvog taba više ne snima pa ponovo ne učitava kampanju sa servera, što je brisalo nečuvani tekst, pošiljaoca i vrstu poruke.
+- Tab Poruke ostaje montiran, pa se lokalni unos (anketa, fajl) ne gubi dok se ne sačuva ili ne pokrene kampanja.
+
+## 20. Viber sesija — nit prikazuje anketu i odgovor (2026-10-29)
+
+- Dashboard sesije više ne prikazuje samo odlazne sesijske poruke. U istu nit ulaze i pitanje kampanje (anketa) i redovi iz `received_messages` za taj telefon i pošiljaoca.
+- `ViberAnswersJob` ide na 1 minut. Odgovor sa telefona se upisuje tek kad taj posao povuče `AnswersById`, i samo ako API radi sa ispravkom datuma `/Date(...)/`.
+
+## 19. Viber sesija — slika bez teksta (2026-10-29)
+
+- Comtrade tip **307** je samo slika, **221** samo fajl. Tekst uz njih se ne šalje u istom payload-u.
+- Ako korisnik unese i tekst i sliku/fajl, prvo ide posebna poruka **306**, pa medij. Svaka dobija svoj `viber_message_id` i broji se u limit 10/60.
+- `8000000000` je namerni početak identity za sesijske poruke.
+
 ## 18. Viber odgovori — datum Comtrade `/Date(...)/` (2026-10-29)
 
 - **Simptom:** `AnswersById` vrati odgovor, `received_messages` ostane prazan, ponovni poziv da `ViberAnswers: []`.

@@ -109,7 +109,7 @@ public static class SchedulingServiceConfiguration
                     .WithIdentity("viber-campaigns-last-48h-answers-trigger")
                     .ForJob("viber-campaigns-last-48h-answers-job")
                     .WithSimpleSchedule(x => x
-                        .WithIntervalInHours(1)
+                        .WithIntervalInMinutes(1)
                         .RepeatForever()),
                 jobConfigurator => jobConfigurator
                     .WithIdentity("viber-campaigns-last-48h-answers-job")

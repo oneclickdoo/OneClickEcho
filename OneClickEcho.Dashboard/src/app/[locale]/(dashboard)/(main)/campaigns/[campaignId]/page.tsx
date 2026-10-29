@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { useQuery } from "@tanstack/react-query";
@@ -64,6 +64,7 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
     });
 
     const [currentTab, setCurrentTab] = useState<string>("tab1");
+    const messagingDraftDirty = useRef(false);
     const [isLoadedLaunch, setIsLoadedLaunch] = useState<boolean>(false);
 
     const { authFetch } = useAuth();
@@ -131,6 +132,7 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
 
             const { data: freshCampaign } = await refetch();
             if (freshCampaign) {
+                messagingDraftDirty.current = false;
                 setCampaign({
                     ...freshCampaign,
                     viberMessage: migrateLegacyViberHtmlToMarkdown(freshCampaign.viberMessage)
@@ -199,28 +201,23 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
         }
     };
 
-    const saveCampaign = async () => {
-        try {
-            await updateCampaign(campaign, authFetch);
-            const { data } = await refetch();
-            if (data) {
-                setCampaign({
-                    ...data,
-                    viberMessage: migrateLegacyViberHtmlToMarkdown(data.viberMessage)
-                });
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
     useEffect(() => {
-        if (fetchCampaign) {
-            setCampaign({
+        if (!fetchCampaign) return;
+        setCampaign((current) => {
+            if (
+                messagingDraftDirty.current &&
+                current.campaignId === fetchCampaign.campaignId &&
+                fetchCampaign.status === CampaignStatus.Draft
+            ) {
+                return current;
+            }
+
+            messagingDraftDirty.current = false;
+            return {
                 ...fetchCampaign,
                 viberMessage: migrateLegacyViberHtmlToMarkdown(fetchCampaign.viberMessage)
-            });
-        }
+            };
+        });
     }, [fetchCampaign]);
 
     const campaignTitle = t("pageTitle", { name: campaign.name });
@@ -309,8 +306,7 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
             <Tabs
                 value={currentTab}
                 className="mt-4 sm:mt-6 lg:mt-10"
-                onValueChange={async (value) => {
-                    if (currentTab === "tab1" && campaign.status === CampaignStatus.Draft) await saveCampaign();
+                onValueChange={(value) => {
                     setCurrentTab(value);
                 }}
             >
@@ -324,8 +320,18 @@ export default function CampaignPage({ params }: { params: { campaignId: string 
 
                 {fetchCampaign ? (
                     <div className="pt-6">
-                        <TabsContent value="tab1">
-                            <CampaignMessagingTab formData={campaign} setFormData={setCampaign} />
+                        <TabsContent
+                            value="tab1"
+                            forceMount
+                            className={currentTab === "tab1" ? undefined : "hidden"}
+                        >
+                            <CampaignMessagingTab
+                                formData={campaign}
+                                setFormData={(value) => {
+                                    messagingDraftDirty.current = true;
+                                    setCampaign(value);
+                                }}
+                            />
                         </TabsContent>
 
                         <TabsContent value="tab2">
