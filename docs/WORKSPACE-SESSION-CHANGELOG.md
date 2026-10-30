@@ -111,6 +111,12 @@
 
 ---
 
+## 25. Viber sesije — jedan broj, kampanje u filteru (2026-10-30)
+
+- Isti telefon iz dve kolekcije je jedan red (spajanje po broju, jedan lead po `lead_id` unutar kampanje).
+- Padajuća lista ima sve kampanje tog razgovora, ne samo poslednju. Izbor kampanje ostavlja telefone te kampanje i u niti samo njene poruke.
+- „Sve / Otvorena / Zatvorena“ je preimenovano u prozor od 24 sata.
+
 ## 24. Viber sesije — prijemno sanduče (2026-10-29)
 
 - Grana `viber-sessions-inbox`. Stari prikaz je commit `9e96bd3` na `main`. Povratak: `git checkout main`.

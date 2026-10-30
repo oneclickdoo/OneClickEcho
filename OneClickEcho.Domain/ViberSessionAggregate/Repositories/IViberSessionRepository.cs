@@ -11,6 +11,12 @@ public interface IViberSessionRepository : IRepository<ViberSession, ViberSessio
 {
     Task<ViberSession?> GetByIdAsync(ViberSessionId id, CancellationToken cancellationToken = default);
 
+    Task<List<ViberSession>> ListSameHandsetAsync(
+        CompanyId companyId,
+        string sender,
+        string phoneNumber,
+        CancellationToken cancellationToken = default);
+
     Task<ViberSession?> FindLatestAsync(
         CompanyId companyId,
         string sender,

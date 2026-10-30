@@ -40,13 +40,14 @@ public record ViberSessionListItemResponse(
     DateTime ExpiresAt,
     DateTime LastActivityAt,
     string? LastPreview,
-    Guid? CampaignId,
-    string? CampaignName);
+    IReadOnlyList<ViberSessionCampaignRef> Campaigns);
+
+public record ViberSessionCampaignRef(Guid Id, string Name);
 
 public record ListViberSessionsQuery(Guid CompanyId, string? Phone = null, string? Sender = null)
     : IQuery<List<ViberSessionListItemResponse>>;
 
-public record GetViberSessionQuery(Guid CompanyId, Guid SessionId) : IQuery<ViberSessionResponse>;
+public record GetViberSessionQuery(Guid CompanyId, Guid SessionId, Guid? CampaignId = null) : IQuery<ViberSessionResponse>;
 
 public record GetViberSessionByPhoneQuery(Guid CompanyId, string Sender, string PhoneNumber) : IQuery<ViberSessionResponse>;
 

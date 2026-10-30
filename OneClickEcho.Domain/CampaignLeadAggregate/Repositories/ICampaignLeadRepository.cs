@@ -109,8 +109,8 @@ public interface ICampaignLeadRepository : IRepository<CampaignLead, CampaignLea
         string phoneNumber,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Latest Viber campaign for each sender and phone among the given numbers.</summary>
-    Task<List<PhoneCampaignLink>> GetLatestViberCampaignsAsync(
+    /// <summary>Each Viber campaign sent to these phones, one row per sender, phone, and campaign.</summary>
+    Task<List<PhoneCampaignLink>> GetViberCampaignsForPhonesAsync(
         CompanyId companyId,
         IReadOnlyCollection<string> phoneNumbers,
         CancellationToken cancellationToken = default);
@@ -133,4 +133,5 @@ public sealed record PhoneCampaignLink(
     string Sender,
     string Phone,
     Guid CampaignId,
-    string CampaignName);
+    string CampaignName,
+    DateTime SentAt);

@@ -46,6 +46,27 @@ public static class PhoneNumberHelper
 
     public static string NormalizeKey(string phoneNumber) => Standardize(phoneNumber);
 
+    /// <summary>Stored spellings of one handset: +3816…, 3816…, 006…, and the local 06… form.</summary>
+    public static IReadOnlyList<string> LookupForms(string phoneNumber)
+    {
+        string canonical = Standardize(phoneNumber);
+        if (string.IsNullOrEmpty(canonical))
+        {
+            return [];
+        }
+
+        string digits = canonical.TrimStart('+');
+        List<string> forms = [canonical, digits, "00" + digits, "+" + digits];
+        if (digits.StartsWith("381", StringComparison.Ordinal) && digits.Length > 3)
+        {
+            string local = "0" + digits[3..];
+            forms.Add(local);
+            forms.Add("+" + local);
+        }
+
+        return forms.Distinct(StringComparer.Ordinal).ToList();
+    }
+
     /// <summary>
     /// International digits only, no leading + (e.g. <c>381641234567</c>). Used for SMS HTTP APIs that expect <c>381…</c> not E.164.
     /// </summary>

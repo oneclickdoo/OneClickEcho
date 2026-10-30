@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using OneClickEcho.Application.Common.Viber;
+using OneClickEcho.Domain.Common;
 using Microsoft.EntityFrameworkCore.Storage;
 using OneClickEcho.Domain.CampaignAggregate;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
@@ -559,10 +560,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         string phoneNumber,
         CancellationToken cancellationToken = default)
     {
-        string trimmed = phoneNumber.Trim();
-        string plus = trimmed.StartsWith('+') ? trimmed : "+" + trimmed;
-        string bare = plus.TrimStart('+');
-        string[] phones = [plus, bare, "00" + bare];
+        IReadOnlyList<string> phones = PhoneNumberHelper.LookupForms(phoneNumber);
         string senderNorm = sender.Trim();
 
         var sent = await (
@@ -578,6 +576,7 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             select new
             {
                 cl.Id,
+                LeadId = cl.LeadId,
                 CampaignId = c.Id,
                 CampaignName = c.Name,
                 cl.CreatedAt,
@@ -599,23 +598,43 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             .Select(m => new { m.Id, m.CampaignLeadId, m.CreatedAt, m.MessageContent })
             .ToListAsync(cancellationToken);
 
-        return sent.Select(row => new CampaignPhoneExchange(
-            row.Id.Value,
-            row.CampaignId.Value,
-            row.CampaignName,
-            row.CreatedAt,
-            row.ViberMessageId,
-            row.ViberMessage,
-            row.ViberMedia,
-            row.ViberSurveyOptionsJson,
-            replies
-                .Where(r => r.CampaignLeadId == row.Id)
-                .OrderBy(r => r.CreatedAt)
-                .Select(r => new CampaignPhoneReply(r.Id.Value, r.CreatedAt, r.MessageContent))
-                .ToList())).ToList();
+        return sent
+            .GroupBy(row => row.CampaignId.Value)
+            .Select(group =>
+            {
+                var rows = group
+                    .GroupBy(row => row.LeadId.Value)
+                    .Select(leadGroup => leadGroup.OrderByDescending(row => row.CreatedAt).First())
+                    .ToList();
+                var chosen = rows
+                    .OrderByDescending(row => replies.Any(reply => reply.CampaignLeadId == row.Id && !string.IsNullOrWhiteSpace(reply.MessageContent)))
+                    .ThenBy(row => row.CreatedAt)
+                    .First();
+                HashSet<Guid> leadRowIds = rows.Select(row => row.Id.Value).ToHashSet();
+                List<CampaignPhoneReply> mergedReplies = replies
+                    .Where(reply => leadRowIds.Contains(reply.CampaignLeadId.Value) && !string.IsNullOrWhiteSpace(reply.MessageContent))
+                    .GroupBy(reply => reply.MessageContent.Trim(), StringComparer.Ordinal)
+                    .Select(replyGroup => replyGroup.OrderBy(reply => reply.CreatedAt).First())
+                    .OrderBy(reply => reply.CreatedAt)
+                    .Select(reply => new CampaignPhoneReply(reply.Id.Value, reply.CreatedAt, reply.MessageContent))
+                    .ToList();
+
+                return new CampaignPhoneExchange(
+                    chosen.Id.Value,
+                    chosen.CampaignId.Value,
+                    chosen.CampaignName,
+                    chosen.CreatedAt,
+                    chosen.ViberMessageId,
+                    chosen.ViberMessage,
+                    chosen.ViberMedia,
+                    chosen.ViberSurveyOptionsJson,
+                    mergedReplies);
+            })
+            .OrderBy(exchange => exchange.SentAt)
+            .ToList();
     }
 
-    public async Task<List<PhoneCampaignLink>> GetLatestViberCampaignsAsync(
+    public async Task<List<PhoneCampaignLink>> GetViberCampaignsForPhonesAsync(
         CompanyId companyId,
         IReadOnlyCollection<string> phoneNumbers,
         CancellationToken cancellationToken = default)
@@ -628,11 +647,10 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
         HashSet<string> variants = [];
         foreach (string phoneNumber in phoneNumbers)
         {
-            string plus = ViberPhone.Normalize(phoneNumber);
-            string bare = plus.TrimStart('+');
-            variants.Add(plus);
-            variants.Add(bare);
-            variants.Add("00" + bare);
+            foreach (string form in PhoneNumberHelper.LookupForms(phoneNumber))
+            {
+                variants.Add(form);
+            }
         }
 
         var sent = await (
@@ -654,11 +672,19 @@ public class CampaignLeadRepository(ApplicationDbContext dbContext, IConfigurati
             }).ToListAsync(cancellationToken);
 
         return sent
-            .GroupBy(row => (row.Sender.Trim(), ViberPhone.Normalize(row.PhoneNumber)))
+            .GroupBy(row => (
+                row.Sender.Trim(),
+                PhoneNumberHelper.Standardize(row.PhoneNumber),
+                row.CampaignId.Value))
             .Select(group =>
             {
                 var latest = group.OrderByDescending(row => row.CreatedAt).First();
-                return new PhoneCampaignLink(group.Key.Item1, group.Key.Item2, latest.CampaignId.Value, latest.CampaignName);
+                return new PhoneCampaignLink(
+                    group.Key.Item1,
+                    group.Key.Item2,
+                    group.Key.Item3,
+                    latest.CampaignName,
+                    latest.CreatedAt);
             })
             .ToList();
     }

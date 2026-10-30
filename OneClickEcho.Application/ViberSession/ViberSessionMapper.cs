@@ -89,6 +89,7 @@ public static class ViberSessionMapper
         }
 
         thread.Sort((a, b) => a.CreatedAt.CompareTo(b.CreatedAt));
+        thread = AssignOpenCampaign(thread);
 
         return new ViberSessionResponse(
             session.Id.Value,
@@ -103,6 +104,29 @@ public static class ViberSessionMapper
             session.ConsecutiveOutbound,
             session.IsOpen(utcNow),
             thread);
+    }
+
+    private static List<ViberSessionMessageResponse> AssignOpenCampaign(List<ViberSessionMessageResponse> thread)
+    {
+        Guid? campaignId = null;
+        string? campaignName = null;
+        List<ViberSessionMessageResponse> assigned = [];
+        foreach (ViberSessionMessageResponse message in thread)
+        {
+            if (message.CampaignId is Guid id)
+            {
+                campaignId = id;
+                campaignName = message.CampaignName;
+                assigned.Add(message);
+                continue;
+            }
+
+            assigned.Add(campaignId is null
+                ? message
+                : message with { CampaignId = campaignId, CampaignName = campaignName });
+        }
+
+        return assigned;
     }
 
     private static string? QuestionText(string? question, string? surveyOptionsJson)

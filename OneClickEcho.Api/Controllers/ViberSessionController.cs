@@ -32,14 +32,20 @@ public class ViberSessionController(IMediator mediator) : ApiController(mediator
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> Get([FromRoute] Guid id, [FromQuery] Guid companyId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Get(
+        [FromRoute] Guid id,
+        [FromQuery] Guid companyId,
+        [FromQuery] Guid? campaignId,
+        CancellationToken cancellationToken)
     {
         if (!CampaignTenantFilter.UserMayAccessCampaignCompany(User, companyId))
         {
             return Forbid();
         }
 
-        Result<ViberSessionResponse> response = await Mediator.Send(new GetViberSessionQuery(companyId, id), cancellationToken);
+        Result<ViberSessionResponse> response = await Mediator.Send(
+            new GetViberSessionQuery(companyId, id, campaignId),
+            cancellationToken);
         return response.IsSuccess ? Ok(response.Value) : NotFound(response.Error);
     }
 

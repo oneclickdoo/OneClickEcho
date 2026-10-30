@@ -41,8 +41,7 @@ type SessionListItem = {
     expiresAt: string;
     lastActivityAt: string;
     lastPreview?: string | null;
-    campaignId?: string | null;
-    campaignName?: string | null;
+    campaigns?: { id: string; name: string }[];
 };
 
 export default function ViberSessionsPage() {
@@ -83,10 +82,11 @@ export default function ViberSessionsPage() {
         if (!companyId) return;
         const url = new URL(`/api/app/viber-sessions/${id}`, window.location.origin);
         url.searchParams.set("companyId", companyId);
+        if (campaignFilter) url.searchParams.set("campaignId", campaignFilter);
         const response = await authFetch(url.toString(), { headers: { Accept: "application/json" } });
         if (!response.ok) return;
         setCurrent((await response.json()) as SessionDetail);
-    }, [authFetch, companyId]);
+    }, [authFetch, companyId, campaignFilter]);
 
     useEffect(() => {
         void loadList();
@@ -107,18 +107,27 @@ export default function ViberSessionsPage() {
     const campaigns = useMemo(() => {
         const map = new Map<string, string>();
         for (const row of rows) {
-            if (row.campaignId && row.campaignName) map.set(row.campaignId, row.campaignName);
+            if (senderFilter && row.sender !== senderFilter) continue;
+            for (const campaign of row.campaigns ?? []) {
+                if (campaign.id && campaign.name) map.set(campaign.id, campaign.name);
+            }
         }
         return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
-    }, [rows]);
+    }, [rows, senderFilter]);
 
     const visibleRows = rows.filter((row) => {
         if (senderFilter && row.sender !== senderFilter) return false;
         if (statusFilter === "open" && !row.isOpen) return false;
         if (statusFilter === "closed" && row.isOpen) return false;
-        if (campaignFilter && row.campaignId !== campaignFilter) return false;
+        if (campaignFilter && !(row.campaigns ?? []).some((campaign) => campaign.id === campaignFilter)) return false;
         return true;
     });
+
+    useEffect(() => {
+        if (selected && !visibleRows.some((row) => row.id === selected)) {
+            setSelected(null);
+        }
+    }, [selected, visibleRows]);
 
     const opener = current?.messages.find((message) => message.campaignName)?.campaignName;
 
@@ -153,7 +162,7 @@ export default function ViberSessionsPage() {
         }
         setText("");
         setMedia("");
-        setCurrent((await response.json()) as SessionDetail);
+        await loadDetail(current.id);
         await loadList();
     };
 
@@ -184,9 +193,9 @@ export default function ViberSessionsPage() {
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value as "all" | "open" | "closed")}
                         >
-                            <option value="all">{t("allStatuses")}</option>
-                            <option value="open">{t("open")}</option>
-                            <option value="closed">{t("closed")}</option>
+                            <option value="all">{t("windowAll")}</option>
+                            <option value="open">{t("windowOpen")}</option>
+                            <option value="closed">{t("windowClosed")}</option>
                         </select>
                         <select
                             className="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-800 dark:bg-gray-950"
@@ -214,7 +223,7 @@ export default function ViberSessionsPage() {
                                 <span className="block text-xs text-gray-500">
                                     {row.sender} · {row.isOpen ? t("open") : t("closed")}
                                 </span>
-                                {row.campaignName ? <span className="block truncate text-xs text-gray-600 dark:text-gray-300">{row.campaignName}</span> : null}
+                                {row.campaigns?.[0]?.name ? <span className="block truncate text-xs text-gray-600 dark:text-gray-300">{row.campaigns[0].name}</span> : null}
                                 {row.lastPreview ? <span className="block truncate text-xs text-gray-400">{row.lastPreview}</span> : null}
                             </button>
                         ))}

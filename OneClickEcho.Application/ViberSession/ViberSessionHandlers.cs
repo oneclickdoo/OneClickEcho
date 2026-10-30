@@ -1,6 +1,7 @@
 using MediatR;
 using OneClickEcho.Application.Common.Messaging;
 using OneClickEcho.Application.Common.Viber;
+using OneClickEcho.Domain.Common;
 using OneClickEcho.Domain.Common.Shared;
 using OneClickEcho.Domain.CampaignLeadAggregate.Repositories;
 using OneClickEcho.Domain.CompanyAggregate.Repositories;
@@ -22,31 +23,44 @@ public class ListViberSessionsHandler(IViberSessionRepository sessions, ICampaig
         List<SessionEntity> rows = await sessions.ListByCompanyAsync(companyId, query.Phone, query.Sender, cancellationToken);
         List<ViberSessionLatestMessage> previews = await sessions.GetLatestMessagesAsync(rows.Select(row => row.Id).ToList(), cancellationToken);
         Dictionary<Guid, ViberSessionLatestMessage> previewBySession = previews.ToDictionary(preview => preview.SessionId);
-        List<PhoneCampaignLink> campaigns = await campaignLeads.GetLatestViberCampaignsAsync(
+        List<PhoneCampaignLink> campaigns = await campaignLeads.GetViberCampaignsForPhonesAsync(
             companyId,
             rows.Select(row => row.PhoneNumber).Distinct().ToList(),
             cancellationToken);
-        Dictionary<(string Sender, string Phone), PhoneCampaignLink> campaignByPhone = campaigns
-            .GroupBy(link => (link.Sender, link.Phone))
-            .ToDictionary(group => group.Key, group => group.First());
+        ILookup<(string Sender, string Phone), PhoneCampaignLink> campaignByPhone = campaigns
+            .ToLookup(link => (Sender: link.Sender, Phone: link.Phone));
 
         DateTime utcNow = DateTime.UtcNow;
         List<ViberSessionListItemResponse> result = [];
-        foreach (SessionEntity row in rows)
+        foreach (IGrouping<(string Sender, string Phone), SessionEntity> handset in rows.GroupBy(row =>
+                     (Sender: row.Sender, Phone: PhoneNumberHelper.Standardize(row.PhoneNumber))))
         {
-            previewBySession.TryGetValue(row.Id.Value, out ViberSessionLatestMessage? preview);
-            campaignByPhone.TryGetValue((row.Sender, row.PhoneNumber), out PhoneCampaignLink? campaign);
-            DateTime activity = preview?.At ?? row.LastInboundAt ?? row.StartedAt;
+            SessionEntity row = handset
+                .OrderByDescending(session => session.LastInboundAt ?? session.StartedAt)
+                .First();
+            ViberSessionLatestMessage? preview = handset
+                .Select(session => previewBySession.GetValueOrDefault(session.Id.Value))
+                .Where(item => item is not null)
+                .OrderByDescending(item => item!.At)
+                .FirstOrDefault();
+            List<PhoneCampaignLink> links = campaignByPhone[(handset.Key.Sender, handset.Key.Phone)]
+                .GroupBy(link => link.CampaignId)
+                .Select(group => group.OrderByDescending(link => link.SentAt).First())
+                .OrderByDescending(link => link.SentAt)
+                .ToList();
+            DateTime activity = preview?.At
+                ?? links.FirstOrDefault()?.SentAt
+                ?? row.LastInboundAt
+                ?? row.StartedAt;
             result.Add(new ViberSessionListItemResponse(
                 row.Id.Value,
                 row.Sender,
-                row.PhoneNumber,
-                row.IsOpen(utcNow),
+                handset.Key.Phone,
+                handset.Any(session => session.IsOpen(utcNow)),
                 row.ExpiresAt,
                 activity,
                 TrimPreview(preview?.Text),
-                campaign?.CampaignId,
-                campaign?.CampaignName));
+                links.Select(link => new ViberSessionCampaignRef(link.CampaignId, link.CampaignName)).ToList()));
         }
 
         result.Sort((a, b) => b.LastActivityAt.CompareTo(a.LastActivityAt));
@@ -76,7 +90,16 @@ public class GetViberSessionHandler(IViberSessionRepository sessions, ICampaignL
             return Result.Failure<ViberSessionResponse>(new Error("ViberSession.NotFound", "Session was not found."));
         }
 
-        return await ViberSessionThread.MapAsync(sessions, campaignLeads, session, cancellationToken);
+        ViberSessionResponse mapped = await ViberSessionThread.MapAsync(sessions, campaignLeads, session, cancellationToken);
+        if (query.CampaignId is not Guid campaignId)
+        {
+            return mapped;
+        }
+
+        return mapped with
+        {
+            Messages = mapped.Messages.Where(message => message.CampaignId == campaignId).ToList()
+        };
     }
 }
 
@@ -108,7 +131,28 @@ static class ViberSessionThread
         SessionEntity session,
         CancellationToken cancellationToken)
     {
-        List<ViberSessionMessage> thread = await sessions.ListMessagesAsync(session.Id, cancellationToken);
+        List<SessionEntity> handset = await sessions.ListSameHandsetAsync(
+            session.CompanyId,
+            session.Sender,
+            session.PhoneNumber,
+            cancellationToken);
+        if (handset.All(row => row.Id != session.Id))
+        {
+            handset.Add(session);
+        }
+
+        List<ViberSessionMessage> thread = [];
+        HashSet<Guid> seenMessages = [];
+        foreach (SessionEntity row in handset)
+        {
+            foreach (ViberSessionMessage message in await sessions.ListMessagesAsync(row.Id, cancellationToken))
+            {
+                if (seenMessages.Add(message.Id.Value))
+                {
+                    thread.Add(message);
+                }
+            }
+        }
         List<CampaignPhoneExchange> exchanges = await campaignLeads.GetViberExchangesForPhoneAsync(
             session.CompanyId,
             session.Sender,

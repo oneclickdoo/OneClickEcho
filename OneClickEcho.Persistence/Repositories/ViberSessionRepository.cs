@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OneClickEcho.Application.Common.Viber;
+using OneClickEcho.Domain.Common;
 using OneClickEcho.Domain.CompanyAggregate.ValueObjects;
 using OneClickEcho.Domain.ViberSessionAggregate;
 using OneClickEcho.Domain.ViberSessionAggregate.Entities;
@@ -16,6 +17,29 @@ public class ViberSessionRepository(ApplicationDbContext dbContext) : IViberSess
     public async Task<ViberSession?> GetByIdAsync(ViberSessionId id, CancellationToken cancellationToken = default)
     {
         return await _dbContext.ViberSessions.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+    }
+
+    public async Task<List<ViberSession>> ListSameHandsetAsync(
+        CompanyId companyId,
+        string sender,
+        string phoneNumber,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<string> forms = PhoneNumberHelper.LookupForms(phoneNumber);
+        if (forms.Count == 0)
+        {
+            return [];
+        }
+
+        string senderNorm = sender.Trim();
+        string canonical = PhoneNumberHelper.Standardize(phoneNumber);
+        List<ViberSession> rows = await _dbContext.ViberSessions
+            .Where(s => s.CompanyId == companyId && s.Sender == senderNorm && forms.Contains(s.PhoneNumber))
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Where(s => PhoneNumberHelper.Standardize(s.PhoneNumber) == canonical)
+            .ToList();
     }
 
     public async Task<ViberSession?> FindLatestAsync(
