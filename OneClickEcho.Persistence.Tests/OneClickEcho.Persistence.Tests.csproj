@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OneClickEcho.Persistence\OneClickEcho.Persistence.csproj" />
+    <ProjectReference Include="..\OneClickEcho.Infrastructure\OneClickEcho.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

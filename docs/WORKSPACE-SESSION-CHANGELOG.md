@@ -111,6 +111,12 @@
 
 ---
 
+## 26. CSV kolekcije — samo PhoneNumber (2026-11-09)
+
+- `UploadAndAssignLeads` je vraćao 500 kad CSV ima samo kolonu `PhoneNumber`, jer je čitač tražio sve kolone iz šablona.
+- Ostale kolone su opcione. Pun šablon i dalje radi. Ako je zaglavlje samo `PhoneNumber`, a redovi imaju prazna polja iza tačka-zareza (`3816…;;;;;;;;`), broj se čita iz prvog polja.
+- **Fajl:** `CsvReaderService.cs`.
+
 ## 25. Viber sesije — jedan broj, kampanje u filteru (2026-10-30)
 
 - Isti telefon iz dve kolekcije je jedan red (spajanje po broju, jedan lead po `lead_id` unutar kampanje).
