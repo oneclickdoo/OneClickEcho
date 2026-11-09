@@ -34,6 +34,29 @@ public class CsvReaderServiceTests
     }
 
     [Fact]
+    public async Task CsvToLeads_accepts_phone_only_column()
+    {
+        string folder = Path.Combine(Directory.GetCurrentDirectory(), FileStorageService.UploadPath);
+        Directory.CreateDirectory(folder);
+        string name = $"leads-{Guid.NewGuid():N}.csv";
+        await File.WriteAllTextAsync(Path.Combine(folder, name), "PhoneNumber\r\n381677599826\r\n381659980412\r\n");
+
+        try
+        {
+            List<OneClickEcho.Application.Common.Services.CsvLeadDto> rows =
+                await new CsvReaderService().CsvToLeads(name);
+
+            Assert.Equal(2, rows.Count);
+            Assert.Equal("381677599826", rows[0].PhoneNumber);
+            Assert.Equal("381659980412", rows[1].PhoneNumber);
+        }
+        finally
+        {
+            File.Delete(Path.Combine(folder, name));
+        }
+    }
+
+    [Fact]
     public async Task CsvToLeads_accepts_full_comma_header()
     {
         string folder = Path.Combine(Directory.GetCurrentDirectory(), FileStorageService.UploadPath);
